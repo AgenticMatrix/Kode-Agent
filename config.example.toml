@@ -1,0 +1,13 @@
+# Kode Agent Configuration
+# Copy this file to ~/.kode/config.toml and customize your settings.
+
+[env]
+# Anthropic API Configuration
+# Priority: environment variables > this file > defaults
+# For API key: ANTHROPIC_API_KEY > ANTHROPIC_AUTH_TOKEN
+ANTHROPIC_BASE_URL = "https://api.deepseek.com/v1"
+ANTHROPIC_AUTH_TOKEN = "sk-ant-xxxxx"
+ANTHROPIC_MODEL = "deepseek-v4-pro"
+
+# Appearance
+theme = "dark"

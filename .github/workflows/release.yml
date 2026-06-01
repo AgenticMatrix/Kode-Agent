@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  PNPM_VERSION: '9.15.4'
+  NODE_VERSION: '22'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Full CI gate before publishing
+  # ═══════════════════════════════════════════════════════════════════════════
+  gate:
+    name: Pre-release CI Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Publish all packages to npm
+  # ═══════════════════════════════════════════════════════════════════════════
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: gate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed for changelog generation
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Generate CHANGELOG
+        run: ./scripts/changelog.sh "${{ github.ref_name }}"
+
+      - name: Publish packages
+        run: ./scripts/publish.sh
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          generate_release_notes: false
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}

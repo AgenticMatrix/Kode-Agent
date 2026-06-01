@@ -1,0 +1,21 @@
+{
+  "name": "@kode/mcp",
+  "version": "0.1.0",
+  "description": "Kode Agent MCP Client & Server — JSON-RPC 2.0 over stdio",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@kode/shared": "workspace:*"
+  }
+}

@@ -29,7 +29,7 @@ export const STARTUP_QUERY = (process.env.CODER_TUI_QUERY ?? '').trim()
 export const STARTUP_IMAGE = (process.env.CODER_TUI_IMAGE ?? '').trim()
 
 // Mouse tracking mode resolution at startup. Per-mode selection (off|wheel|
-// buttons|all) lives in display.mouse_tracking in config.yaml — these env
+// buttons|all) lives in display.mouse_tracking in settings.json — these env
 // vars only set the boot-time default before that config is applied.
 //
 // Precedence (highest first):

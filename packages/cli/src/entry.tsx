@@ -207,9 +207,91 @@ if (cliArgs.version) {
   process.exit(0);
 }
 
-// TTY check after --help/--print/--version handlers so those flags work without a terminal
+// --model: interactive model selection (non-TUI mode)
+if (cliArgs.model || process.argv.includes('--model')) {
+  const { readFileSync, writeFileSync } = await import('node:fs');
+  const { homedir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const settingsPath = join(homedir(), '.coder', 'settings.json');
+  let settings: any = {};
+  try {
+    settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+  } catch {}
+
+  const modelList: Array<{name: string; model: string; base_url?: string; auth_token_env?: string; provider?: string}> =
+    settings.model_list ?? [];
+
+  if (modelList.length === 0) {
+    console.log('No models configured. Add models to ~/.coder/settings.json model_list.');
+    process.exit(0);
+  }
+
+  const targetModel = cliArgs.model;
+  if (targetModel) {
+    // Non-interactive: set specific model
+    const entry = modelList.find(m => m.name === targetModel || m.model === targetModel);
+    if (entry) {
+      settings.default_model = entry.name;
+      settings.env = settings.env ?? {};
+      settings.env.CODER_MODEL = entry.model;
+      if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
+      if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+      console.log(`Default model set to: ${entry.name} (${entry.model})`);
+    } else {
+      console.log(`Model "${targetModel}" not found in model_list.`);
+    }
+    process.exit(0);
+  }
+
+  // Interactive: show model list and let user choose
+  console.log('Available models:');
+  modelList.forEach((m, i) => {
+    const marker = settings.default_model === m.name ? ' [default]' : '';
+    console.log(`  ${i + 1}. ${m.name} (${m.model})${marker}`);
+  });
+  console.log('');
+
+  // Use readline for interactive input
+  const readline = await import('node:readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+  rl.question(`Select model (1-${modelList.length}) or press Enter to exit: `, (answer) => {
+    rl.close();
+    const idx = parseInt(answer.trim(), 10) - 1;
+    if (idx >= 0 && idx < modelList.length) {
+      const entry = modelList[idx]!;
+      settings.default_model = entry.name;
+      settings.env = settings.env ?? {};
+      settings.env.CODER_MODEL = entry.model;
+      if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
+      if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+      console.log(`Default model set to: ${entry.name} (${entry.model})`);
+    } else {
+      console.log('No change.');
+    }
+    process.exit(0);
+  });
+  // Exit is handled in the readline callback above — don't fall through to TTY check
+}
+
+// TTY check — skip for non-interactive flags handled above
+const isNonInteractive = cliArgs.help || cliArgs.version || cliArgs.print || cliArgs.model || process.argv.includes('--model') || process.argv.includes('-m')
+if (isNonInteractive) {
+  // Exit gracefully — the --model handler above uses readline callback to exit
+  if (!cliArgs.model && !process.argv.includes('--model') && !process.argv.includes('-m')) {
+    process.exit(0)
+  }
+  // For --model: don't fall through to TUI init; readline callback handles exit
+  // Use a no-op wait so the process stays alive for readline
+  await new Promise(() => {})
+}
+
+// TTY check for interactive mode
 if (!process.stdin.isTTY) {
-  console.log('coder-tui: no TTY (use --help, --print, or --version for non-TTY usage)')
+  console.log('coder-tui: no TTY (use --help, --print, --version, or --model for non-TTY usage)')
   process.exit(0)
 }
 

@@ -51,7 +51,7 @@ Coder Agent supports multiple LLM providers. Set at least one:
 
 ```bash
 # Anthropic (default)
-export ANTHROPIC_API_KEY=sk-ant-...
+export CODER_API_KEY=sk-ant-...
 
 # DeepSeek
 export DEEPSEEK_API_KEY=sk-...
@@ -65,7 +65,7 @@ across terminal sessions.
 
 ### Provider Selection
 
-Set the provider and model in `~/.coder/config.yaml`:
+Set the provider and model in `~/.coder/settings.json`:
 
 ```yaml
 provider: deepseek

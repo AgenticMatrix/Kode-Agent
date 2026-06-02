@@ -1,13 +1,14 @@
-# Coder Agent Configuration
-# Copy this file to ~/.coder/config.toml and customize your settings.
+# Coder Agent Configuration (DEPRECATED FORMAT)
+# This file is kept for reference only. Modern config uses ~/.coder/settings.json.
+# Copy this file to ~/.coder/config.toml to use the legacy TOML format.
 
 [env]
-# Anthropic API Configuration
+# Coder API Configuration
 # Priority: environment variables > this file > defaults
-# For API key: ANTHROPIC_API_KEY > ANTHROPIC_AUTH_TOKEN
-ANTHROPIC_BASE_URL = "https://api.deepseek.com/v1"
-ANTHROPIC_AUTH_TOKEN = "sk-ant-xxxxx"
-ANTHROPIC_MODEL = "deepseek-v4-pro"
+# For API key: CODER_API_KEY > CODER_AUTH_TOKEN
+CODER_BASE_URL = "https://api.deepseek.com/v1"
+CODER_AUTH_TOKEN = "sk-ant-xxxxx"
+CODER_MODEL = "deepseek-v4-pro"
 
 # Appearance
 theme = "dark"

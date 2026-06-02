@@ -144,7 +144,7 @@ Skills are stored in `~/.coder/skills/` and can be managed via:
 /skills search      # Search community skills by keyword
 ```
 
-Configure skill auto-creation and auto-improvement in `~/.coder/config.yaml`:
+Configure skill auto-creation and auto-improvement in `~/.coder/settings.json`:
 
 ```yaml
 skills:
@@ -226,95 +226,61 @@ skills:
 
 ## Configuration
 
-### API Key
+### Configuration
 
-Coder Agent primarily uses `ANTHROPIC_API_KEY` for authentication. The legacy `ANTHROPIC_AUTH_TOKEN` is also supported as a fallback.
+Coder Agent uses `~/.coder/settings.json` for persistent config, with environment variable overrides.
 
-Priority order for API key resolution:
-1. `ANTHROPIC_API_KEY` environment variable
-2. `ANTHROPIC_AUTH_TOKEN` environment variable
-3. `~/.coder/settings.json` → `env.ANTHROPIC_API_KEY`
-4. `~/.coder/settings.json` → `env.ANTHROPIC_AUTH_TOKEN`
-
-```bash
-# Recommended: set ANTHROPIC_API_KEY
-export ANTHROPIC_API_KEY="sk-ant-api03-..."
-
-# Legacy: ANTHROPIC_AUTH_TOKEN also works
-export ANTHROPIC_AUTH_TOKEN="sk-ant-api03-..."
-```
-
-For OpenAI or DeepSeek, set the `CODER_PROVIDER` environment variable:
+**Priority order:**
+1. CLI flags (`--model`, `--provider`)
+2. Environment variables (`CODER_BASE_URL`, `CODER_MODEL`, `CODER_AUTH_TOKEN`)
+3. `~/.coder/settings.json` → `model_list[]` + `env.*`
 
 ```bash
-# Use OpenAI
-export CODER_PROVIDER=openai
-export OPENAI_API_KEY="sk-..."
+# Set auth token (required)
+export CODER_AUTH_TOKEN="sk-your-key-here"
 
-# Use DeepSeek with Anthropic-compatible endpoint
-export CODER_PROVIDER=anthropic
-export ANTHROPIC_API_KEY="sk-..."
-export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
-export ANTHROPIC_MODEL="deepseek-chat"
+# Optional: override model and endpoint
+export CODER_MODEL="deepseek-chat"
+export CODER_BASE_URL="https://api.deepseek.com/anthropic"
 ```
 
-### Configuration File (~/.coder/config.yaml)
+### Model Switching
 
-For persistent configuration, use `~/.coder/config.yaml`:
-
-```yaml
-provider: anthropic
-model: claude-sonnet-4-20250514
-
-providers:
-  anthropic:
-    baseUrl: https://api.anthropic.com
-    maxRetries: 3
-    timeoutMs: 120000
-  openai:
-    baseUrl: https://api.openai.com/v1
-    maxRetries: 3
-    timeoutMs: 120000
-  deepseek:
-    baseUrl: https://api.deepseek.com/anthropic
-    maxRetries: 3
-    timeoutMs: 120000
-
-permissions:
-  mode: default              # default | accept-edits | bypass
-  allowedPaths: []
-  deniedPaths: []
-
-maxTurns: 100
-contextBudget: 180000
+Switch models interactively:
+```bash
+coder --model          # Interactive selection from model_list
+coder --model gpt-4o   # Switch to a specific model by name
 ```
 
-You can also use `~/.coder/settings.json` (JSON format) for environment variables:
+### ~/.coder/settings.json
 
 ```json
 {
   "theme": "dark",
   "model_list": [
     {
+      "name": "deepseek-v4",
+      "model": "deepseek-chat",
+      "base_url": "https://api.deepseek.com/anthropic",
+      "auth_token_env": "CODER_AUTH_TOKEN",
+      "provider": "deepseek"
+    },
+    {
       "name": "claude-sonnet-4-6",
       "model": "claude-sonnet-4-6",
       "base_url": "https://api.anthropic.com/v1",
-      "auth_token_env": "ANTHROPIC_API_KEY",
+      "auth_token_env": "CODER_AUTH_TOKEN",
       "provider": "anthropic"
-    },
-    {
-      "name": "deepseek/deepseek-v4-pro",
-      "model": "deepseek-chat",
-      "base_url": "https://api.deepseek.com/anthropic",
-      "auth_token_env": "DEEPSEEK_API_KEY",
-      "provider": "deepseek"
     }
   ],
-  "default_model": "claude-sonnet-4-6"
+  "default_model": "deepseek-v4",
+  "env": {
+    "CODER_MODEL": "deepseek-chat",
+    "CODER_BASE_URL": "https://api.deepseek.com/anthropic",
+    "CODER_AUTH_TOKEN": ""
+  }
 }
 ```
-
-> **Note:** `ANTHROPIC_BASE_URL` can also be configured per-provider in `~/.coder/config.yaml` under the `providers` section, rather than as a global environment variable.
 
 ### Hook Configuration
 
@@ -406,7 +372,7 @@ pnpm ci
 ## Documentation
 
 - [Getting Started Guide](./docs/getting-started.md) — installation, basic usage, TUI shortcuts, session management
-- [Configuration Reference](./docs/configuration.md) — full config.yaml schema, env vars, permission modes, sandbox setup
+- [Configuration Reference](./docs/configuration.md) — full settings.json schema, env vars, permission modes, sandbox setup
 
 ---
 

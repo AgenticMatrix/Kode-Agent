@@ -246,7 +246,7 @@ export interface Provider {
  * Anthropic pricing per 1M tokens (as of 2025).
  * Update these as pricing changes.
  */
-export const ANTHROPIC_PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
+export const CODER_PRICING: Record<string, { input: number; output: number; cacheWrite: number; cacheRead: number }> = {
   'claude-sonnet-4-6': {
     input: 3.0,
     output: 15.0,
@@ -296,7 +296,7 @@ export function calculateCost(
   cacheWriteTokens: number = 0,
   cacheReadTokens: number = 0,
 ): number {
-  const pricing = ANTHROPIC_PRICING[model] ?? ANTHROPIC_PRICING.default!;
+  const pricing = CODER_PRICING[model] ?? CODER_PRICING.default!;
 
   let cost = 0;
   cost += (inputTokens / 1_000_000) * pricing.input;

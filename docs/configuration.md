@@ -1,11 +1,11 @@
 # Configuration Reference
 
-Coder Agent is configured through a combination of `~/.coder/config.yaml`,
+Coder Agent is configured through a combination of `~/.coder/settings.json`,
 environment variables, and CLI flags.
 
 ## Config File
 
-The primary configuration file lives at `~/.coder/config.yaml`. It is created
+The primary configuration file lives at `~/.coder/settings.json`. It is created
 automatically on first run if it doesn't exist.
 
 ### Full Schema
@@ -73,7 +73,7 @@ Environment variables take precedence over the config file.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Anthropic API key | — |
+| `CODER_API_KEY` | Coder API key | — |
 | `DEEPSEEK_API_KEY` | DeepSeek API key | — |
 | `OPENAI_API_KEY` | OpenAI API key | — |
 | `CODER_PROVIDER` | LLM provider name | `anthropic` |
@@ -99,7 +99,7 @@ Environment variables take precedence over the config file.
 ### Anthropic (Default)
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-api03-...
+export CODER_API_KEY=sk-ant-api03-...
 ```
 
 Supported models:
@@ -303,6 +303,6 @@ compactThreshold: 0.7      # Start compacting at 126K tokens
 
 ### Multiple Projects
 
-Configuration is global (`~/.coder/config.yaml`), but project-specific
+Configuration is global (`~/.coder/settings.json`), but project-specific
 instructions go in `CLAUDE.md` at the project root. The agent reads this
 file at the start of every session.

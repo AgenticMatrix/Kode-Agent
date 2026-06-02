@@ -26,7 +26,7 @@ export type {
   ErrorEvent,
 } from './base.js';
 
-export { calculateCost, ANTHROPIC_PRICING } from './base.js';
+export { calculateCost, CODER_PRICING } from './base.js';
 
 // Anthropic provider
 export { AnthropicProvider } from './anthropic.js';

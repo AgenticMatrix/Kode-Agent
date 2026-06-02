@@ -79,7 +79,7 @@ import type { BaseTool } from '@coder/shared';
 export interface EngineFactoryOptions {
   /** Working directory for the agent (default: process.cwd()) */
   cwd?: string;
-  /** API key override (default: process.env.ANTHROPIC_API_KEY) */
+  /** API key override (default: process.env.CODER_API_KEY) */
   apiKey?: string;
   /** Base URL override for the provider */
   baseUrl?: string;
@@ -222,7 +222,7 @@ function filterToolsByRole(role?: string): BaseTool[] {
 /**
  * Create a fully configured QueryEngine with all dependencies wired up.
  *
- * Reads ANTHROPIC_API_KEY from the environment (or options.apiKey).
+ * Reads CODER_API_KEY from the environment (or options.apiKey).
  * Creates an AnthropicProvider, ToolRegistry with all 31 core tools,
  * SessionManager, CheckpointManager, and SystemPromptAssembler.
  *
@@ -238,9 +238,9 @@ export function createQueryEngine(
       : (cwdOrOptions ?? {});
 
   const cwd = opts.cwd ?? process.cwd();
-  const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
-  const baseUrl = opts.baseUrl ?? process.env.ANTHROPIC_BASE_URL;
-  const model = (opts.model && opts.model !== 'claude-sonnet-4-6') ? opts.model : process.env.CODER_MODEL ?? process.env.ANTHROPIC_MODEL ?? opts.model ?? 'claude-sonnet-4-6';
+  const apiKey = opts.apiKey ?? process.env.CODER_API_KEY ?? '';
+  const baseUrl = opts.baseUrl ?? process.env.CODER_BASE_URL;
+  const model = (opts.model && opts.model !== 'claude-sonnet-4-6') ? opts.model : process.env.CODER_MODEL ?? opts.model ?? 'claude-sonnet-4-6';
   const providerName = opts.providerName ?? (model.toLowerCase().includes('deepseek') ? 'deepseek' : process.env.CODER_PROVIDER ?? 'anthropic');
 
   // ── Determine agent role ─────────────────────────────────────────
@@ -458,8 +458,8 @@ function createRouterProxy(router: ProviderRouter, _defaultProvider?: string): P
  */
 export function hasApiKey(): boolean {
   return Boolean(
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.ANTHROPIC_AUTH_TOKEN ||
+    process.env.CODER_API_KEY ||
+    process.env.CODER_AUTH_TOKEN ||
     process.env.OPENAI_API_KEY ||
     process.env.DEEPSEEK_API_KEY,
   );
@@ -469,5 +469,5 @@ export function hasApiKey(): boolean {
  * Get the configured model name.
  */
 export function getConfiguredModel(): string {
-  return process.env.CODER_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
+  return process.env.CODER_MODEL ?? 'claude-sonnet-4-6';
 }

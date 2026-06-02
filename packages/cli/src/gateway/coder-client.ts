@@ -140,9 +140,9 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   // 3. Legacy env fallback
   const env = settings.env ?? {}
   return {
-    model: env.ANTHROPIC_MODEL ?? fallbackModel,
-    baseUrl: env.ANTHROPIC_BASE_URL,
-    apiKey: env.ANTHROPIC_AUTH_TOKEN,
+    model: env.CODER_MODEL ?? fallbackModel,
+    baseUrl: env.CODER_BASE_URL,
+    apiKey: env.CODER_AUTH_TOKEN,
     name: fallbackModel,
     provider: 'anthropic',
   }
@@ -517,9 +517,9 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
             if (entry) {
               // Update env vars in settings to match the selected model entry
               settings.env = settings.env ?? {}
-              settings.env.ANTHROPIC_MODEL = entry.model
-              if (entry.base_url) settings.env.ANTHROPIC_BASE_URL = entry.base_url
-              if (entry.auth_token_env) settings.env.ANTHROPIC_AUTH_TOKEN = entry.auth_token_env
+              settings.env.CODER_MODEL = entry.model
+              if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url
+              if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = entry.auth_token_env
               settings.default_model = value
 
               // Persist to disk
@@ -714,18 +714,18 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
     const settings = loadClaudeSettings()
     const env = settings.env ?? {}
 
-    // Resolve API key: env var, model_list entry, or env ANTHROPIC_AUTH_TOKEN
+    // Resolve API key: env var, model_list entry, or env CODER_AUTH_TOKEN
     const modelCfg = this.modelConfig
     const apiKey =
-      process.env.ANTHROPIC_API_KEY ??
+      process.env.CODER_AUTH_TOKEN ??
       modelCfg?.apiKey ??
-      env.ANTHROPIC_AUTH_TOKEN ??
+      env.CODER_AUTH_TOKEN ??
       ''
 
     const baseUrl =
       modelCfg?.baseUrl ??
-      env.ANTHROPIC_BASE_URL ??
-      process.env.ANTHROPIC_BASE_URL
+      env.CODER_BASE_URL ??
+      process.env.CODER_BASE_URL
 
     // Check CODER_COORDINATOR_MODE env var (set by entry.tsx or manually)
     const coordinatorMode =
@@ -948,9 +948,8 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
 
     // Legacy env check
     return Boolean(
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.ANTHROPIC_AUTH_TOKEN ||
-      env.ANTHROPIC_AUTH_TOKEN,
+      process.env.CODER_AUTH_TOKEN ||
+      env.CODER_AUTH_TOKEN,
     )
   }
 

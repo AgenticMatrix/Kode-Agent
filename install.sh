@@ -172,54 +172,91 @@ mkdir -p "${CODER_DIR}/scratchpad"
 echo -e "${GREEN}✅ Configuration directory created at ${CODER_DIR}${NC}"
 
 # ---------------------------------------------------------------------------
-# 6. API Key setup
+# 6. Model Configuration (settings.json)
 # ---------------------------------------------------------------------------
+SETTINGS_FILE="${CODER_DIR}/settings.json"
+
 echo ""
 echo -e "${YELLOW}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${YELLOW}║  API Key Configuration                          ║${NC}"
+echo -e "${YELLOW}║  Model Configuration                            ║${NC}"
 echo -e "${YELLOW}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo "Coder Agent supports multiple LLM providers:"
-echo "  - DeepSeek (default):   DEEPSEEK_API_KEY"
-echo "  - Anthropic:            ANTHROPIC_API_KEY"
-echo "  - OpenAI:               OPENAI_API_KEY"
+echo "Configure your default LLM provider and model."
 echo ""
 
-# Check if API keys are already set
-if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
-  echo -e "${GREEN}✅ DEEPSEEK_API_KEY is already set${NC}"
-else
-  echo -e "${YELLOW}⚠️  DEEPSEEK_API_KEY is not set${NC}"
-  echo ""
-  echo "To set it now, enter your DeepSeek API key (or press Enter to skip):"
-  read -r -p "API Key: " api_key
+# -- CODER_BASE_URL --
+echo -e "${CYAN}API Base URL${NC} (e.g. https://api.deepseek.com/anthropic)"
+echo "Press Enter to skip:"
+read -r -p "> " coder_base_url
 
-  if [ -n "$api_key" ]; then
-    # Detect shell config file
-    SHELL_CONFIG=""
-    if [ -f "${HOME}/.zshrc" ]; then
-      SHELL_CONFIG="${HOME}/.zshrc"
-    elif [ -f "${HOME}/.bashrc" ]; then
-      SHELL_CONFIG="${HOME}/.bashrc"
-    elif [ -f "${HOME}/.bash_profile" ]; then
-      SHELL_CONFIG="${HOME}/.bash_profile"
-    fi
+# -- CODER_MODEL --
+echo ""
+echo -e "${CYAN}Model ID${NC} (e.g. deepseek-chat, claude-sonnet-4-6)"
+echo "Press Enter for default (deepseek-chat):"
+read -r -p "> " coder_model
+coder_model="${coder_model:-deepseek-chat}"
 
-    if [ -n "$SHELL_CONFIG" ]; then
-      echo "" >> "$SHELL_CONFIG"
-      echo "# Coder Agent — API Key" >> "$SHELL_CONFIG"
-      echo "export DEEPSEEK_API_KEY=${api_key}" >> "$SHELL_CONFIG"
-      echo -e "${GREEN}✅ API key added to ${SHELL_CONFIG}${NC}"
-      echo ""
-      echo -e "${YELLOW}Run 'source ${SHELL_CONFIG}' or restart your terminal to apply.${NC}"
-    else
-      echo -e "${YELLOW}Could not detect shell config file. Add this to your shell profile:${NC}"
-      echo "  export DEEPSEEK_API_KEY=${api_key}"
-    fi
-  else
-    echo "Skipped. You can set it later:"
-    echo "  export DEEPSEEK_API_KEY=your-key-here"
-  fi
+# -- CODER_AUTH_TOKEN --
+echo ""
+echo -e "${CYAN}API Key / Auth Token${NC}"
+echo "Press Enter to skip (you can set CODER_AUTH_TOKEN env var later):"
+read -r -p "> " coder_auth_token
+
+# Build settings.json
+SETTINGS_JSON=$(cat <<SETEOF
+{
+  "theme": "dark",
+  "default_model": "${coder_model}",
+  "model_list": [
+    {
+      "name": "${coder_model}",
+      "model": "${coder_model}",
+      "base_url": "${coder_base_url}",
+      "auth_token_env": "CODER_AUTH_TOKEN",
+      "provider": "deepseek"
+    }
+  ],
+  "env": {
+    "CODER_MODEL": "${coder_model}",
+    "CODER_BASE_URL": "${coder_base_url}",
+    "CODER_AUTH_TOKEN": "${coder_auth_token}"
+  }
+}
+SETEOF
+)
+
+# Write settings.json
+echo "$SETTINGS_JSON" > "$SETTINGS_FILE"
+echo -e "${GREEN}✅ Created ${SETTINGS_FILE}${NC}"
+
+# Export env vars for immediate use
+if [ -n "$coder_base_url" ]; then
+  export CODER_BASE_URL="$coder_base_url"
+fi
+if [ -n "$coder_auth_token" ]; then
+  export CODER_AUTH_TOKEN="$coder_auth_token"
+fi
+export CODER_MODEL="$coder_model"
+
+# Add to shell config for persistence
+SHELL_CONFIG=""
+if [ -f "${HOME}/.zshrc" ]; then
+  SHELL_CONFIG="${HOME}/.zshrc"
+elif [ -f "${HOME}/.bashrc" ]; then
+  SHELL_CONFIG="${HOME}/.bashrc"
+elif [ -f "${HOME}/.bash_profile" ]; then
+  SHELL_CONFIG="${HOME}/.bash_profile"
+fi
+
+if [ -n "$SHELL_CONFIG" ]; then
+  {
+    echo ""
+    echo "# Coder Agent — Model Configuration"
+    echo "export CODER_MODEL=${coder_model}"
+    [ -n "$coder_base_url" ] && echo "export CODER_BASE_URL=${coder_base_url}"
+    [ -n "$coder_auth_token" ] && echo "export CODER_AUTH_TOKEN=${coder_auth_token}"
+  } >> "$SHELL_CONFIG"
+  echo -e "${GREEN}✅ Env vars added to ${SHELL_CONFIG}${NC}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -244,6 +281,7 @@ echo ""
 echo -e "${CYAN}Configuration:${NC}"
 echo "  ~/.coder/               — Configuration directory"
 echo "  ~/.coder/settings.json  — Provider & model settings"
+echo "  export CODER_AUTH_TOKEN  — Set your API key if skipped during install"
 echo "  CODER.md                — Project-specific instructions"
 echo ""
 echo -e "${YELLOW}Documentation: https://github.com/AgenticMatrix/Coder-Agent${NC}"

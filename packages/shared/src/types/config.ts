@@ -2,8 +2,7 @@
  * Configuration types — Kode Agent configuration system.
  *
  * Priority (highest to lowest):
- *   CLI args > Environment variables > .kode/config.yaml (project) >
- *   ~/.kode/config.yaml (user) > Default values
+ *   CLI args > Environment variables > ~/.kode/settings.json > Default values
  */
 
 import { PermissionMode } from './permission.js';
@@ -42,7 +41,7 @@ export interface KodeConfig {
 export interface ModelConfig {
   /** Provider identifier (anthropic, openai, deepseek) */
   provider: 'anthropic' | 'openai' | 'deepseek' | string;
-  /** Model identifier (deepseek-v4-pro, gpt-4o, claude-sonnet-4-6) */
+  /** Model identifier (claude-sonnet-4-6, gpt-4o, deepseek-chat) */
   model: string;
   /** Maximum tokens for the response */
   maxTokens?: number;
@@ -219,8 +218,8 @@ export interface CliConfig {
 
 export const DEFAULT_KODE_CONFIG: KodeConfig = {
   model: {
-    provider: 'deepseek',
-    model: 'deepseek-v4-pro',
+    provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
     maxTokens: 8192,
     thinking: {
       mode: 'adaptive',

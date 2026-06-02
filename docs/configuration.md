@@ -12,8 +12,8 @@ automatically on first run if it doesn't exist.
 
 ```yaml
 # ── Provider ──────────────────────────────────────────────────────────────
-provider: deepseek             # deepseek | anthropic | openai
-model: deepseek-v4-pro
+provider: anthropic          # anthropic | deepseek | openai
+model: claude-sonnet-4-20250514
 
 # ── Provider-specific settings ────────────────────────────────────────────
 providers:
@@ -22,7 +22,7 @@ providers:
     maxRetries: 3
     timeoutMs: 120000
   deepseek:
-    baseUrl: https://api.deepseek.com/v1
+    baseUrl: https://api.deepseek.com/anthropic
     maxRetries: 3
     timeoutMs: 120000
   openai:
@@ -304,5 +304,5 @@ compactThreshold: 0.7      # Start compacting at 126K tokens
 ### Multiple Projects
 
 Configuration is global (`~/.kode/config.yaml`), but project-specific
-instructions go in `KODE.md` at the project root. The agent reads this
+instructions go in `CLAUDE.md` at the project root. The agent reads this
 file at the start of every session.

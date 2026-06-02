@@ -83,7 +83,7 @@ export interface EngineFactoryOptions {
   apiKey?: string;
   /** Base URL override for the provider */
   baseUrl?: string;
-  /** Model identifier (default: from env or 'deepseek-v4-pro') */
+  /** Model identifier (default: from env or 'claude-sonnet-4-6') */
   model?: string;
   /** Provider name: "anthropic" | "openai" | "deepseek" | "auto" (default: "anthropic") */
   providerName?: string;
@@ -240,8 +240,8 @@ export function createQueryEngine(
   const cwd = opts.cwd ?? process.cwd();
   const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
   const baseUrl = opts.baseUrl ?? process.env.ANTHROPIC_BASE_URL;
-  const model = opts.model ?? process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'deepseek-v4-pro';
-  const providerName = opts.providerName ?? process.env.KODE_PROVIDER ?? 'anthropic';
+  const model = (opts.model && opts.model !== 'claude-sonnet-4-6') ? opts.model : process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? opts.model ?? 'claude-sonnet-4-6';
+  const providerName = opts.providerName ?? (model.toLowerCase().includes('deepseek') ? 'deepseek' : process.env.KODE_PROVIDER ?? 'anthropic');
 
   // ── Determine agent role ─────────────────────────────────────────
   const coordinatorMode = opts.coordinatorMode ?? false;
@@ -371,11 +371,21 @@ export function createQueryEngine(
  * @returns A Provider instance
  */
 function createProvider(name: string, config: ProviderConfig): Provider {
+  const isAnthropicEndpoint = config.baseUrl?.includes('/anthropic');
+
   switch (name) {
     case 'openai':
       return new OpenAICompatProvider(config, 'openai');
-    case 'deepseek':
+    case 'deepseek': {
+      // DeepSeek's /anthropic endpoint uses Anthropic Messages API format, not
+      // OpenAI Chat Completions.  When the base URL targets the /anthropic
+      // endpoint we must use AnthropicProvider so the SDK sends the correct
+      // request shape.
+      if (isAnthropicEndpoint) {
+        return new AnthropicProvider(config);
+      }
       return new DeepSeekProvider(config);
+    }
     case 'auto': {
       // Auto mode: create a router with all providers that have API keys configured
       const router = new ProviderRouter();
@@ -386,10 +396,14 @@ function createProvider(name: string, config: ProviderConfig): Provider {
       if (openaiKey) {
         router.register('openai', new OpenAICompatProvider({ ...config, apiKey: openaiKey }, 'openai'), ['gpt-4o', 'gpt-4o-mini']);
       }
-      // Register DeepSeek if key available
+      // Register DeepSeek if key available — use the right provider per endpoint
       const deepseekKey = process.env.DEEPSEEK_API_KEY;
       if (deepseekKey) {
-        router.register('deepseek', new DeepSeekProvider({ ...config, apiKey: deepseekKey }), ['deepseek-chat', 'deepseek-reasoner']);
+        const deepseekCfg = { ...config, apiKey: deepseekKey };
+        const deepseekProvider = isAnthropicEndpoint
+          ? new AnthropicProvider(deepseekCfg)
+          : new DeepSeekProvider(deepseekCfg);
+        router.register('deepseek', deepseekProvider, ['deepseek-chat', 'deepseek-reasoner']);
       }
       // Return a proxy provider that delegates to the router
       return createRouterProxy(router, config.apiKey ? 'anthropic' : undefined);
@@ -407,7 +421,7 @@ function createProvider(name: string, config: ProviderConfig): Provider {
 function createRouterProxy(router: ProviderRouter, _defaultProvider?: string): Provider {
   const routerRef = { current: router };
   const providerRef: { current: Provider | null } = { current: null };
-  const modelRef: { current: string } = { current: 'deepseek-v4-pro' };
+  const modelRef: { current: string } = { current: 'claude-sonnet-4-6' };
 
   return {
     async stream(modelConfig, system, messages, tools, onEvent) {
@@ -455,5 +469,5 @@ export function hasApiKey(): boolean {
  * Get the configured model name.
  */
 export function getConfiguredModel(): string {
-  return process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'deepseek-v4-pro';
+  return process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
 }

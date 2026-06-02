@@ -2,11 +2,11 @@
 
 <p align="center">
   <b>An open-source, enterprise-grade CLI agent coding tool</b><br/>
-  <em>Multi-provider LLM support, Agent Teams, and a powerful hook system</em>
+  <em>A Claude Code alternative with multi-provider support, Agent Teams, and a powerful hook system</em>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License: Apache 2.0" />
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" />
   <img src="https://img.shields.io/badge/TypeScript-5.7-blue" alt="TypeScript" />
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen" alt="Node.js >= 18.0.0" />
   <img src="https://img.shields.io/badge/tests-~500%20passed-success" alt="Tests" />
@@ -38,9 +38,9 @@ cat > ~/.kode/settings.json << 'EOF'
   "theme": "dark",
   "model_list": [
     {
-      "name": "deepseek-v4-pro",
-      "model": "deepseek-v4-pro",
-      "base_url": "https://api.deepseek.com/v1",
+      "name": "deepseek/deepseek-v4-pro",
+      "model": "deepseek-chat",
+      "base_url": "https://api.deepseek.com/anthropic",
       "auth_token_env": "DEEPSEEK_API_KEY",
       "provider": "deepseek"
     },
@@ -52,7 +52,7 @@ cat > ~/.kode/settings.json << 'EOF'
       "provider": "anthropic"
     }
   ],
-  "default_model": "deepseek-v4-pro"
+  "default_model": "deepseek/deepseek-v4-pro"
 }
 EOF
 
@@ -67,7 +67,7 @@ kode
 For a guided setup, run the installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AgenticMatrix/Kode-Agent/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/kode-agent/kode-agent/main/install.sh | bash
 ```
 
 ---
@@ -235,7 +235,7 @@ skills:
 
 | Feature | Kode Agent | Claude Code | Hermes-Agent |
 |---------|-----------|-------------|--------------|
-| **License** | Apache 2.0 | Proprietary | MIT |
+| **License** | MIT | Proprietary | MIT |
 | **Multi-Provider** | ✅ Anthropic + OpenAI + DeepSeek + Auto | ❌ Anthropic only | ✅ Multi-provider |
 | **Agent Teams** | ✅ Coordinator/Worker + SubagentBus | ❌ Single agent | ❌ Single agent |
 | **Hook System** | ✅ 27 events, Shell + JS | ⚠️ Limited hooks | ❌ No hooks |
@@ -283,9 +283,10 @@ export KODE_PROVIDER=openai
 export OPENAI_API_KEY="sk-..."
 
 # Use DeepSeek with Anthropic-compatible endpoint
-export KODE_PROVIDER=deepseek
-export DEEPSEEK_API_KEY="sk-..."
-export DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
+export KODE_PROVIDER=anthropic
+export ANTHROPIC_API_KEY="sk-..."
+export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
+export ANTHROPIC_MODEL="deepseek-chat"
 ```
 
 ### Configuration File (~/.kode/config.yaml)
@@ -293,8 +294,8 @@ export DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
 For persistent configuration, use `~/.kode/config.yaml`:
 
 ```yaml
-provider: deepseek
-model: deepseek-v4-pro
+provider: anthropic
+model: claude-sonnet-4-20250514
 
 providers:
   anthropic:
@@ -306,7 +307,7 @@ providers:
     maxRetries: 3
     timeoutMs: 120000
   deepseek:
-    baseUrl: https://api.deepseek.com/v1
+    baseUrl: https://api.deepseek.com/anthropic
     maxRetries: 3
     timeoutMs: 120000
 
@@ -326,21 +327,21 @@ You can also use `~/.kode/settings.json` (JSON format) for environment variables
   "theme": "dark",
   "model_list": [
     {
-      "name": "deepseek-v4-pro",
-      "model": "deepseek-v4-pro",
-      "base_url": "https://api.deepseek.com/v1",
-      "auth_token_env": "DEEPSEEK_API_KEY",
-      "provider": "deepseek"
-    },
-    {
-      "name": "anthropic/claude-sonnet-4-6",
+      "name": "claude-sonnet-4-6",
       "model": "claude-sonnet-4-6",
       "base_url": "https://api.anthropic.com/v1",
       "auth_token_env": "ANTHROPIC_API_KEY",
       "provider": "anthropic"
+    },
+    {
+      "name": "deepseek/deepseek-v4-pro",
+      "model": "deepseek-chat",
+      "base_url": "https://api.deepseek.com/anthropic",
+      "auth_token_env": "DEEPSEEK_API_KEY",
+      "provider": "deepseek"
     }
   ],
-  "default_model": "deepseek-v4-pro"
+  "default_model": "claude-sonnet-4-6"
 }
 ```
 
@@ -363,9 +364,9 @@ Place hook definitions in `~/.kode/hooks/*.json`:
 
 Supported events: `SessionStart`, `UserPromptSubmit`, `PreMessage`, `PostMessage`, `PreToolUse`, `PostToolUse`, `PostToolBatch`, `Stop`, `StopFailure`, `PreCompact`, `PostCompact`, `PermissionRequest`, `PermissionDenied`, `Notification`, `SubagentStart`, `SubagentStop`, and more.
 
-### Project Configuration (KODE.md)
+### Project Configuration (CLAUDE.md)
 
-Place a `KODE.md` file in your project root for project-specific instructions. Kode Agent automatically loads this as context at the start of every session (also supports `CLAUDE.md` and `CODEBUDDY.md` for compatibility):
+Place a `CLAUDE.md` file in your project root for project-specific instructions. Kode Agent automatically loads this as context at the start of every session:
 
 ```markdown
 # Project Overview
@@ -384,7 +385,7 @@ This is a Next.js e-commerce application with Prisma ORM and PostgreSQL.
 - API routes follow RESTful conventions
 ```
 
-Use `/init` in an interactive session to have Kode Agent auto-generate a `KODE.md` for your project.
+Use `/init` in an interactive session to have Kode Agent auto-generate a `CLAUDE.md` for your project.
 
 ---
 
@@ -442,7 +443,7 @@ pnpm ci
 
 ## License
 
-[Apache 2.0](LICENSE) © Kode Agent Contributors
+MIT © Kode Agent Contributors
 
 ---
 

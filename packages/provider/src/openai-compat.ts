@@ -210,6 +210,10 @@ export class OpenAICompatProvider implements Provider {
     return OPENAI_PRICING[model] ?? OPENAI_PRICING.default!;
   }
 
+  protected buildStreamUrl(baseUrl: string): string {
+    return `${baseUrl}/chat/completions`;
+  }
+
   // -----------------------------------------------------------------------
   // Internal Implementation
   // -----------------------------------------------------------------------
@@ -223,7 +227,7 @@ export class OpenAICompatProvider implements Provider {
   ): Promise<ProviderResponse> {
     const signal = this.abortController!.signal;
     const baseUrl = this.config.baseUrl ?? this.defaultBaseUrl;
-    const url = `${baseUrl}/chat/completions`;
+    const url = this.buildStreamUrl(baseUrl);
 
     // Convert messages to OpenAI format, with system prompt as first message
     const openaiMessages = this.convertMessages(system, messages);

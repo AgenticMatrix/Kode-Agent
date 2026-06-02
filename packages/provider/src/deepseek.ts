@@ -2,8 +2,8 @@
  * DeepSeek Provider — DeepSeek API via OpenAI-compatible endpoint.
  *
  * Extends OpenAICompatProvider with DeepSeek-specific optimizations:
- *   - Primary endpoint: https://api.deepseek.com/v1 (OpenAI-compatible)
- *   - DeepSeek V1 endpoint: https://api.deepseek.com/v1 (OpenAI-compatible)
+ *   - Primary endpoint: https://api.deepseek.com/anthropic (DeepSeek API)
+ *     → Final request URL: {baseUrl}/v1/chat/completions
  *   - Prefix caching optimization via X-DS-Prefix-Cache header
  *   - DeepSeek-specific pricing
  *   - Models: deepseek-chat (DeepSeek-V3), deepseek-reasoner (DeepSeek-R1)
@@ -28,7 +28,7 @@ const DEEPSEEK_PRICING: Record<string, { input: number; output: number }> = {
 
 export class DeepSeekProvider extends OpenAICompatProvider {
   constructor(config: ProviderConfig) {
-    super(config, 'deepseek', 'https://api.deepseek.com/v1');
+    super(config, 'deepseek', 'https://api.deepseek.com/anthropic');
   }
 
   // -----------------------------------------------------------------------
@@ -47,6 +47,8 @@ export class DeepSeekProvider extends OpenAICompatProvider {
   protected override getPricingForModel(model: string): { input: number; output: number } {
     return DEEPSEEK_PRICING[model] ?? DEEPSEEK_PRICING.default!;
   }
+
+  protected override buildStreamUrl(baseUrl: string): string { return `${baseUrl}/v1/chat/completions`; }
 
   override async listModels(): Promise<ModelInfo[]> {
     return [

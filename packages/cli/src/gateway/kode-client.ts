@@ -10,7 +10,7 @@
 
 import { EventEmitter } from 'node:events'
 import { execFile } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -79,16 +79,6 @@ function loadClaudeSettings(): ClaudeSettings {
   }
 }
 
-function resolveAuthToken(authTokenEnv?: string): string | undefined {
-  if (!authTokenEnv) return undefined
-  // If it looks like an env var name (uppercase with underscores), resolve it
-  if (/^[A-Z_][A-Z0-9_]*$/.test(authTokenEnv)) {
-    return process.env[authTokenEnv] ?? authTokenEnv
-  }
-  // Otherwise treat as a literal key value
-  return authTokenEnv
-}
-
 function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   model: string
   baseUrl?: string
@@ -96,6 +86,32 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   name: string
   provider: string
 } {
+  // 0. KODE_MODEL env var — highest priority (overrides all other sources)
+  const kodeModel = process.env.KODE_MODEL
+  if (kodeModel) {
+    // Look up in model_list first
+    if (settings.model_list) {
+      const entry = settings.model_list.find(
+        m => m.name === kodeModel || m.model === kodeModel,
+      )
+      if (entry) {
+        return {
+          model: entry.model,
+          baseUrl: entry.base_url,
+          apiKey: entry.auth_token_env,
+          name: entry.name,
+          provider: entry.provider ?? inferProvider(entry.name),
+        }
+      }
+    }
+    // Not in model_list — use KODE_MODEL directly as the model name
+    return {
+      model: kodeModel,
+      name: kodeModel,
+      provider: inferProvider(kodeModel),
+    }
+  }
+
   // 1. Find default model from model_list
   const defaultName = settings.default_model
   if (defaultName && settings.model_list) {
@@ -104,7 +120,7 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
       return {
         model: entry.model,
         baseUrl: entry.base_url,
-        apiKey: resolveAuthToken(entry.auth_token_env),
+        apiKey: entry.auth_token_env,
         name: entry.name,
         provider: entry.provider ?? inferProvider(entry.name),
       }
@@ -116,20 +132,19 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
     return {
       model: entry.model,
       baseUrl: entry.base_url,
-      apiKey: resolveAuthToken(entry.auth_token_env),
+      apiKey: entry.auth_token_env,
       name: entry.name,
       provider: entry.provider ?? inferProvider(entry.name),
     }
   }
   // 3. Legacy env fallback
   const env = settings.env ?? {}
-  const model = env.ANTHROPIC_MODEL ?? fallbackModel
   return {
-    model,
+    model: env.ANTHROPIC_MODEL ?? fallbackModel,
     baseUrl: env.ANTHROPIC_BASE_URL,
     apiKey: env.ANTHROPIC_AUTH_TOKEN,
-    name: model,
-    provider: inferProvider(model),
+    name: fallbackModel,
+    provider: 'anthropic',
   }
 }
 
@@ -197,7 +212,34 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
     this.setMaxListeners(0)
 
     const settings = loadClaudeSettings()
-    const resolved = resolveModelConfig(settings, 'deepseek-v4-pro')
+
+    // KODE_MODEL env var — highest-priority model override.
+    // Check before resolveModelConfig so the env var wins over settings.json.
+    const kodeModel = process.env.KODE_MODEL
+    let resolved: { model: string; baseUrl?: string; apiKey?: string; name: string; provider: string }
+    if (kodeModel) {
+      // Look up in model_list to get base_url / auth_token_env
+      const entry = settings.model_list?.find(
+        m => m.name === kodeModel || m.model === kodeModel,
+      )
+      if (entry) {
+        resolved = {
+          model: entry.model,
+          baseUrl: entry.base_url,
+          apiKey: entry.auth_token_env,
+          name: entry.name,
+          provider: entry.provider ?? inferProvider(entry.name),
+        }
+      } else {
+        resolved = {
+          model: kodeModel,
+          name: kodeModel,
+          provider: inferProvider(kodeModel),
+        }
+      }
+    } else {
+      resolved = resolveModelConfig(settings, 'claude-sonnet-4-6')
+    }
 
     this.model = resolved.model
     this.modelConfig = resolved
@@ -355,67 +397,33 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
           if (!sessionId) {
             return { removed: 0, after_messages: 0, before_messages: 0 } as unknown as T
           }
-
           const session = getSessionManager().get(sessionId)
           if (!session || session.messages.length === 0) {
             return { removed: 0, after_messages: 0, before_messages: 0 } as unknown as T
           }
-
           const beforeMessages = session.messages.length
-
-          // Publish "Compressing conversation…" via the compact status event
           this.publish({
             type: 'status.update',
             payload: { text: 'Compressing conversation…', kind: 'info' },
           } as GatewayEvent)
-
-          // Use the Compactor to compact the session messages
-          const compactor = new Compactor({
-            summarizeEnabled: false, // use snip-only for CLI mode
-          })
-
-          // Estimate tokens and determine if compaction is actually needed
+          const compactor = new Compactor({ summarizeEnabled: false })
           const contextBudget = 180_000
           const budget = compactor.computeBudget(session.messages, contextBudget)
-
           if (!compactor.needsCompaction(session.messages, contextBudget)) {
-            // Publish completion
             this.publish({
               type: 'status.update',
               payload: { text: 'Context is within budget — no compaction needed', kind: 'info' },
             } as GatewayEvent)
-            return {
-              removed: 0,
-              before_messages: beforeMessages,
-              after_messages: beforeMessages,
-              before_tokens: budget.current,
-              after_tokens: budget.current,
-            } as unknown as T
+            return { removed: 0, before_messages: beforeMessages, after_messages: beforeMessages, before_tokens: budget.current, after_tokens: budget.current } as unknown as T
           }
-
           try {
             const result = await compactor.compact(session.messages, contextBudget)
-
-            // Replace session messages with compacted ones
             session.messages = result.messages
-
-            // Publish completion with stats
             this.publish({
               type: 'status.update',
-              payload: {
-                text: `Compacted: ${result.messagesRemoved} messages removed, ${result.beforeTokens.toLocaleString()} → ${result.afterTokens.toLocaleString()} tokens`,
-                kind: 'info',
-              },
+              payload: { text: `Compacted: ${result.messagesRemoved} messages removed, ${result.beforeTokens.toLocaleString()} → ${result.afterTokens.toLocaleString()} tokens`, kind: 'info' },
             } as GatewayEvent)
-
-            return {
-              removed: result.messagesRemoved,
-              before_messages: beforeMessages,
-              after_messages: result.messages.length,
-              before_tokens: result.beforeTokens,
-              after_tokens: result.afterTokens,
-              summary: result.summary ? { note: result.summary } : undefined,
-            } as unknown as T
+            return { removed: result.messagesRemoved, before_messages: beforeMessages, after_messages: result.messages.length, before_tokens: result.beforeTokens, after_tokens: result.afterTokens, summary: result.summary ? { note: result.summary } : undefined } as unknown as T
           } catch {
             return { removed: 0, after_messages: beforeMessages, before_messages: beforeMessages } as unknown as T
           }
@@ -424,7 +432,7 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
         // ── Config ────────────────────────────────────────────
         case 'config.full': {
           const settings = loadClaudeSettings()
-          const resolved = resolveModelConfig(settings, 'deepseek-v4-pro')
+          const resolved = resolveModelConfig(settings, 'claude-sonnet-4-6')
           return {
             config: {
               display: {
@@ -454,7 +462,7 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
           switch (key) {
             case 'full': {
               const settings = loadClaudeSettings()
-              const resolved = resolveModelConfig(settings, 'deepseek-v4-pro')
+              const resolved = resolveModelConfig(settings, 'claude-sonnet-4-6')
               return {
                 config: {
                   display: {
@@ -498,8 +506,51 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
           return { value: env3[gkey] ?? '' } as unknown as T
         }
         case 'config.set': {
+          const key = (params?.key as string) ?? ''
           const value = (params?.value as string) ?? ''
-          return { value } as unknown as T
+          const settings = loadClaudeSettings()
+
+          if (key === 'model' && value) {
+            // Find the model in model_list by name
+            const modelList = settings.model_list ?? []
+            const entry = modelList.find(m => m.name === value)
+            if (entry) {
+              // Update env vars in settings to match the selected model entry
+              settings.env = settings.env ?? {}
+              settings.env.ANTHROPIC_MODEL = entry.model
+              if (entry.base_url) settings.env.ANTHROPIC_BASE_URL = entry.base_url
+              if (entry.auth_token_env) settings.env.ANTHROPIC_AUTH_TOKEN = entry.auth_token_env
+              settings.default_model = value
+
+              // Persist to disk
+              writeFileSync(
+                join(homedir(), '.kode', 'settings.json'),
+                JSON.stringify(settings, null, 2),
+              )
+
+              // Update runtime state so the change takes effect immediately
+              this.model = entry.model
+              this.modelConfig = {
+                model: entry.model,
+                baseUrl: entry.base_url,
+                apiKey: entry.auth_token_env,
+                name: entry.name,
+                provider: entry.provider ?? inferProvider(entry.name),
+              }
+              this.log(`config.set model=${value} → ${entry.model} (provider=${this.modelConfig.provider})`)
+            }
+          } else {
+            // Generic key: update env[key] in settings and persist
+            settings.env = settings.env ?? {}
+            settings.env[key] = value
+            writeFileSync(
+              join(homedir(), '.kode', 'settings.json'),
+              JSON.stringify(settings, null, 2),
+            )
+            this.log(`config.set ${key}=${value}`)
+          }
+
+          return { key, value } as unknown as T
         }
 
         // ── Commands ───────────────────────────────────────────
@@ -750,6 +801,11 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
           kind: 'info',
         },
       })
+      // TODO (Phase 2): Coordinator task allocation loop —
+      //   After each turn, check for idle workers and assign pending
+      //   sub-tasks from the task queue. The Agent Loop already drains
+      //   completed agents via SubagentBus at the start of each turn
+      //   (see query.ts:subagentBus.drainCompleted()).
       this.log(`coordinator: task allocation placeholder (workers=${this.maxWorkers})`)
     }
 

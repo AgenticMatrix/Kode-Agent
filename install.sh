@@ -180,18 +180,18 @@ echo -e "${YELLOW}║  API Key Configuration                          ║${NC}"
 echo -e "${YELLOW}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
 echo "Coder Agent supports multiple LLM providers:"
-echo "  - Anthropic (default):  ANTHROPIC_API_KEY"
-echo "  - DeepSeek:             DEEPSEEK_API_KEY"
+echo "  - DeepSeek (default):   DEEPSEEK_API_KEY"
+echo "  - Anthropic:            ANTHROPIC_API_KEY"
 echo "  - OpenAI:               OPENAI_API_KEY"
 echo ""
 
 # Check if API keys are already set
-if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-  echo -e "${GREEN}✅ ANTHROPIC_API_KEY is already set${NC}"
+if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
+  echo -e "${GREEN}✅ DEEPSEEK_API_KEY is already set${NC}"
 else
-  echo -e "${YELLOW}⚠️  ANTHROPIC_API_KEY is not set${NC}"
+  echo -e "${YELLOW}⚠️  DEEPSEEK_API_KEY is not set${NC}"
   echo ""
-  echo "To set it now, enter your Anthropic API key (or press Enter to skip):"
+  echo "To set it now, enter your DeepSeek API key (or press Enter to skip):"
   read -r -p "API Key: " api_key
 
   if [ -n "$api_key" ]; then
@@ -208,17 +208,17 @@ else
     if [ -n "$SHELL_CONFIG" ]; then
       echo "" >> "$SHELL_CONFIG"
       echo "# Coder Agent — API Key" >> "$SHELL_CONFIG"
-      echo "export ANTHROPIC_API_KEY=${api_key}" >> "$SHELL_CONFIG"
+      echo "export DEEPSEEK_API_KEY=${api_key}" >> "$SHELL_CONFIG"
       echo -e "${GREEN}✅ API key added to ${SHELL_CONFIG}${NC}"
       echo ""
       echo -e "${YELLOW}Run 'source ${SHELL_CONFIG}' or restart your terminal to apply.${NC}"
     else
       echo -e "${YELLOW}Could not detect shell config file. Add this to your shell profile:${NC}"
-      echo "  export ANTHROPIC_API_KEY=${api_key}"
+      echo "  export DEEPSEEK_API_KEY=${api_key}"
     fi
   else
     echo "Skipped. You can set it later:"
-    echo "  export ANTHROPIC_API_KEY=your-key-here"
+    echo "  export DEEPSEEK_API_KEY=your-key-here"
   fi
 fi
 

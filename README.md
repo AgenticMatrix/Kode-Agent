@@ -21,54 +21,23 @@
 ## Quick Start
 
 ```bash
-# Prerequisites: Node.js >= 18.0.0 (Node.js >= 22.0.0 recommended), pnpm >= 9.15.0
+# Prerequisites: Node.js >= 18.0.0 (>= 22.0.0 recommended)
 
-# Install dependencies
-pnpm install
+# Clone the repo
+git clone https://github.com/AgenticMatrix/Coder-Agent.git
+cd Coder-Agent
 
-# Build all packages
-pnpm build
+# One-click install (builds, links `coder` command globally, sets up config)
+./install.sh --local
 
-# Configure your API key
-export ANTHROPIC_API_KEY="sk-ant-api03-your-key-here"
+# Set your API key (DeepSeek by default)
+export DEEPSEEK_API_KEY="sk-your-key-here"
 
-# Or store it in ~/.coder/settings.json
-cat > ~/.coder/settings.json << 'EOF'
-{
-  "theme": "dark",
-  "model_list": [
-    {
-      "name": "deepseek/deepseek-v4-pro",
-      "model": "deepseek-chat",
-      "base_url": "https://api.deepseek.com/anthropic",
-      "auth_token_env": "DEEPSEEK_API_KEY",
-      "provider": "deepseek"
-    },
-    {
-      "name": "anthropic/claude-sonnet-4-6",
-      "model": "claude-sonnet-4-6",
-      "base_url": "https://api.anthropic.com/v1",
-      "auth_token_env": "ANTHROPIC_API_KEY",
-      "provider": "anthropic"
-    }
-  ],
-  "default_model": "deepseek/deepseek-v4-pro"
-}
-EOF
-
-# Run Coder Agent
-node packages/cli/dist/entry.js
-
-# Or install globally
-pnpm link --global
+# Start coding
 coder
 ```
 
-For a guided setup, run the installer:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/AgenticMatrix/Coder-Agent/main/install.sh | bash
-```
+> **Note:** The installer defaults to **DeepSeek** as the LLM provider. To use Anthropic or OpenAI, set the corresponding API key and edit `~/.coder/settings.json`.
 
 ---
 

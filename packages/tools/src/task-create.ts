@@ -17,7 +17,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,7 +58,7 @@ interface TaskRecord {
 }
 
 function getTasksDir(sessionId: string): string {
-  const dir = join(homedir(), '.kode', 'sessions', sessionId, 'tasks');
+  const dir = join(homedir(), '.coder', 'sessions', sessionId, 'tasks');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }

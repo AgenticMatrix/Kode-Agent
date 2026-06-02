@@ -2,11 +2,11 @@
  * cron-create.ts — CronCreateTool: Schedule timed prompts (cron jobs)
  *
  * Creates persistent or session-only scheduled tasks that fire prompts
- * at specified cron intervals. Tasks are stored in ~/.kode/scheduled_tasks.json.
+ * at specified cron intervals. Tasks are stored in ~/.coder/scheduled_tasks.json.
  *
  * Reference: Claude Code's CronCreate tool
  */
-import { BaseTool, type ToolContext, type ToolDefinition, type ValidationResult } from '@kode/shared';
+import { BaseTool, type ToolContext, type ToolDefinition, type ValidationResult } from '@coder/shared';
 export interface CronCreateInput {
     /** Standard 5-field cron expression: "minute hour dom month dow" */
     cron: string;

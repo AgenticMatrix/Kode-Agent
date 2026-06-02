@@ -2,15 +2,15 @@
  * subagent-bus.ts — Core-side SubagentBus engine-runner integration
  *
  * Provides createRunAgentCallback() — a factory that returns a
- * RunAgentCallback wired to the Kode Agent runtime (QueryEngine,
+ * RunAgentCallback wired to the Coder Agent runtime (QueryEngine,
  * SessionManager, ToolRegistry).
  *
- * The shared @kode/shared SubagentBus is a pure coordinator. Engine
- * creation happens here in @kode/core where QueryEngine lives.
+ * The shared @coder/shared SubagentBus is a pure coordinator. Engine
+ * creation happens here in @coder/core where QueryEngine lives.
  *
  * Usage (in CLI layer):
- *   import { getSubagentBus } from '@kode/shared';
- *   import { createRunAgentCallback } from '@kode/core';
+ *   import { getSubagentBus } from '@coder/shared';
+ *   import { createRunAgentCallback } from '@coder/core';
  *
  *   const bus = getSubagentBus();
  *   bus.initialize({
@@ -20,7 +20,7 @@
  * Architecture reference: ARCHITECTURE.md §4.3 (Sub-Agent System)
  */
 
-import type { Message, StreamEvent, AssistantMessage } from '@kode/shared';
+import type { Message, StreamEvent, AssistantMessage } from '@coder/shared';
 import type {
   SubagentEntry,
   SubagentSpawnConfig,
@@ -28,7 +28,7 @@ import type {
   ForkSessionConfig,
   RunForkAgentCallback,
   WorkerConfig,
-} from '@kode/shared';
+} from '@coder/shared';
 import { QueryEngine } from './query-engine.js';
 import { ToolRegistry } from './tool-registry.js';
 import { SessionManager } from './session.js';

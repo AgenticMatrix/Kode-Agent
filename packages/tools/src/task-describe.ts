@@ -1,7 +1,7 @@
 /**
  * task-describe.ts — TaskDescribe tool: retrieve detailed task information
  *
- * Reads the task record from disk (~/.kode/sessions/<sessionId>/tasks/<taskId>.json)
+ * Reads the task record from disk (~/.coder/sessions/<sessionId>/tasks/<taskId>.json)
  * and returns full details including name, description, status, dependencies,
  * agent assignment, timestamps, and result summary.
  *
@@ -16,7 +16,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 import { type TaskRecord, getTaskPath } from './task-create.js';
 
 // ---------------------------------------------------------------------------

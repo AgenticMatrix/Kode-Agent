@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, useInput } from '@kode/tui'
+import { Text, useInput } from '@coder/tui'
 
 import type { Theme } from '../theme.js'
 

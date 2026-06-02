@@ -1,7 +1,7 @@
 /**
  * cron-scheduler.ts — Cron task scheduler
  *
- * Manages timed prompts from ~/.kode/scheduled_tasks.json. Parses cron
+ * Manages timed prompts from ~/.coder/scheduled_tasks.json. Parses cron
  * expressions, computes next-run times, and fires prompts by enqueueing
  * them into the active Agent Loop via a registered callback.
  *
@@ -24,7 +24,7 @@ import fs from 'node:fs';
 
 /**
  * Scheduled task descriptor — defined here to avoid cross-package imports.
- * Mirrors the interface from @kode/tools cron-create.ts.
+ * Mirrors the interface from @coder/tools cron-create.ts.
  */
 export interface ScheduledTask {
   id: string;
@@ -86,7 +86,7 @@ function cronComputeNext(cron: string, from: Date): Date {
 // ---------------------------------------------------------------------------
 
 export interface CronSchedulerConfig {
-  /** Path to scheduled_tasks.json (default: ~/.kode/scheduled_tasks.json) */
+  /** Path to scheduled_tasks.json (default: ~/.coder/scheduled_tasks.json) */
   tasksPath?: string;
   /** Callback invoked when a task fires */
   onFire?: (task: ScheduledTask) => void;
@@ -113,7 +113,7 @@ export class CronScheduler extends EventEmitter {
 
   constructor(config: CronSchedulerConfig = {}) {
     super();
-    this.tasksPath = config.tasksPath ?? path.join(homedir(), '.kode', 'scheduled_tasks.json');
+    this.tasksPath = config.tasksPath ?? path.join(homedir(), '.coder', 'scheduled_tasks.json');
     this.onFire = config.onFire ?? null;
     if (config.autoStart !== false) {
       this.start();
@@ -351,7 +351,7 @@ export function getCronScheduler(): CronScheduler | null {
 export function setCronScheduler(scheduler: CronScheduler): void {
   _scheduler = scheduler;
   // Expose on globalThis for tool integration
-  (globalThis as Record<string, unknown>).__kodeCronScheduler = scheduler;
+  (globalThis as Record<string, unknown>).__coderCronScheduler = scheduler;
 }
 
 export function resetCronScheduler(): void {
@@ -359,5 +359,5 @@ export function resetCronScheduler(): void {
     _scheduler.stop();
   }
   _scheduler = null;
-  delete (globalThis as Record<string, unknown>).__kodeCronScheduler;
+  delete (globalThis as Record<string, unknown>).__coderCronScheduler;
 }

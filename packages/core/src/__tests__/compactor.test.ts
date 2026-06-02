@@ -3,7 +3,7 @@ import {
   Compactor,
   DEFAULT_COMPACTOR_CONFIG,
 } from '../context/compactor.js';
-import type { Message } from '@kode/shared';
+import type { Message } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Helpers

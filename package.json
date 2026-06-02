@@ -1,8 +1,8 @@
 {
-  "name": "kode-agent",
+  "name": "coder-agent",
   "version": "0.1.0",
   "private": true,
-  "description": "Kode Agent — An open-source, enterprise-grade CLI coding agent with multi-provider support, Agent Teams, and a powerful hook system",
+  "description": "Coder Agent — An open-source, enterprise-grade CLI coding agent with multi-provider support, Agent Teams, and a powerful hook system",
   "type": "module",
   "scripts": {
     "dev": "pnpm --recursive run dev",
@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/AgenticMatrix/Kode-Agent"
+    "url": "https://github.com/AgenticMatrix/Coder-Agent"
   },
   "license": "Apache-2.0",
   "keywords": [
@@ -56,9 +56,9 @@
     "mcp",
     "hooks"
   ],
-  "author": "Kode Agent Contributors",
+  "author": "Coder Agent Contributors",
   "bugs": {
-    "url": "https://github.com/AgenticMatrix/Kode-Agent/issues"
+    "url": "https://github.com/AgenticMatrix/Coder-Agent/issues"
   },
-  "homepage": "https://github.com/AgenticMatrix/Kode-Agent#readme"
+  "homepage": "https://github.com/AgenticMatrix/Coder-Agent#readme"
 }

@@ -1,9 +1,9 @@
 /**
  * rules-manager.ts — Path-scoped rules system (Phase 5 Sprint 7)
  *
- * Scans .kode/rules/*.md files, extracts YAML frontmatter with optional
+ * Scans .coder/rules/*.md files, extracts YAML frontmatter with optional
  * pathPattern glob, and returns only rules whose glob matches the currently
- * active file path. Matches .kode/rules/*.md pattern for auto-loading rules by file path.
+ * active file path. Matches .coder/rules/*.md pattern for auto-loading rules by file path.
  *
  * Rule file format:
  *   ---
@@ -65,7 +65,7 @@ export interface ActiveRulesContext {
 // ---------------------------------------------------------------------------
 
 /** Directory name containing rule files */
-const RULES_DIR = '.kode/rules';
+const RULES_DIR = '.coder/rules';
 
 /** Maximum individual rule file size (50 KB) */
 const MAX_RULE_SIZE_BYTES = 50 * 1024;
@@ -83,12 +83,12 @@ export class RuleManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Scan the .kode/rules/ directory under cwd and parse all .md files.
+   * Scan the .coder/rules/ directory under cwd and parse all .md files.
    *
    * Results are cached per project root. Call this once at session start
    * or on tool invocation. Subsequent calls return the cached rules.
    *
-   * @param cwd — Project working directory (used to locate .kode/rules/)
+   * @param cwd — Project working directory (used to locate .coder/rules/)
    * @returns Array of parsed RuleFile objects (may be empty if no rules dir)
    */
   loadRules(cwd: string): RuleFile[] {

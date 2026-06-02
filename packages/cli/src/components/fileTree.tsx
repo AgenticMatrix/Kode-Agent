@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { Box, NoSelect, Text } from '@kode/tui';
+import { Box, NoSelect, Text } from '@coder/tui';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 import type { FileNode } from '../lib/fileTreeBuilder.js';
@@ -220,67 +220,67 @@ export const FileTree = memo(function FileTree({
 
 export function createMockTree(): FileNode {
   return {
-    name: 'kode-agent',
-    path: '/project/kode-agent',
+    name: 'coder-agent',
+    path: '/project/coder-agent',
     type: 'directory',
     depth: 0,
     expanded: true,
     children: [
       {
         name: 'packages',
-        path: '/project/kode-agent/packages',
+        path: '/project/coder-agent/packages',
         type: 'directory',
         depth: 1,
         expanded: true,
         children: [
           {
             name: 'core',
-            path: '/project/kode-agent/packages/core',
+            path: '/project/coder-agent/packages/core',
             type: 'directory',
             depth: 2,
             expanded: false,
             children: [
-              { name: 'src', path: '/project/kode-agent/packages/core/src', type: 'directory', depth: 3, expanded: false, children: [] },
+              { name: 'src', path: '/project/coder-agent/packages/core/src', type: 'directory', depth: 3, expanded: false, children: [] },
             ],
           },
           {
             name: 'cli',
-            path: '/project/kode-agent/packages/cli',
+            path: '/project/coder-agent/packages/cli',
             type: 'directory',
             depth: 2,
             expanded: false,
             children: [
-              { name: 'src', path: '/project/kode-agent/packages/cli/src', type: 'directory', depth: 3, expanded: false, children: [] },
+              { name: 'src', path: '/project/coder-agent/packages/cli/src', type: 'directory', depth: 3, expanded: false, children: [] },
             ],
           },
           {
             name: 'shared',
-            path: '/project/kode-agent/packages/shared',
+            path: '/project/coder-agent/packages/shared',
             type: 'directory',
             depth: 2,
             expanded: false,
             children: [
-              { name: 'src', path: '/project/kode-agent/packages/shared/src', type: 'directory', depth: 3, expanded: false, children: [] },
+              { name: 'src', path: '/project/coder-agent/packages/shared/src', type: 'directory', depth: 3, expanded: false, children: [] },
             ],
           },
         ],
       },
       {
         name: 'package.json',
-        path: '/project/kode-agent/package.json',
+        path: '/project/coder-agent/package.json',
         type: 'file',
         depth: 1,
         gitStatus: 'M',
       },
       {
         name: 'README.md',
-        path: '/project/kode-agent/README.md',
+        path: '/project/coder-agent/README.md',
         type: 'file',
         depth: 1,
       },
       {
         name: 'pnpm-lock.yaml',
-        path: '/project/kode-agent/pnpm-lock.yaml',
+        path: '/project/coder-agent/pnpm-lock.yaml',
         type: 'file',
         depth: 1,
       },

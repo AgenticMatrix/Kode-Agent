@@ -1,19 +1,19 @@
-import { withInkSuspended } from '@kode/tui'
+import { withInkSuspended } from '@coder/tui'
 
-import { launchKodeCommand } from '../../../lib/externalCli.js'
+import { launchCoderCommand } from '../../../lib/externalCli.js'
 import { runExternalSetup } from '../../setupHandoff.js'
 import type { SlashCommand } from '../types.js'
 
 export const setupCommands: SlashCommand[] = [
   {
-    help: 'run full setup wizard (launches `kode setup`)',
+    help: 'run full setup wizard (launches `coder setup`)',
     name: 'setup',
     run: (arg, ctx) =>
       void runExternalSetup({
         args: ['setup', ...arg.split(/\s+/).filter(Boolean)],
         ctx,
         done: 'setup complete — starting session…',
-        launcher: launchKodeCommand,
+        launcher: launchCoderCommand,
         suspend: withInkSuspended
       })
   }

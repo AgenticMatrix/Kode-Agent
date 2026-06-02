@@ -15,7 +15,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // I/O Types
@@ -94,7 +94,7 @@ export class WriteTool extends BaseTool<WriteInput, WriteOutput> {
     const existed = existsSync(filePath);
 
     // Atomic write: write to .tmp, then rename
-    const tmpPath = `${filePath}.kode-tmp-${Date.now()}`;
+    const tmpPath = `${filePath}.coder-tmp-${Date.now()}`;
     try {
       writeFileSync(tmpPath, input.content, 'utf-8');
       renameSync(tmpPath, filePath);

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { useStdin, withInkSuspended } from '@kode/tui'
+import { useStdin, withInkSuspended } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import { useCallback, useMemo, useState } from 'react'
 
@@ -268,7 +268,7 @@ export function useComposerState({
   )
 
   const openEditor = useCallback(async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'kode-'))
+    const dir = mkdtempSync(join(tmpdir(), 'coder-'))
     const file = join(dir, 'prompt.md')
     const [cmd, ...args] = resolveEditor()
 

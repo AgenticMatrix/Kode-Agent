@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BashTool } from '../bash.js';
-import { RiskLevel } from '@kode/shared';
+import { RiskLevel } from '@coder/shared';
 
 describe('BashTool', () => {
   const tool = new BashTool();

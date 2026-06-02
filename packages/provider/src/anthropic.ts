@@ -8,8 +8,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { MessageParam, ContentBlockParam, TextBlockParam, Tool } from '@anthropic-ai/sdk/resources/messages.mjs';
 
-import type { Message } from '@kode/shared';
-import type { ToolDefinition } from '@kode/shared';
+import type { Message } from '@coder/shared';
+import type { ToolDefinition } from '@coder/shared';
 
 import type {
   Provider,
@@ -127,7 +127,7 @@ export class AnthropicProvider implements Provider {
   ): Promise<ProviderResponse> {
     const signal = this.abortController!.signal;
 
-    // Convert Kode tool definitions to Anthropic format.
+    // Convert Coder tool definitions to Anthropic format.
     // Anthropic SDK requires input_schema to have at minimum { type: 'object' }.
     const anthropicTools: Tool[] | undefined = tools.length > 0
       ? tools.map((tool) => ({

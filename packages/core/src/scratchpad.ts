@@ -1,7 +1,7 @@
 /**
  * Scratchpad — Shared filesystem for cross-Worker communication
  *
- * Provides a persistent, shared directory (~/.kode/scratchpad/) where
+ * Provides a persistent, shared directory (~/.coder/scratchpad/) where
  * Worker agents can read and write files without permission approval.
  *
  * Features:
@@ -35,7 +35,7 @@ import { randomUUID } from 'node:crypto';
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_BASE_DIR = join(homedir(), '.kode', 'scratchpad');
+const DEFAULT_BASE_DIR = join(homedir(), '.coder', 'scratchpad');
 const SHARED_DIR_NAME = 'shared';
 const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LOCK_POLL_INTERVAL_MS = 100;
@@ -92,7 +92,7 @@ export class Scratchpad {
       }
 
       // Atomic write: write to .tmp then rename
-      const tmpPath = `${filePath}.kode-tmp-${randomUUID()}`;
+      const tmpPath = `${filePath}.coder-tmp-${randomUUID()}`;
       try {
         writeFileSync(tmpPath, content, 'utf-8');
         renameSync(tmpPath, filePath);
@@ -304,7 +304,7 @@ export class Scratchpad {
     this.ensureDir(sharedDir);
 
     const filePath = join(sharedDir, filename);
-    const tmpPath = `${filePath}.kode-tmp-${randomUUID()}`;
+    const tmpPath = `${filePath}.coder-tmp-${randomUUID()}`;
 
     try {
       writeFileSync(tmpPath, content, 'utf-8');
@@ -376,7 +376,7 @@ export class Scratchpad {
             }
 
             // Remove temporary files
-            if (entry.name.includes('.kode-tmp-') && (now - stat.mtimeMs > 60 * 1000)) {
+            if (entry.name.includes('.coder-tmp-') && (now - stat.mtimeMs > 60 * 1000)) {
               unlinkSync(fullPath);
               removed++;
               continue;
@@ -432,7 +432,7 @@ let _instance: Scratchpad | null = null;
 
 /**
  * Get the process-wide Scratchpad singleton.
- * Creates it with the default ~/.kode/scratchpad/ path on first call.
+ * Creates it with the default ~/.coder/scratchpad/ path on first call.
  */
 export function getScratchpad(): Scratchpad {
   if (!_instance) {

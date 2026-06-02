@@ -16,7 +16,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 import { type TaskRecord, getTasksDir } from './task-create.js';
 
 // ---------------------------------------------------------------------------

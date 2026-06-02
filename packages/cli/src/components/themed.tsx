@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text } from '@kode/tui'
+import { Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import type { ReactNode } from 'react'
 

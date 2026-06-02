@@ -1,7 +1,7 @@
 /**
  * query.ts — AsyncGenerator-driven Agent Loop
  *
- * The core of Kode Agent — an AsyncGenerator that yields messages
+ * The core of Coder Agent — an AsyncGenerator that yields messages
  * (stream_event / assistant / user / system / error / progress)
  * consumed by QueryEngine.submitMessage() via for-await.
  *
@@ -23,16 +23,16 @@ import type {
   CompactMetadata,
   ToolProgress,
   DeferredPermission,
-} from '@kode/shared';
-import { AgentError, RiskLevel } from '@kode/shared';
+} from '@coder/shared';
+import { AgentError, RiskLevel } from '@coder/shared';
 import { ToolRegistry } from './tool-registry.js';
 import { PermissionEngine } from './permission/engine.js';
 import { SessionManager } from './session.js';
 import { CheckpointManager } from './checkpoint.js';
 import type { SystemPrompt } from './system-prompt/assembler.js';
-import type { ToolContext } from '@kode/shared';
-import type { SubagentBus } from '@kode/shared';
-import { formatTaskNotification } from '@kode/shared';
+import type { ToolContext } from '@coder/shared';
+import type { SubagentBus } from '@coder/shared';
+import { formatTaskNotification } from '@coder/shared';
 import type { HookManager } from './hooks/manager.js';
 import { BudgetStore } from './budget-store.js';
 import { Compactor } from './context/compactor.js';

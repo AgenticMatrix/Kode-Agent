@@ -35,19 +35,19 @@ importers:
 
   packages/cli:
     dependencies:
-      '@kode/core':
+      '@coder/core':
         specifier: workspace:*
         version: link:../core
-      '@kode/provider':
+      '@coder/provider':
         specifier: workspace:*
         version: link:../provider
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
-      '@kode/tools':
+      '@coder/tools':
         specifier: workspace:*
         version: link:../tools
-      '@kode/tui':
+      '@coder/tui':
         specifier: workspace:*
         version: link:../tui
       '@nanostores/react':
@@ -81,10 +81,10 @@ importers:
 
   packages/core:
     dependencies:
-      '@kode/provider':
+      '@coder/provider':
         specifier: workspace:*
         version: link:../provider
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -97,7 +97,7 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
 
@@ -106,7 +106,7 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.99.0
         version: 0.99.0
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -135,7 +135,7 @@ importers:
 
   packages/skills:
     dependencies:
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -148,7 +148,7 @@ importers:
 
   packages/tools:
     dependencies:
-      '@kode/shared':
+      '@coder/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:

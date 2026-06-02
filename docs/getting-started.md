@@ -1,6 +1,6 @@
-# Getting Started with Kode Agent
+# Getting Started with Coder Agent
 
-Kode Agent is a terminal-native AI coding agent that understands your codebase and
+Coder Agent is a terminal-native AI coding agent that understands your codebase and
 executes multi-step engineering tasks. It supports both single-agent and
 coordinator/worker modes.
 
@@ -18,26 +18,26 @@ coordinator/worker modes.
 ### One-Click Install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/AgenticMatrix/Kode-Agent/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AgenticMatrix/Coder-Agent/main/install.sh | bash
 ```
 
 The installer will:
 1. Verify your Node.js version
-2. Install `kode-agent` globally via npm
-3. Create `~/.kode/` with session storage and skill directories
+2. Install `coder-agent` globally via npm
+3. Create `~/.coder/` with session storage and skill directories
 4. Prompt you to configure your Anthropic API key
 
 ### npm
 
 ```bash
-npm install -g kode-agent
+npm install -g coder-agent
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/AgenticMatrix/Kode-Agent.git
-cd kode-agent
+git clone https://github.com/AgenticMatrix/Coder-Agent.git
+cd coder-agent
 pnpm install
 pnpm build
 pnpm link --global
@@ -47,7 +47,7 @@ pnpm link --global
 
 ### API Keys
 
-Kode Agent supports multiple LLM providers. Set at least one:
+Coder Agent supports multiple LLM providers. Set at least one:
 
 ```bash
 # Anthropic (default)
@@ -65,7 +65,7 @@ across terminal sessions.
 
 ### Provider Selection
 
-Set the provider and model in `~/.kode/config.yaml`:
+Set the provider and model in `~/.coder/config.yaml`:
 
 ```yaml
 provider: deepseek
@@ -75,8 +75,8 @@ model: deepseek-v4-pro
 Or via environment variables:
 
 ```bash
-export KODE_PROVIDER=deepseek
-export KODE_MODEL=deepseek-chat
+export CODER_PROVIDER=deepseek
+export CODER_MODEL=deepseek-chat
 ```
 
 See [Configuration](./configuration.md) for all options.
@@ -89,7 +89,7 @@ Start an interactive TUI session in your project directory:
 
 ```bash
 cd my-project
-kode
+coder
 ```
 
 The Terminal UI shows:
@@ -103,7 +103,7 @@ The Terminal UI shows:
 Ask a single question without entering interactive mode:
 
 ```bash
-kode "Explain the authentication flow in this project"
+coder "Explain the authentication flow in this project"
 ```
 
 ### Coordinator Mode
@@ -111,23 +111,23 @@ kode "Explain the authentication flow in this project"
 Run a coordinator that delegates work to parallel worker agents:
 
 ```bash
-kode --coordinator "Fix all TypeScript errors across the codebase"
+coder --coordinator "Fix all TypeScript errors across the codebase"
 ```
 
 Control the number of workers:
 
 ```bash
-kode --coordinator --workers 4 "Write tests for all untested modules"
+coder --coordinator --workers 4 "Write tests for all untested modules"
 ```
 
 ### Resume a Session
 
 ```bash
 # Resume the most recent session
-kode --continue
+coder --continue
 
 # Resume a specific session by ID
-kode --resume sess_abc123
+coder --resume sess_abc123
 ```
 
 ### Fork a Session
@@ -135,12 +135,12 @@ kode --resume sess_abc123
 Create a new session from a previous conversation at a specific turn:
 
 ```bash
-kode --fork-session sess_abc123 --fork-turn 5
+coder --fork-session sess_abc123 --fork-turn 5
 ```
 
-## Project Instructions — KODE.md
+## Project Instructions — CODER.md
 
-Create a `KODE.md` file at the root of your project to give the agent
+Create a `CODER.md` file at the root of your project to give the agent
 project-specific context. This file is read automatically at the start of every
 session. (Also supports `CLAUDE.md` and `CODEBUDDY.md` for compatibility.)
 
@@ -172,7 +172,7 @@ This is a Next.js e-commerce application with Prisma ORM and PostgreSQL.
 
 ## Session Management
 
-Sessions are stored in `~/.kode/sessions/` as JSON files. Each session contains:
+Sessions are stored in `~/.coder/sessions/` as JSON files. Each session contains:
 - The full message transcript
 - Checkpoints at each turn boundary
 - Tool usage history
@@ -190,18 +190,18 @@ Sessions are stored in `~/.kode/sessions/` as JSON files. Each session contains:
 
 ## Permissions
 
-Kode Agent asks for permission before executing file writes or shell commands.
+Coder Agent asks for permission before executing file writes or shell commands.
 You can configure the permission mode:
 
 ```bash
 # Always ask (default)
-kode --permission default
+coder --permission default
 
 # Auto-accept safe operations
-kode --permission accept-edits
+coder --permission accept-edits
 
 # Bypass all prompts (use with caution)
-kode --permission bypass
+coder --permission bypass
 ```
 
 ## Next Steps

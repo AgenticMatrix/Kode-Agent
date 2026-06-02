@@ -1,7 +1,7 @@
 /**
- * @kode/tools — Barrel export for all Kode Agent tools.
+ * @coder/tools — Barrel export for all Coder Agent tools.
  *
- * Each tool is exported as a class. Use with @kode/core ToolRegistry.
+ * Each tool is exported as a class. Use with @coder/core ToolRegistry.
  */
 
 // Tool implementations
@@ -106,4 +106,4 @@ export {
   type ToolContext,
   type ValidationResult,
   type ToolExecutionResult,
-} from '@kode/shared';
+} from '@coder/shared';

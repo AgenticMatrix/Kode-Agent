@@ -11,13 +11,13 @@ import type {
   CompletionUsage,
   StreamEvent as SharedStreamEvent,
   StopReason,
-} from '@kode/shared';
-import type { JSONSchema } from '@kode/shared';
-import { createAssistantMessage, RiskLevel } from '@kode/shared';
+} from '@coder/shared';
+import type { JSONSchema } from '@coder/shared';
+import { createAssistantMessage, RiskLevel } from '@coder/shared';
 import type { CallModelParams } from './query.js';
-import type { Provider, ProviderConfig, ProviderResponse, ThinkingConfig, ModelConfig } from '@kode/provider';
-import type { StreamEvent as ProviderStreamEvent } from '@kode/provider';
-import { AnthropicProvider } from '@kode/provider';
+import type { Provider, ProviderConfig, ProviderResponse, ThinkingConfig, ModelConfig } from '@coder/provider';
+import type { StreamEvent as ProviderStreamEvent } from '@coder/provider';
+import { AnthropicProvider } from '@coder/provider';
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -204,7 +204,7 @@ function createConverter(): Converter {
                   type: 'thinking',
                   thinking: event.thinking,
                   signature: event.signature,
-                } as import('@kode/shared').ContentBlock,
+                } as import('@coder/shared').ContentBlock,
               };
             }
             case 'delta':

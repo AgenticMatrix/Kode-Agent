@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useInput, useStdout } from '@kode/tui'
+import { Box, Text, useInput, useStdout } from '@coder/tui'
 import { useEffect, useState } from 'react'
 
 import type { IGatewayClient } from '../gateway/client.js'

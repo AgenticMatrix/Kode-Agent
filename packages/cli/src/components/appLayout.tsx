@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@kode/tui'
+import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import { Fragment, memo, useMemo, useRef } from 'react'
 
@@ -387,9 +387,9 @@ const StatusRulePane = memo(function StatusRulePane({
 
   // Derive mode label from environment: COORDINATOR or WORKER
   const modeLabel =
-    process.env.KODE_COORDINATOR_MODE === 'true'
+    process.env.CODER_COORDINATOR_MODE === 'true'
       ? 'COORDINATOR'
-      : process.env.KODE_WORKER_MODE === 'true'
+      : process.env.CODER_WORKER_MODE === 'true'
         ? 'WORKER'
         : undefined
 

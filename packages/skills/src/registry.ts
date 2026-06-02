@@ -1,7 +1,7 @@
 /**
  * registry.ts — SkillRegistry: in-memory skill index with disk persistence
  *
- * Map-based registry with singleton access. Loads skills from ~/.kode/skills/
+ * Map-based registry with singleton access. Loads skills from ~/.coder/skills/
  * via SkillLoader on init or reload(). Provides indexed lookups by tag and
  * trigger keyword, usage tracking, and improvement candidate detection.
  *
@@ -493,7 +493,7 @@ let _instance: SkillRegistry | null = null;
 /**
  * Get the shared SkillRegistry singleton.
  *
- * The first call creates the default instance pointed at ~/.kode/skills/.
+ * The first call creates the default instance pointed at ~/.coder/skills/.
  * Use setSkillRegistry() to inject a custom instance (e.g. for testing).
  */
 export function getSkillRegistry(): SkillRegistry {

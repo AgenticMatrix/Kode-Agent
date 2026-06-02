@@ -209,7 +209,7 @@ export class SkillImprover {
       mkdirSync(dir, { recursive: true });
     }
 
-    const tmpPath = `${skillPath}.kode-tmp-${randomUUID()}`;
+    const tmpPath = `${skillPath}.coder-tmp-${randomUUID()}`;
     try {
       writeFileSync(tmpPath, content, 'utf-8');
       renameSync(tmpPath, skillPath);
@@ -256,7 +256,7 @@ export class SkillImprover {
   // ── Private: LLM Interaction ────────────────────────────────────
 
   private buildAnalysisSystemPrompt(): string {
-    return `You are a skill quality analyst for the Kode Agent platform. Your job is to compare what a skill expected with what actually happened during execution, and suggest concrete improvements.
+    return `You are a skill quality analyst for the Coder Agent platform. Your job is to compare what a skill expected with what actually happened during execution, and suggest concrete improvements.
 
 ## What to look for
 

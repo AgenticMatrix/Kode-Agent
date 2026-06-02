@@ -1,5 +1,5 @@
 /**
- * Global test setup for Kode Agent.
+ * Global test setup for Coder Agent.
  *
  * Invariants enforced here (inspired by Hermes Agent's conftest.py):
  *
@@ -8,8 +8,8 @@
  *
  * 2. **Deterministic runtime.** TZ=UTC, LANG=C.UTF-8, NODE_ENV=test.
  *
- * 3. **Isolated KODE_HOME.** KODE_HOME points to a per-test tempdir so
- *    code reading `~/.kode/*` cannot see the real one.
+ * 3. **Isolated CODER_HOME.** CODER_HOME points to a per-test tempdir so
+ *    code reading `~/.coder/*` cannot see the real one.
  *
  * These invariants make the local test run match CI closely.
  */
@@ -61,12 +61,12 @@ function looksLikeCredential(name: string): boolean {
 // ── Behavioral vars that change test semantics ────────────────────────────
 
 const BEHAVIORAL_VARS = new Set([
-  'KODE_HOME',
-  'KODE_CONFIG',
-  'KODE_MODEL',
-  'KODE_PROVIDER',
-  'KODE_PERMISSION_MODE',
-  'KODE_YOLO_MODE',
+  'CODER_HOME',
+  'CODER_CONFIG',
+  'CODER_MODEL',
+  'CODER_PROVIDER',
+  'CODER_PERMISSION_MODE',
+  'CODER_YOLO_MODE',
   'NODE_ENV',
 ]);
 
@@ -98,11 +98,11 @@ beforeEach(() => {
   }
   process.env.NODE_ENV = 'test';
 
-  // 3. Set KODE_HOME to a temp path (test files override as needed)
-  if (!('KODE_HOME' in originalEnv)) {
-    originalEnv['KODE_HOME'] = process.env.KODE_HOME;
+  // 3. Set CODER_HOME to a temp path (test files override as needed)
+  if (!('CODER_HOME' in originalEnv)) {
+    originalEnv['CODER_HOME'] = process.env.CODER_HOME;
   }
-  process.env.KODE_HOME = '/tmp/kode-test-home';
+  process.env.CODER_HOME = '/tmp/coder-test-home';
 
   // 4. Reset timer mocks
   vi.useRealTimers();

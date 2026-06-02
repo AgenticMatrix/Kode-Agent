@@ -1,5 +1,5 @@
 /**
- * Core message types for the Kode Agent system.
+ * Core message types for the Coder Agent system.
  * Models the conversation between user, assistant, and system.
  */
 

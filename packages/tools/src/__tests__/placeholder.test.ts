@@ -10,7 +10,7 @@ import {
   WriteTool,
 } from '../index.js';
 
-describe('@kode/tools', () => {
+describe('@coder/tools', () => {
   it('should export BashTool', () => {
     expect(BashTool).toBeDefined();
   });

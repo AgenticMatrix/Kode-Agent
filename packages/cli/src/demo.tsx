@@ -1,11 +1,11 @@
 #!/usr/bin/env -S node --max-old-space-size=8192 --expose-gc
 import React from 'react'
-// Standalone demo entry point for kode-tui using MockGatewayClient.
+// Standalone demo entry point for coder-tui using MockGatewayClient.
 // No Python backend required.
 
 import './lib/forceTruecolor.js'
 
-import type { FrameEvent } from '@kode/tui'
+import type { FrameEvent } from '@coder/tui'
 
 import { MockGatewayClient } from './gateway/mock-client.js'
 import { setupGracefulExit } from './lib/gracefulExit.js'
@@ -14,7 +14,7 @@ import { resetTerminalModes } from './lib/terminalModes.js'
 import { TERMUX_TUI_MODE } from './config/env.js'
 
 if (!process.stdin.isTTY) {
-  console.log('kode-tui: no TTY')
+  console.log('coder-tui: no TTY')
   process.exit(0)
 }
 
@@ -37,16 +37,16 @@ setupGracefulExit({
   ],
   onError: (scope, err) => {
     const message = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err)
-    process.stderr.write(`kode-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
+    process.stderr.write(`coder-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
   },
   onSignal: (signal) => {
     resetTerminalModes()
-    process.stderr.write(`kode-tui lifecycle: received ${signal}\n`)
+    process.stderr.write(`coder-tui lifecycle: received ${signal}\n`)
   },
 })
 
 const [ink, { App }] = await Promise.all([
-  import('@kode/tui'),
+  import('@coder/tui'),
   import('./app.js'),
 ])
 

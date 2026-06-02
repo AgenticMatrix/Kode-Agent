@@ -172,8 +172,8 @@ function circularDistance(a: number, b: number): number {
   return Math.min(distance, 1 - distance)
 }
 
-// Mirrors @kode/tui's colorize.ts. Keep local: app code compiles from
-// ui-tui/src, while @kode/tui is bundled separately from packages/.
+// Mirrors @coder/tui's colorize.ts. Keep local: app code compiles from
+// ui-tui/src, while @coder/tui is bundled separately from packages/.
 function richEightBitColorNumber(red: number, green: number, blue: number): number {
   const [, saturation, lightness] = rgbToHsl(red, green, blue)
 
@@ -247,7 +247,7 @@ function normalizeAnsiForeground(color: string): string {
 // ── Defaults ─────────────────────────────────────────────────────────
 
 const BRAND: ThemeBrand = {
-  name: 'Kode Agent',
+  name: 'Coder Agent',
   icon: '⚕',
   prompt: '❯',
   welcome: 'Type your message or /help for commands.',
@@ -382,13 +382,13 @@ const FALSE_RE = /^(?:0|false|no|off)$/
 
 // TERM_PROGRAM fallback allow-list for terminals whose default profile is
 // light and which may not expose COLORFGBG. This currently includes Apple
-// Terminal. Explicit KODE_TUI_THEME / COLORFGBG signals above still win,
+// Terminal. Explicit CODER_TUI_THEME / COLORFGBG signals above still win,
 // so dark Apple Terminal profiles that advertise a dark background stay dark.
 const LIGHT_DEFAULT_TERM_PROGRAMS = new Set<string>(['Apple_Terminal'])
 
 // Best-effort RGB → luminance check.  Currently only accepts a 3- or
 // 6-digit hex value (with or without a leading `#`); the env var name
-// `KODE_TUI_BACKGROUND` is intentionally generic so a future OSC11
+// `CODER_TUI_BACKGROUND` is intentionally generic so a future OSC11
 // query helper can cache its answer there too, but additional formats
 // (rgb()/hsl()/named colours) would need explicit parsing here first.
 const LUMA_LIGHT_THRESHOLD = 0.6
@@ -425,12 +425,12 @@ function backgroundLuminance(raw: string): null | number {
 
 // Pick light vs dark with ordered, explainable signals (#11300):
 //
-//   1. `KODE_TUI_LIGHT` boolean — `1`/`true`/`yes`/`on` → light;
+//   1. `CODER_TUI_LIGHT` boolean — `1`/`true`/`yes`/`on` → light;
 //      `0`/`false`/`no`/`off` → dark.  Either explicit value wins
 //      regardless of any later signal.
-//   2. `KODE_TUI_THEME` named override — `light` / `dark` win over
+//   2. `CODER_TUI_THEME` named override — `light` / `dark` win over
 //      every signal below.
-//   3. `KODE_TUI_BACKGROUND` hex hint (3- or 6-digit) — luminance
+//   3. `CODER_TUI_BACKGROUND` hex hint (3- or 6-digit) — luminance
 //      ≥ LUMA_LIGHT_THRESHOLD → light.
 //   4. `COLORFGBG` last field — XFCE / rxvt / Terminal.app emit
 //      slot 7 or 15 on light profiles; 0–15 ranges are otherwise
@@ -438,7 +438,7 @@ function backgroundLuminance(raw: string): null | number {
 //      allow-list below cannot override an explicit dark profile.
 //   5. `TERM_PROGRAM` light-default allow-list.
 //
-// Anything we can't decide stays dark — the default Kode palette
+// Anything we can't decide stays dark — the default Coder palette
 // is the dark one.
 export function detectLightMode(
   env: NodeJS.ProcessEnv = process.env,
@@ -446,7 +446,7 @@ export function detectLightMode(
   // precedence rule even though the production allow-list is empty.
   lightDefaultTermPrograms: ReadonlySet<string> = LIGHT_DEFAULT_TERM_PROGRAMS
 ): boolean {
-  const lightFlag = (env.KODE_TUI_LIGHT ?? '').trim().toLowerCase()
+  const lightFlag = (env.CODER_TUI_LIGHT ?? '').trim().toLowerCase()
 
   if (TRUE_RE.test(lightFlag)) {
     return true
@@ -456,7 +456,7 @@ export function detectLightMode(
     return false
   }
 
-  const themeFlag = (env.KODE_TUI_THEME ?? '').trim().toLowerCase()
+  const themeFlag = (env.CODER_TUI_THEME ?? '').trim().toLowerCase()
 
   if (themeFlag === 'light') {
     return true
@@ -466,7 +466,7 @@ export function detectLightMode(
     return false
   }
 
-  const bgHint = backgroundLuminance(env.KODE_TUI_BACKGROUND ?? '')
+  const bgHint = backgroundLuminance(env.CODER_TUI_BACKGROUND ?? '')
 
   if (bgHint !== null) {
     return bgHint >= LUMA_LIGHT_THRESHOLD

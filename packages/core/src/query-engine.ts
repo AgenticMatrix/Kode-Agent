@@ -16,17 +16,17 @@ import type {
   StreamEvent,
   DeferredPermission,
   ContentBlock,
-} from '@kode/shared';
-import { PermissionMode, AgentError } from '@kode/shared';
+} from '@coder/shared';
+import { PermissionMode, AgentError } from '@coder/shared';
 import { query, type QueryConfig, type CallModelParams } from './query.js';
 import { ToolRegistry } from './tool-registry.js';
 import { PermissionEngine } from './permission/engine.js';
 import { SystemPromptAssembler, type SystemPrompt } from './system-prompt/assembler.js';
 import { SessionManager } from './session.js';
 import { CheckpointManager } from './checkpoint.js';
-import type { Provider, ThinkingConfig } from '@kode/provider';
+import type { Provider, ThinkingConfig } from '@coder/provider';
 import { createCallModelFromProvider } from './provider-adapter.js';
-import type { SubagentBus } from '@kode/shared';
+import type { SubagentBus } from '@coder/shared';
 import type { HookManager } from './hooks/manager.js';
 
 // ---------------------------------------------------------------------------

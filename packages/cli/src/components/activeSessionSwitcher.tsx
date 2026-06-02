@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useInput, useStdout } from '@kode/tui'
+import { Box, Text, useInput, useStdout } from '@coder/tui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TUI_SESSION_MODEL_FLAG } from '../domain/slash.js'

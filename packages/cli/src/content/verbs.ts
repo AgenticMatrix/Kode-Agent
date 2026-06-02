@@ -63,7 +63,7 @@ const GENERIC_STATUSES = new Set([
   'running…',
   'ready',
   'interrupted',
-  'summoning Kode…',
+  'summoning Coder…',
   'forging session…',
   'resuming…',
   'resuming most recent…',

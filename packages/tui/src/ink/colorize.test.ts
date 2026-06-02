@@ -41,7 +41,7 @@ describe('shouldUseRichEightBitDowngradeForLegacyAppleTerminal', () => {
     ).toBe(false)
     expect(
       shouldUseRichEightBitDowngradeForLegacyAppleTerminal(
-        { KODE_TUI_TRUECOLOR: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv,
+        { CODER_TUI_TRUECOLOR: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv,
         3
       )
     ).toBe(false)
@@ -49,7 +49,7 @@ describe('shouldUseRichEightBitDowngradeForLegacyAppleTerminal', () => {
 })
 
 describe('richEightBitColorNumber', () => {
-  it('matches Rich downgrade output for default Kode skin colors', () => {
+  it('matches Rich downgrade output for default Coder skin colors', () => {
     expect(richEightBitColorNumber(0xff, 0xd7, 0x00)).toBe(220)
     expect(richEightBitColorNumber(0xff, 0xbf, 0x00)).toBe(214)
     expect(richEightBitColorNumber(0xcd, 0x7f, 0x32)).toBe(173)

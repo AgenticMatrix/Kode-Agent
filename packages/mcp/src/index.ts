@@ -1,5 +1,5 @@
 /**
- * @kode/mcp — Kode Agent MCP Integration
+ * @coder/mcp — Coder Agent MCP Integration
  *
  * JSON-RPC 2.0 over stdio for Model Context Protocol communication.
  * Architecture reference: ARCHITECTURE.md §4.12

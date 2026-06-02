@@ -1,5 +1,5 @@
 /**
- * @kode/core/memory — Barrel export for the Memory system.
+ * @coder/core/memory — Barrel export for the Memory system.
  *
  * Exports types, store, extractor, and consolidator.
  * Architecture reference: ARCHITECTURE.md §4.10

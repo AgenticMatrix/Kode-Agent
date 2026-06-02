@@ -2,7 +2,7 @@
  * SkillTool — Agent invocation of SKILL.md skills
  *
  * When the Agent invokes this tool, the full SKILL.md content is loaded
- * from ~/.kode/skills/<name>/SKILL.md and returned to the Agent's context.
+ * from ~/.coder/skills/<name>/SKILL.md and returned to the Agent's context.
  * This is the trigger for Progressive Disclosure → full loading.
  *
  * The skill content is NOT stored in the tool itself — it is loaded
@@ -18,7 +18,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Lazy import to avoid circular dependency

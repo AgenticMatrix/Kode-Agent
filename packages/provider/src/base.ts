@@ -6,8 +6,8 @@
  * `abort()` to cancel an in-flight request.
  */
 
-import type { Message } from '@kode/shared';
-import type { ToolDefinition } from '@kode/shared';
+import type { Message } from '@coder/shared';
+import type { ToolDefinition } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Provider Configuration

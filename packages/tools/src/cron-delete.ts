@@ -7,7 +7,7 @@
  * Reference: Claude Code's CronDelete tool
  */
 
-import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@kode/shared';
+import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@coder/shared';
 import { loadScheduledTasks, saveScheduledTasks } from './cron-create.js';
 import type { ScheduledTask } from './cron-create.js';
 
@@ -79,8 +79,8 @@ export class CronDeleteTool extends BaseTool<CronDeleteInput, CronDeleteOutput> 
     }
 
     // Remove from in-process scheduler
-    if (typeof (globalThis as Record<string, unknown>).__kodeCronScheduler !== 'undefined') {
-      const scheduler = (globalThis as Record<string, unknown>).__kodeCronScheduler as {
+    if (typeof (globalThis as Record<string, unknown>).__coderCronScheduler !== 'undefined') {
+      const scheduler = (globalThis as Record<string, unknown>).__coderCronScheduler as {
         removeTask: (id: string) => boolean;
       };
       scheduler.removeTask(input.id);

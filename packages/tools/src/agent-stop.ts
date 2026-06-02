@@ -14,8 +14,8 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
-import { getSubagentBus } from '@kode/shared';
+} from '@coder/shared';
+import { getSubagentBus } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types

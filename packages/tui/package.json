@@ -1,7 +1,7 @@
 {
-  "name": "@kode/tui",
+  "name": "@coder/tui",
   "version": "0.1.0",
-  "description": "Kode Agent TUI framework — React Ink-based terminal renderer with Yoga Layout",
+  "description": "Coder Agent TUI framework — React Ink-based terminal renderer with Yoga Layout",
   "type": "module",
   "main": "./dist/entry-exports.js",
   "types": "./dist/entry-exports.d.ts",

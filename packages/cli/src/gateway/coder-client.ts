@@ -1,11 +1,11 @@
 /**
- * kode-client.ts — Kode Gateway Adapter
+ * coder-client.ts — Coder Gateway Adapter
  *
- * Implements IGatewayClient by bridging to kode-agent's QueryEngine
+ * Implements IGatewayClient by bridging to coder-agent's QueryEngine
  * (Agent Loop) and translating QueryMessage → GatewayEvent via
  * query-bridge.ts.
  *
- * Config is read from ~/.kode/settings.json.
+ * Config is read from ~/.coder/settings.json.
  */
 
 import { EventEmitter } from 'node:events'
@@ -15,8 +15,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 
-import type { QueryMessage } from '@kode/shared'
-import { getSubagentBus } from '@kode/shared'
+import type { QueryMessage } from '@coder/shared'
+import { getSubagentBus } from '@coder/shared'
 
 import type { IGatewayClient } from './client.js'
 import type { GatewayEvent } from './types.js'
@@ -36,13 +36,13 @@ import {
   getSessionManager,
   getCheckpointManager,
 } from '../services/session-service.js'
-import type { SessionManager } from '@kode/core'
-import { Compactor } from '@kode/core'
+import type { SessionManager } from '@coder/core'
+import { Compactor } from '@coder/core'
 
 const execFileAsync = promisify(execFile)
 
 // ---------------------------------------------------------------------------
-// Config from ~/.kode/settings.json
+// Config from ~/.coder/settings.json
 // ---------------------------------------------------------------------------
 
 interface ModelEntry {
@@ -72,7 +72,7 @@ interface ClaudeSettings {
 
 function loadClaudeSettings(): ClaudeSettings {
   try {
-    const raw = readFileSync(join(homedir(), '.kode', 'settings.json'), 'utf-8')
+    const raw = readFileSync(join(homedir(), '.coder', 'settings.json'), 'utf-8')
     return JSON.parse(raw)
   } catch {
     return {}
@@ -86,13 +86,13 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   name: string
   provider: string
 } {
-  // 0. KODE_MODEL env var — highest priority (overrides all other sources)
-  const kodeModel = process.env.KODE_MODEL
-  if (kodeModel) {
+  // 0. CODER_MODEL env var — highest priority (overrides all other sources)
+  const coderModel = process.env.CODER_MODEL
+  if (coderModel) {
     // Look up in model_list first
     if (settings.model_list) {
       const entry = settings.model_list.find(
-        m => m.name === kodeModel || m.model === kodeModel,
+        m => m.name === coderModel || m.model === coderModel,
       )
       if (entry) {
         return {
@@ -104,11 +104,11 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
         }
       }
     }
-    // Not in model_list — use KODE_MODEL directly as the model name
+    // Not in model_list — use CODER_MODEL directly as the model name
     return {
-      model: kodeModel,
-      name: kodeModel,
-      provider: inferProvider(kodeModel),
+      model: coderModel,
+      name: coderModel,
+      provider: inferProvider(coderModel),
     }
   }
 
@@ -149,10 +149,10 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
 }
 
 // ---------------------------------------------------------------------------
-// KodeGatewayClient constructor options
+// CoderGatewayClient constructor options
 // ---------------------------------------------------------------------------
 
-export interface KodeGatewayClientOptions {
+export interface CoderGatewayClientOptions {
   /** Enable Coordinator or Worker mode (default: false) */
   coordinatorMode?: boolean
   /** Team identifier for routing */
@@ -172,10 +172,10 @@ export interface KodeGatewayClientOptions {
 }
 
 // ---------------------------------------------------------------------------
-// KodeGatewayClient
+// CoderGatewayClient
 // ---------------------------------------------------------------------------
 
-export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
+export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
   private ready = false
   private subscribed = false
   private bufferedEvents: GatewayEvent[] = []
@@ -207,20 +207,20 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
   /** Gateway session ID from session.create RPC — must match engine's sessionId */
   private gatewaySessionId: string | null = null
 
-  constructor(options: KodeGatewayClientOptions = {}) {
+  constructor(options: CoderGatewayClientOptions = {}) {
     super()
     this.setMaxListeners(0)
 
     const settings = loadClaudeSettings()
 
-    // KODE_MODEL env var — highest-priority model override.
+    // CODER_MODEL env var — highest-priority model override.
     // Check before resolveModelConfig so the env var wins over settings.json.
-    const kodeModel = process.env.KODE_MODEL
+    const coderModel = process.env.CODER_MODEL
     let resolved: { model: string; baseUrl?: string; apiKey?: string; name: string; provider: string }
-    if (kodeModel) {
+    if (coderModel) {
       // Look up in model_list to get base_url / auth_token_env
       const entry = settings.model_list?.find(
-        m => m.name === kodeModel || m.model === kodeModel,
+        m => m.name === coderModel || m.model === coderModel,
       )
       if (entry) {
         resolved = {
@@ -232,9 +232,9 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
         }
       } else {
         resolved = {
-          model: kodeModel,
-          name: kodeModel,
-          provider: inferProvider(kodeModel),
+          model: coderModel,
+          name: coderModel,
+          provider: inferProvider(coderModel),
         }
       }
     } else {
@@ -247,18 +247,18 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
     // ── Coordinator / Worker mode ───────────────────────────────────
     this.coordinatorMode =
       options.coordinatorMode === true ||
-      process.env.KODE_COORDINATOR_MODE === 'true'
+      process.env.CODER_COORDINATOR_MODE === 'true'
     this.workerMode =
       options.workerMode === true ||
-      process.env.KODE_WORKER_MODE === 'true'
-    this.teamId = options.teamId ?? process.env.KODE_TEAM_ID
+      process.env.CODER_WORKER_MODE === 'true'
+    this.teamId = options.teamId ?? process.env.CODER_TEAM_ID
     this.maxWorkers = options.maxWorkers ?? 3
     this.thinkingMode =
       options.thinkingMode === true ||
-      process.env.KODE_THINKING_MODE === 'true'
+      process.env.CODER_THINKING_MODE === 'true'
     this.thinkingBudget =
       options.thinkingBudget ??
-      (process.env.KODE_THINKING_BUDGET ? parseInt(process.env.KODE_THINKING_BUDGET, 10) : undefined) ??
+      (process.env.CODER_THINKING_BUDGET ? parseInt(process.env.CODER_THINKING_BUDGET, 10) : undefined) ??
       1024
     this.forkSessionId = options.forkSessionId
     this.forkTurn = options.forkTurn
@@ -272,7 +272,7 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
   start(): void {
     this.ready = true
     const modeTag = this.coordinatorMode ? ' coordinator' : this.workerMode ? ' worker' : ''
-    this.log(`gateway started (kode TypeScript backend, model=${this.model}${modeTag})`)
+    this.log(`gateway started (coder TypeScript backend, model=${this.model}${modeTag})`)
     this.publish({ type: 'gateway.ready' })
   }
 
@@ -524,7 +524,7 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
 
               // Persist to disk
               writeFileSync(
-                join(homedir(), '.kode', 'settings.json'),
+                join(homedir(), '.coder', 'settings.json'),
                 JSON.stringify(settings, null, 2),
               )
 
@@ -544,7 +544,7 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
             settings.env = settings.env ?? {}
             settings.env[key] = value
             writeFileSync(
-              join(homedir(), '.kode', 'settings.json'),
+              join(homedir(), '.coder', 'settings.json'),
               JSON.stringify(settings, null, 2),
             )
             this.log(`config.set ${key}=${value}`)
@@ -665,8 +665,8 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
             team_id: this.teamId ?? null,
             worker_mode: this.workerMode,
             max_workers: this.maxWorkers,
-            env_coordinator: process.env.KODE_COORDINATOR_MODE === 'true',
-            env_team_id: process.env.KODE_TEAM_ID ?? null,
+            env_coordinator: process.env.CODER_COORDINATOR_MODE === 'true',
+            env_team_id: process.env.CODER_TEAM_ID ?? null,
           } as unknown as T
         }
 
@@ -727,10 +727,10 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
       env.ANTHROPIC_BASE_URL ??
       process.env.ANTHROPIC_BASE_URL
 
-    // Check KODE_COORDINATOR_MODE env var (set by entry.tsx or manually)
+    // Check CODER_COORDINATOR_MODE env var (set by entry.tsx or manually)
     const coordinatorMode =
       this.coordinatorMode ||
-      process.env.KODE_COORDINATOR_MODE === 'true'
+      process.env.CODER_COORDINATOR_MODE === 'true'
 
     // Share the gateway's singleton SessionManager with the engine.
     // This ensures session.create RPC (gateway) and engine tool execution
@@ -964,6 +964,6 @@ export class KodeGatewayClient extends EventEmitter implements IGatewayClient {
   }
 
   private log(msg: string): void {
-    this.logLines.push(`[kode-gw] ${msg}`)
+    this.logLines.push(`[coder-gw] ${msg}`)
   }
 }

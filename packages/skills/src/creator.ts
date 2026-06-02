@@ -5,10 +5,10 @@
  * skill creation via LLM draft generation, and writes SKILL.md files.
  *
  * Flow:
- *  1. trackTask() — record each task execution to ~/.kode/skills/.task-patterns.json
+ *  1. trackTask() — record each task execution to ~/.coder/skills/.task-patterns.json
  *  2. shouldCreateSkill() — check if pattern repeats enough (≥2) or is complex enough
  *  3. generateDraft() → proposeSkill() — LLM generates SKILL.md draft
- *  4. writeSkill() — atomic write to ~/.kode/skills/<name>/SKILL.md
+ *  4. writeSkill() — atomic write to ~/.coder/skills/<name>/SKILL.md
  *
  * Architecture reference: ARCHITECTURE.md §4.11, SPRINT_PLAN.md §5.9
  */
@@ -26,7 +26,7 @@ import type {
 import { SkillLoader } from './loader.js';
 
 // ---------------------------------------------------------------------------
-// AsyncGenerator type alias (avoid circular dep on @kode/core)
+// AsyncGenerator type alias (avoid circular dep on @coder/core)
 // ---------------------------------------------------------------------------
 
 type CallModelFn = (params: {
@@ -40,7 +40,7 @@ type CallModelFn = (params: {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_SKILLS_DIR = join(homedir(), '.kode', 'skills');
+const DEFAULT_SKILLS_DIR = join(homedir(), '.coder', 'skills');
 const TASK_PATTERNS_FILE = '.task-patterns.json';
 const MIN_REPEAT_COUNT = 2;
 const MIN_COMPLEXITY = 0.6;
@@ -185,7 +185,7 @@ export class SkillCreator {
     }
 
     // Atomic write: tmp → rename
-    const tmpPath = `${skillPath}.kode-tmp-${randomUUID()}`;
+    const tmpPath = `${skillPath}.coder-tmp-${randomUUID()}`;
     try {
       writeFileSync(tmpPath, content, 'utf-8');
       renameSync(tmpPath, skillPath);
@@ -202,7 +202,7 @@ export class SkillCreator {
   /**
    * Track a completed task for pattern detection.
    *
-   * Writes to ~/.kode/skills/.task-patterns.json, updating the count
+   * Writes to ~/.coder/skills/.task-patterns.json, updating the count
    * for the matched pattern key.
    *
    * Pattern keys are derived from the task description via keyword
@@ -250,7 +250,7 @@ export class SkillCreator {
   // ── Private: LLM Prompts ────────────────────────────────────────
 
   private buildDraftSystemPrompt(): string {
-    return `You are a skill author for the Kode Agent platform. Your task is to create a SKILL.md file that teaches an AI agent how to perform a specific task.
+    return `You are a skill author for the Coder Agent platform. Your task is to create a SKILL.md file that teaches an AI agent how to perform a specific task.
 
 ## SKILL.md Format
 
@@ -400,7 +400,7 @@ Generate a complete SKILL.md with appropriate frontmatter and body.`;
       mkdirSync(dir, { recursive: true });
     }
 
-    const tmpPath = `${path}.kode-tmp-${randomUUID()}`;
+    const tmpPath = `${path}.coder-tmp-${randomUUID()}`;
     try {
       writeFileSync(tmpPath, JSON.stringify(store, null, 2), 'utf-8');
       renameSync(tmpPath, path);

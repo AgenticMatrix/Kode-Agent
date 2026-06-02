@@ -3,13 +3,13 @@
  *
  * Wraps SessionManager and CheckpointManager for CLI use cases:
  * - Resume / Continue / Fork from command-line args
- * - Session persistence to ~/.kode/sessions/
+ * - Session persistence to ~/.coder/sessions/
  * - Checkpoint integration (auto-create on session start)
  */
 
-import { SessionManager, CheckpointManager } from '@kode/core';
-import type { Checkpoint } from '@kode/core';
-import type { Session, SessionSummary } from '@kode/shared';
+import { SessionManager, CheckpointManager } from '@coder/core';
+import type { Checkpoint } from '@coder/core';
+import type { Session, SessionSummary } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Singletons
@@ -107,7 +107,7 @@ export async function continueLatestSession(): Promise<{
 
   const sessions = sm.list({ limit: 1 });
   if (sessions.length === 0) {
-    throw new Error('No previous sessions found. Start a new session with `kode`.');
+    throw new Error('No previous sessions found. Start a new session with `coder`.');
   }
 
   const latest = sessions[0]!;

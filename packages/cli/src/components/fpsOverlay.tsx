@@ -1,7 +1,7 @@
 import React from 'react'
-// FPS counter overlay (KODE_TUI_FPS=1). Zero-cost when disabled.
+// FPS counter overlay (CODER_TUI_FPS=1). Zero-cost when disabled.
 
-import { Text } from '@kode/tui'
+import { Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 
 import { SHOW_FPS } from '../config/env.js'

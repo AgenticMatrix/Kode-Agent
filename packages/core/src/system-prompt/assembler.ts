@@ -3,8 +3,8 @@
  *
  * Dynamically assembles the system prompt from multiple sources:
  * 1. Base harness instructions (tool usage, message format, permissions)
- * 2. KODE.md / CLAUDE.md / .kode/ project context (discovered from filesystem)
- * 3. Rules directory (path-scoped .kode/rules/*.md — Phase 5)
+ * 2. CODER.md / CLAUDE.md / .coder/ project context (discovered from filesystem)
+ * 3. Rules directory (path-scoped .coder/rules/*.md — Phase 5)
  * 4. MEMORY.md memories (from FTS5 store)
  * 5. Active skills summary (progressive disclosure)
  * 6. MCP context (server-provided resources and prompts)
@@ -31,7 +31,7 @@ export interface PromptPart {
 }
 
 export interface AssemblyContext {
-  /** Working directory — used to discover KODE.md / CLAUDE.md */
+  /** Working directory — used to discover CODER.md / CLAUDE.md */
   cwd: string;
   /** User's query for memory selection */
   query?: string;
@@ -50,7 +50,7 @@ export interface AssemblyContext {
   /** Agent role for mode-specific prompt injection */
   agentRole?: 'coordinator' | 'worker' | 'default';
   /**
-   * Optional RuleManager for loading path-scoped rules from .kode/rules/*.md.
+   * Optional RuleManager for loading path-scoped rules from .coder/rules/*.md.
    * When provided and activeFilePath is set, matching rules are injected
    * into the system prompt. (Phase 5 — matches Claude Code's rules directory)
    */
@@ -88,7 +88,7 @@ export interface SystemPrompt {
 // Base Instructions
 // ---------------------------------------------------------------------------
 
-const BASE_INSTRUCTIONS = `You are Kode Agent, an Open-Source Coding Agent built by the open-source community.
+const BASE_INSTRUCTIONS = `You are Coder Agent, an Open-Source Coding Agent built by the open-source community.
 
 ## Your Capabilities
 - Read, write, and edit files
@@ -158,13 +158,13 @@ export class SystemPromptAssembler {
     }
     parts.push({ source: 'base', content: baseInstructions });
 
-    // 2. Discover and load KODE.md / CLAUDE.md files
+    // 2. Discover and load CODER.md / CLAUDE.md files
     const contextFiles = this.discoverContextFiles(ctx.cwd);
     for (const file of contextFiles) {
       parts.push({ source: file.source, content: file.content });
     }
 
-    // 2.5. Path-scoped rules from .kode/rules/*.md (Phase 5)
+    // 2.5. Path-scoped rules from .coder/rules/*.md (Phase 5)
     //      Injected between project context and memory so rules are highly visible.
     if (ctx.ruleManager) {
       const matchingRules = ctx.ruleManager.getMatchingRules({
@@ -228,11 +228,11 @@ export class SystemPromptAssembler {
   }
 
   /**
-   * Discover KODE.md / CLAUDE.md / CODEBUDDY.md files from cwd up to root.
+   * Discover CODER.md / CLAUDE.md / CODEBUDDY.md files from cwd up to root.
    */
   discoverContextFiles(cwd: string): PromptPart[] {
     const files: PromptPart[] = [];
-    const searchNames = ['KODE.md', 'CLAUDE.md', 'CODEBUDDY.md', '.koderules', '.cursorrules'];
+    const searchNames = ['CODER.md', 'CLAUDE.md', 'CODEBUDDY.md', '.coderrules', '.cursorrules'];
 
     let dir = cwd;
     while (dir !== dirname(dir)) {

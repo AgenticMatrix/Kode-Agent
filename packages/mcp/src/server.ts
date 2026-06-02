@@ -1,5 +1,5 @@
 /**
- * server.ts — MCPServer: Expose Kode Agent tools over MCP (Model Context Protocol)
+ * server.ts — MCPServer: Expose Coder Agent tools over MCP (Model Context Protocol)
  *
  * Implements the MCP server protocol over stdio transport. Reads JSON-RPC 2.0
  * requests from stdin and writes responses to stdout. Compatible with any MCP
@@ -11,13 +11,13 @@
  *  - tools/call    → executes a tool via ToolRegistry and returns the result
  *
  * The tool provider is injected via constructor — the concrete ToolRegistry
- * from @kode/core satisfies the IToolProvider interface.
+ * from @coder/core satisfies the IToolProvider interface.
  *
  * Architecture reference: ARCHITECTURE.md §4.12 (MCP Integration)
  */
 
 import { Readable, Writable } from 'node:stream';
-import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@kode/shared';
+import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Tool Provider Interface (dependency-injected, satisfied by ToolRegistry)
@@ -26,7 +26,7 @@ import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@kode/sha
 /**
  * Minimal interface for looking up and executing tools.
  *
- * ToolRegistry from @kode/core satisfies this interface:
+ * ToolRegistry from @coder/core satisfies this interface:
  *  - get(name): returns { definition, instance } where instance.execute(input, ctx)
  *  - getDefinitions(): returns ToolDefinition[]
  */
@@ -40,7 +40,7 @@ export interface IToolProvider {
 // ---------------------------------------------------------------------------
 
 const PROTOCOL_VERSION = '2024-11-05';
-const SERVER_NAME = 'kode-agent-mcp';
+const SERVER_NAME = 'coder-agent-mcp';
 const SERVER_VERSION = '0.1.0';
 
 // ---------------------------------------------------------------------------

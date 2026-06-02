@@ -1,7 +1,7 @@
 {
-  "name": "@kode/provider",
+  "name": "@coder/provider",
   "version": "0.1.0",
-  "description": "Kode Agent LLM provider abstraction — Anthropic, OpenAI, DeepSeek adapters",
+  "description": "Coder Agent LLM provider abstraction — Anthropic, OpenAI, DeepSeek adapters",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
-    "@kode/shared": "workspace:*"
+    "@coder/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

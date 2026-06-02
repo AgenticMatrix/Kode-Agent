@@ -16,7 +16,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,7 +46,7 @@ export interface TodoWriteOutput {
 // ---------------------------------------------------------------------------
 
 function getTodoPath(sessionId: string): string {
-  const dir = join(homedir(), '.kode', 'sessions', sessionId);
+  const dir = join(homedir(), '.coder', 'sessions', sessionId);
   return join(dir, 'todos.json');
 }
 

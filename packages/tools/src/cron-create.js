@@ -2,18 +2,18 @@
  * cron-create.ts — CronCreateTool: Schedule timed prompts (cron jobs)
  *
  * Creates persistent or session-only scheduled tasks that fire prompts
- * at specified cron intervals. Tasks are stored in ~/.kode/scheduled_tasks.json.
+ * at specified cron intervals. Tasks are stored in ~/.coder/scheduled_tasks.json.
  *
  * Reference: Claude Code's CronCreate tool
  */
 import { randomUUID } from 'node:crypto';
-import { BaseTool, RiskLevel } from '@kode/shared';
+import { BaseTool, RiskLevel } from '@coder/shared';
 // ---------------------------------------------------------------------------
 // Scheduled Task persistence path
 // ---------------------------------------------------------------------------
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-const SCHEDULED_TASKS_PATH = join(homedir(), '.kode', 'scheduled_tasks.json');
+const SCHEDULED_TASKS_PATH = join(homedir(), '.coder', 'scheduled_tasks.json');
 // ---------------------------------------------------------------------------
 // Cron field validation
 // ---------------------------------------------------------------------------
@@ -138,8 +138,8 @@ export class CronCreateTool extends BaseTool {
             nextRun: nextRun.toISOString(),
         };
         // Register with in-process scheduler if available
-        if (typeof globalThis.__kodeCronScheduler !== 'undefined') {
-            const scheduler = globalThis.__kodeCronScheduler;
+        if (typeof globalThis.__coderCronScheduler !== 'undefined') {
+            const scheduler = globalThis.__coderCronScheduler;
             scheduler.addTask(task);
         }
         return {

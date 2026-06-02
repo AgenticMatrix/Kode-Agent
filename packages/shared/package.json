@@ -1,7 +1,7 @@
 {
-  "name": "@kode/shared",
+  "name": "@coder/shared",
   "version": "0.1.0",
-  "description": "Kode Agent shared types, utilities, and protocol definitions",
+  "description": "Coder Agent shared types, utilities, and protocol definitions",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

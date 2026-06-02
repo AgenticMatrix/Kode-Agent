@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text } from '@kode/tui'
+import { Box, Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 
 import { useGateway } from '../app/gatewayContext.js'

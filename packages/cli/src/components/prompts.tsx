@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useInput } from '@kode/tui'
+import { Box, Text, useInput } from '@coder/tui'
 import { useState } from 'react'
 
 import { isMac } from '../lib/platform.js'

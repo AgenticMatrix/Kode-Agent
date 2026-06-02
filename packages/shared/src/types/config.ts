@@ -1,17 +1,17 @@
 /**
- * Configuration types — Kode Agent configuration system.
+ * Configuration types — Coder Agent configuration system.
  *
  * Priority (highest to lowest):
- *   CLI args > Environment variables > ~/.kode/settings.json > Default values
+ *   CLI args > Environment variables > ~/.coder/settings.json > Default values
  */
 
 import { PermissionMode } from './permission.js';
 
 // ---------------------------------------------------------------------------
-// KodeConfig — Root configuration
+// CoderConfig — Root configuration
 // ---------------------------------------------------------------------------
 
-export interface KodeConfig {
+export interface CoderConfig {
   /** API key for the provider (resolved from env or config file) */
   apiKey?: string;
   /** Base URL override for the provider */
@@ -216,7 +216,7 @@ export interface CliConfig {
 // Default Configuration
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_KODE_CONFIG: KodeConfig = {
+export const DEFAULT_CODER_CONFIG: CoderConfig = {
   model: {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',

@@ -2,13 +2,13 @@
  * cron-create.ts — CronCreateTool: Schedule timed prompts (cron jobs)
  *
  * Creates persistent or session-only scheduled tasks that fire prompts
- * at specified cron intervals. Tasks are stored in ~/.kode/scheduled_tasks.json.
+ * at specified cron intervals. Tasks are stored in ~/.coder/scheduled_tasks.json.
  *
  * Reference: Claude Code's CronCreate tool
  */
 
 import { randomUUID } from 'node:crypto';
-import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@kode/shared';
+import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Scheduled Task persistence path
@@ -16,7 +16,7 @@ import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type Valida
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-const SCHEDULED_TASKS_PATH = join(homedir(), '.kode', 'scheduled_tasks.json');
+const SCHEDULED_TASKS_PATH = join(homedir(), '.coder', 'scheduled_tasks.json');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -194,8 +194,8 @@ export class CronCreateTool extends BaseTool<CronCreateInput, CronCreateOutput> 
     };
 
     // Register with in-process scheduler if available
-    if (typeof (globalThis as Record<string, unknown>).__kodeCronScheduler !== 'undefined') {
-      const scheduler = (globalThis as Record<string, unknown>).__kodeCronScheduler as {
+    if (typeof (globalThis as Record<string, unknown>).__coderCronScheduler !== 'undefined') {
+      const scheduler = (globalThis as Record<string, unknown>).__coderCronScheduler as {
         addTask: (task: ScheduledTask) => void;
       };
       scheduler.addTask(task);

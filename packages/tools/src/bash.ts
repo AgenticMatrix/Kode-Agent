@@ -16,7 +16,7 @@ import {
   type ToolDefinition,
   type ValidationResult,
   type ToolExecutionResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants

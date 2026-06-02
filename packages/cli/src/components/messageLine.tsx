@@ -1,5 +1,5 @@
 import React from 'react'
-import { Ansi, Box, NoSelect, Text } from '@kode/tui'
+import { Ansi, Box, NoSelect, Text } from '@coder/tui'
 import { memo, useState } from 'react'
 
 import { TERMUX_TUI_MODE } from '../config/env.js'

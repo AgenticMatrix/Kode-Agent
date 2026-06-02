@@ -1,5 +1,5 @@
-# Kode Agent Configuration
-# Copy this file to ~/.kode/config.toml and customize your settings.
+# Coder Agent Configuration
+# Copy this file to ~/.coder/config.toml and customize your settings.
 
 [env]
 # Anthropic API Configuration

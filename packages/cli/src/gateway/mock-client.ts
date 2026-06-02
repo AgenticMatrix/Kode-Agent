@@ -45,7 +45,7 @@ export class MockGatewayClient extends EventEmitter implements IGatewayClient {
           session_id: MOCK_SESSION_ID,
           model: MOCK_MODEL,
           cwd: process.cwd(),
-          version: 'kode-tui-standalone',
+          version: 'coder-tui-standalone',
         } as unknown as T
 
       case 'session.list':
@@ -195,7 +195,7 @@ export class MockGatewayClient extends EventEmitter implements IGatewayClient {
           this.publish({
             type: 'message.delta',
             payload: {
-              text: `## Mock Response\n\nYou said: "${userText}"\n\nThis is a **standalone mock** response from \`kode-tui\`.\n\nThe real Kode backend (Python gateway) is not connected.\n\n### Features available in mock mode:\n- Full TUI rendering (components, scrolling, markdown)\n- Text input and composer\n- Status bar and overlays\n- Virtual history and session management`,
+              text: `## Mock Response\n\nYou said: "${userText}"\n\nThis is a **standalone mock** response from \`coder-tui\`.\n\nThe real Coder backend (Python gateway) is not connected.\n\n### Features available in mock mode:\n- Full TUI rendering (components, scrolling, markdown)\n- Text input and composer\n- Status bar and overlays\n- Virtual history and session management`,
             },
           })
           this.publish({ type: 'message.complete' })

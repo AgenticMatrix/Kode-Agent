@@ -1,6 +1,6 @@
-# Kode Agent 测试策略
+# Coder Agent 测试策略
 
-> 基于 Hermes Agent 测试实践总结，适用于 Kode Agent monorepo 项目。
+> 基于 Hermes Agent 测试实践总结，适用于 Coder Agent monorepo 项目。
 
 ---
 
@@ -30,7 +30,7 @@ Hermes Agent（17,000+ 测试）采用四层测试架构：
 # 4. 禁止 HERMES_SESSION_* 继承
 ```
 
-**Kode Agent 适配**：已实现 `configs/test-setup.ts`，功能完全对齐。
+**Coder Agent 适配**：已实现 `configs/test-setup.ts`，功能完全对齐。
 
 #### 模式 2：Per-File 进程隔离
 
@@ -40,7 +40,7 @@ Hermes Agent（17,000+ 测试）采用四层测试架构：
 scripts/run_tests_parallel.py → 每个测试文件独立 subprocess
 ```
 
-**Kode Agent 适配**：
+**Coder Agent 适配**：
 - Vitest 默认在独立 Worker 线程中运行测试文件（`pool: 'threads'`）
 - 每个 Worker 有独立的模块缓存
 - 配合 `configs/test-setup.ts` 的 `beforeEach`/`afterEach` 确保 per-test 清理
@@ -62,7 +62,7 @@ def make_runner(platform, session_entry=None):
     return runner
 ```
 
-**Kode Agent 适配**：已实现 `configs/test-utils.ts`：
+**Coder Agent 适配**：已实现 `configs/test-utils.ts`：
 - `createTestContext()` — 构建 Agent 测试上下文
 - `mockAgentResponse()` — 模拟 LLM 响应
 - `mockAgentToolUse()` — 模拟工具调用响应
@@ -80,7 +80,7 @@ adapter.send = AsyncMock(return_value=SendResult(success=True, message_id="e2e-r
 
 完整的消息流测试：adapter.handle_message(event) → background task → GatewayRunner → adapter.send()
 
-**Kode Agent 适配**：
+**Coder Agent 适配**：
 - 单元测试 mock LLM 调用（`mockAgentResponse`）
 - 集成测试使用 mock provider
 - E2E 测试通过 CLI `--print` 模式 + 脚本化输入验证完整流程
@@ -93,13 +93,13 @@ def platform(request):
     return request.param
 ```
 
-**Kode Agent 适配**：
+**Coder Agent 适配**：
 - Provider 测试参数化：`describe.each([['anthropic'], ['openai'], ['deepseek']])`
 - 工具测试参数化：不同工具的风险等级、参数组合
 
 ### 1.3 关键数据
 
-| 指标 | Hermes Agent | Kode Agent 一期目标 |
+| 指标 | Hermes Agent | Coder Agent 一期目标 |
 |------|-------------|---------------------|
 | 总测试数 | ~17,000+ | 200+ |
 | 测试文件数 | ~90 | 20+ |
@@ -109,12 +109,12 @@ def platform(request):
 
 ---
 
-## 二、Kode Agent 测试架构
+## 二、Coder Agent 测试架构
 
 ### 2.1 测试目录结构
 
 ```
-kode-agent/
+coder-agent/
 ├── configs/
 │   ├── test-setup.ts           # 全局测试环境（hermetic invariants）
 │   ├── test-utils.ts           # 测试辅助函数（工厂、mock、断言）

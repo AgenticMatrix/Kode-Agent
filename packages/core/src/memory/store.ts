@@ -2,7 +2,7 @@
  * MemoryStore — SQLite FTS5 cross-session memory with JSON fallback.
  *
  * Primary implementation: better-sqlite3 with WAL mode and FTS5 virtual table.
- * Fallback: JSON file at ~/.kode/memory.json with keyword-based search.
+ * Fallback: JSON file at ~/.coder/memory.json with keyword-based search.
  *
  * Architecture reference: ARCHITECTURE.md §4.10
  */
@@ -67,12 +67,12 @@ export interface IMemoryStore {
 // JSON File Fallback Store
 // ---------------------------------------------------------------------------
 
-const DEFAULT_DB_PATH = join(homedir(), '.kode', 'memory.json');
+const DEFAULT_DB_PATH = join(homedir(), '.coder', 'memory.json');
 
 /**
  * JSON-file based memory store.
  *
- * Stores memories as a JSON array at ~/.kode/memory.json.
+ * Stores memories as a JSON array at ~/.coder/memory.json.
  * Search uses keyword matching on content + keywords fields.
  * Designed as a drop-in fallback when better-sqlite3 is unavailable.
  *

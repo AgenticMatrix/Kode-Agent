@@ -12,7 +12,7 @@ import type {
   StreamEvent,
   AssistantMessage,
   CompletionUsage,
-} from '@kode/shared';
+} from '@coder/shared';
 import {
   createBridgeState,
   bridgeQueryToGateway,

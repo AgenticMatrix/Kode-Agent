@@ -36,7 +36,7 @@ import type {
   RetryConfig,
 } from '../index.js';
 
-describe('@kode/core', () => {
+describe('@coder/core', () => {
   it('should export ToolRegistry', () => {
     expect(ToolRegistry).toBeDefined();
   });

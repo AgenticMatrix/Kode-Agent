@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, NoSelect, Text } from '@kode/tui'
+import { Box, NoSelect, Text } from '@coder/tui'
 import { memo, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import spinners, { type BrailleSpinnerName } from 'unicode-animations'
 

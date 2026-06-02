@@ -14,8 +14,8 @@ import {
   requiresApproval as checkApproval,
   type PermissionCheck,
   type PermissionResult,
-} from '@kode/shared';
-import type { ToolDefinition } from '@kode/shared';
+} from '@coder/shared';
+import type { ToolDefinition } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // PermissionEngine

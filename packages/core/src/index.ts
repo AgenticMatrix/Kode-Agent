@@ -1,5 +1,5 @@
 /**
- * @kode/core — Kode Agent core runtime
+ * @coder/core — Coder Agent core runtime
  *
  * Phase 1: Agent Loop, QueryEngine, Session, Checkpoint, Permission, System Prompt
  * Phase 2: Hooks, Context Management, Sub-Agents
@@ -89,7 +89,7 @@ export {
   setSubagentBus,
   resetSubagentBus,
   formatTaskNotification,
-} from '@kode/shared';
+} from '@coder/shared';
 export type {
   SubagentEntry,
   SubagentStatus,
@@ -98,7 +98,7 @@ export type {
   SubagentBusConfig,
   RunAgentCallback,
   CompletedSubagent,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // --- Agent Teams (re-exported from shared) ---
 export {
@@ -108,8 +108,8 @@ export {
   getDefaultToolsForRole,
   isValidWorkerRole,
   isCoordinatorRole,
-} from '@kode/shared';
-export type { WorkerConfig } from '@kode/shared';
+} from '@coder/shared';
+export type { WorkerConfig } from '@coder/shared';
 
 // --- Subagent Bus (core-side engine integration) ---
 export { createRunAgentCallback, createForkAgentCallback } from './subagent-bus.js';

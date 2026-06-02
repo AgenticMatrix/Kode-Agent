@@ -1,4 +1,4 @@
-import { forceRedraw, type MouseTrackingMode } from '@kode/tui'
+import { forceRedraw, type MouseTrackingMode } from '@coder/tui'
 
 import { NO_CONFIRM_DESTRUCTIVE } from '../../../config/env.js'
 import { dailyFortune, randomFortune } from '../../../content/fortunes.js'
@@ -112,17 +112,17 @@ export const coreCommands: SlashCommand[] = [
 
   {
     aliases: ['exit'],
-    help: 'exit Kode',
+    help: 'exit Coder',
     name: 'quit',
     run: (_arg, ctx) => ctx.session.die()
   },
 
   {
-    help: 'update Kode Agent to the latest version (exits TUI)',
+    help: 'update Coder Agent to the latest version (exits TUI)',
     name: 'update',
     run: (_arg, ctx) => {
       ctx.transcript.sys('exiting TUI to run update...')
-      // Exit code 42 signals the Python wrapper to exec `kode update`.
+      // Exit code 42 signals the Python wrapper to exec `coder update`.
       // Use dieWithCode for proper cleanup (gateway kill + Ink unmount).
       setTimeout(() => ctx.session.dieWithCode(42), 100)
     }
@@ -396,7 +396,7 @@ export const coreCommands: SlashCommand[] = [
           return sys(`copied ${text.length} characters`)
         } else {
           return sys(
-            'clipboard copy failed — try KODE_TUI_FORCE_OSC52=1 to force the escape sequence'
+            'clipboard copy failed — try CODER_TUI_FORCE_OSC52=1 to force the escape sequence'
           )
         }
       }
@@ -501,7 +501,7 @@ export const coreCommands: SlashCommand[] = [
       const preview = Math.max(80, parseInt(arg, 10) || 400)
 
       const lines = items.map((m, i) => {
-        const tag = m.role === 'user' ? `You #${i + 1}` : `Kode #${i + 1}`
+        const tag = m.role === 'user' ? `You #${i + 1}` : `Coder #${i + 1}`
         const body = m.text.trim() || (m.tools?.length ? `(${m.tools.length} tool calls)` : '(empty)')
         const clipped = body.length > preview ? `${body.slice(0, preview).trimEnd()}…` : body
 

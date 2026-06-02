@@ -19,7 +19,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -92,7 +92,7 @@ function ddgSearch(query: string, signal?: AbortSignal): Promise<DDGResponse> {
       path,
       method: 'GET',
       headers: {
-        'User-Agent': 'KodeAgent/1.0 (web-search)',
+        'User-Agent': 'CoderAgent/1.0 (web-search)',
         'Accept': 'application/json',
       },
       timeout: HTTP_TIMEOUT_MS,

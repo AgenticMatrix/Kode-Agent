@@ -23,8 +23,8 @@ import {
   OpenAICompatProvider,
   DeepSeekProvider,
   ProviderRouter,
-} from '@kode/provider';
-import type { Provider, ProviderConfig } from '@kode/provider';
+} from '@coder/provider';
+import type { Provider, ProviderConfig } from '@coder/provider';
 import {
   QueryEngine,
   ToolRegistry,
@@ -35,8 +35,8 @@ import {
   CronScheduler,
   setCronScheduler,
   getCronScheduler,
-} from '@kode/core';
-import type { QueryEngineEvent } from '@kode/core';
+} from '@coder/core';
+import type { QueryEngineEvent } from '@coder/core';
 import {
   BashTool,
   ReadTool,
@@ -69,8 +69,8 @@ import {
   CronListTool,
   EnterWorktreeTool,
   ExitWorktreeTool,
-} from '@kode/tools';
-import type { BaseTool } from '@kode/shared';
+} from '@coder/tools';
+import type { BaseTool } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Factory options
@@ -103,7 +103,7 @@ export interface EngineFactoryOptions {
    *  returned by session.create RPC, otherwise TUI filters out all bridge events. */
   sessionId?: string;
   /** Optional SubagentBus for tracking background sub-agents */
-  subagentBus?: import('@kode/shared').SubagentBus;
+  subagentBus?: import('@coder/shared').SubagentBus;
   /** Enable Coordinator mode (default: false) */
   coordinatorMode?: boolean;
   /** Worker role: only meaningful when coordinatorMode=false (default: undefined) */
@@ -118,7 +118,7 @@ export interface EngineFactoryOptions {
    *  instance as the gateway (session.create/list/resume RPCs). Without
    *  this, each engine creates its own instance, leading to session state
    *  divergence between the TUI and the Agent Loop. */
-  sessionManager?: import('@kode/core').SessionManager;
+  sessionManager?: import('@coder/core').SessionManager;
 }
 
 export interface EngineFactoryResult {
@@ -240,8 +240,8 @@ export function createQueryEngine(
   const cwd = opts.cwd ?? process.cwd();
   const apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
   const baseUrl = opts.baseUrl ?? process.env.ANTHROPIC_BASE_URL;
-  const model = (opts.model && opts.model !== 'claude-sonnet-4-6') ? opts.model : process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? opts.model ?? 'claude-sonnet-4-6';
-  const providerName = opts.providerName ?? (model.toLowerCase().includes('deepseek') ? 'deepseek' : process.env.KODE_PROVIDER ?? 'anthropic');
+  const model = (opts.model && opts.model !== 'claude-sonnet-4-6') ? opts.model : process.env.CODER_MODEL ?? process.env.ANTHROPIC_MODEL ?? opts.model ?? 'claude-sonnet-4-6';
+  const providerName = opts.providerName ?? (model.toLowerCase().includes('deepseek') ? 'deepseek' : process.env.CODER_PROVIDER ?? 'anthropic');
 
   // ── Determine agent role ─────────────────────────────────────────
   const coordinatorMode = opts.coordinatorMode ?? false;
@@ -307,7 +307,7 @@ export function createQueryEngine(
   // ── 4b. Cron Scheduler ────────────────────────────────────────────
   // Initialize the singleton CronScheduler if not already running.
   // Cron tools (CronCreate/CronDelete/CronList) depend on
-  // globalThis.__kodeCronScheduler which is set by setCronScheduler().
+  // globalThis.__coderCronScheduler which is set by setCronScheduler().
   if (!getCronScheduler()) {
     const cronScheduler = new CronScheduler({
       autoStart: true,
@@ -336,7 +336,7 @@ export function createQueryEngine(
     contextBudget: opts.contextBudget ?? 180_000,
     compactThreshold: opts.compactThreshold ?? 0.7,
     customSystemPrompt: opts.customSystemPrompt,
-    appendSystemPrompt: opts.appendSystemPrompt ?? process.env.KODE_APPEND_SYSTEM_PROMPT,
+    appendSystemPrompt: opts.appendSystemPrompt ?? process.env.CODER_APPEND_SYSTEM_PROMPT,
     model,
     // Provider is wired via provider + providerModel for lazy adapter loading
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -469,5 +469,5 @@ export function hasApiKey(): boolean {
  * Get the configured model name.
  */
 export function getConfiguredModel(): string {
-  return process.env.KODE_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
+  return process.env.CODER_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
 }

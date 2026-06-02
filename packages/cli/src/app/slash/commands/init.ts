@@ -1,17 +1,17 @@
 import type { SlashCommand } from '../types.js'
 
 /**
- * /init — Bootstrap a project context file (.kode/KODE.md)
+ * /init — Bootstrap a project context file (.coder/CODER.md)
  *
  * Sends a structured prompt to the Agent asking it to:
  * 1. Analyse the project structure (package.json, tsconfig, directory layout)
- * 2. Generate a tailored .kode/KODE.md with project description, tech stack,
+ * 2. Generate a tailored .coder/CODER.md with project description, tech stack,
  *    build commands, coding conventions, and architecture notes
- * 3. Write the file to .kode/KODE.md and report what was created
+ * 3. Write the file to .coder/CODER.md and report what was created
  */
 export const initCommands: SlashCommand[] = [
   {
-    help: 'bootstrap a project context file (.kode/KODE.md)',
+    help: 'bootstrap a project context file (.coder/CODER.md)',
     name: 'init',
     run: (_arg, ctx) => {
       // If the agent is busy mid-turn, queue the prompt so it fires
@@ -32,7 +32,7 @@ export const initCommands: SlashCommand[] = [
 
 /** The prompt sent to the Agent by /init. */
 const INIT_PROMPT = [
-  'Please analyse the current project and create a `.kode/KODE.md` file.',
+  'Please analyse the current project and create a `.coder/CODER.md` file.',
   '',
   'Steps:',
   '1. Read `package.json` (if it exists) — note the project name, scripts, dependencies.',
@@ -41,7 +41,7 @@ const INIT_PROMPT = [
   '4. Check for existing config files: `.eslintrc.*`, `.prettierrc*`, `vite.config.*`, etc.',
   '5. Check `.gitignore` for build-output patterns.',
   '',
-  'Then generate `.kode/KODE.md` with these sections:',
+  'Then generate `.coder/CODER.md` with these sections:',
   '',
   '```markdown',
   '# Project: <name from package.json>',
@@ -84,5 +84,5 @@ const INIT_PROMPT = [
   '- Keep descriptions concise — this is a reference for future Agent sessions.',
   '- Use the actual project structure you observe, not templates.',
   '- If a section does not apply (e.g. no database), omit it.',
-  '- The file path must be `.kode/KODE.md` in the project root.'
+  '- The file path must be `.coder/CODER.md` in the project root.'
 ].join('\n')

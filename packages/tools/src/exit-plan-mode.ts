@@ -21,7 +21,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,7 +50,7 @@ export interface ExitPlanModeOutput {
  * The PermissionEngine checks for this file to detect mode transitions.
  */
 export function getExitPlanMarkerPath(sessionId: string): string {
-  const dir = join(homedir(), '.kode', 'sessions', sessionId);
+  const dir = join(homedir(), '.coder', 'sessions', sessionId);
   return join(dir, '.exit_plan_mode');
 }
 
@@ -144,7 +144,7 @@ export class ExitPlanModeTool extends BaseTool<ExitPlanModeInput, ExitPlanModeOu
     const targetMode = input.mode ?? 'ask';
 
     // Ensure the session directory exists
-    const sessionDir = join(homedir(), '.kode', 'sessions', ctx.sessionId);
+    const sessionDir = join(homedir(), '.coder', 'sessions', ctx.sessionId);
     if (!existsSync(sessionDir)) {
       mkdirSync(sessionDir, { recursive: true });
     }

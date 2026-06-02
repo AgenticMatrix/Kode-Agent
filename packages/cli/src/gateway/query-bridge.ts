@@ -22,8 +22,8 @@ import type {
   CompactMetadata,
   DeferredPermission,
   CompletionUsage,
-} from '@kode/shared';
-import { AgentError } from '@kode/shared';
+} from '@coder/shared';
+import { AgentError } from '@coder/shared';
 import type { GatewayEvent } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -589,7 +589,7 @@ function extractTextContent(message: AssistantMessage): string {
  * Returns the tool name that was resolved, or null if no matching approval.
  *
  * **NOTE**: This function resolves ONLY the inline DeferredPermission (System A).
- * In production, kode-client.ts handles approval resolution directly because it
+ * In production, coder-client.ts handles approval resolution directly because it
  * must also resolve via the global pendingPermissions Map (System B) via
  * resolvePermission(). This function remains exported for integration tests
  * where System B is not in play.

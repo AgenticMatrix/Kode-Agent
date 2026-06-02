@@ -6,7 +6,7 @@ import {
   withRetry,
 } from '../index.js';
 
-describe('@kode/provider', () => {
+describe('@coder/provider', () => {
   it('should export AnthropicProvider', () => {
     expect(AnthropicProvider).toBeDefined();
   });

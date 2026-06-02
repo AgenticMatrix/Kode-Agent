@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text } from '@kode/tui'
+import { Box, Text } from '@coder/tui'
 
 import { compactPreview } from '../lib/text.js'
 import type { Theme } from '../theme.js'

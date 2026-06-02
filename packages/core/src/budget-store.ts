@@ -19,7 +19,7 @@
  *   - Async non-blocking: disk writes are synchronous for now (kept simple)
  *     but the caller fires them in a fire-and-forget style
  *   - Memory-safe: large content is written to disk, not held in memory
- *   - Path: ~/.kode/tool-results/<sessionId>/<fileId>.txt
+ *   - Path: ~/.coder/tool-results/<sessionId>/<fileId>.txt
  *   - fileId format: tool_<toolUseId>_<timestamp>
  *
  * Tool Result Budget stage in the context compactor pipeline.
@@ -73,7 +73,7 @@ export class BudgetStore {
   private baseDir: string;
 
   constructor(baseDir?: string) {
-    this.baseDir = baseDir ?? join(homedir(), '.kode', 'tool-results');
+    this.baseDir = baseDir ?? join(homedir(), '.coder', 'tool-results');
   }
 
   // -----------------------------------------------------------------------

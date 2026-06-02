@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { ToolRegistry, CATEGORY_MAP } from '../tool-registry.js';
-import { BaseTool, RiskLevel } from '@kode/shared';
-import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@kode/shared';
+import { BaseTool, RiskLevel } from '@coder/shared';
+import type { ToolDefinition, ToolContext, ToolExecutionResult } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Test doubles

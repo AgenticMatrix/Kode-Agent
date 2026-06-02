@@ -1,4 +1,4 @@
-import type { ScrollBoxHandle } from '@kode/tui'
+import type { ScrollBoxHandle } from '@coder/tui'
 
 import type { SelectionApi } from './interfaces.js'
 

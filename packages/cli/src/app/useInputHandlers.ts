@@ -1,4 +1,4 @@
-import { forceRedraw, useInput } from '@kode/tui'
+import { forceRedraw, useInput } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import { useEffect, useRef } from 'react'
 

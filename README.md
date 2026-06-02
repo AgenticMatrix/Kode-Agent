@@ -1,4 +1,4 @@
-# Kode Agent
+# Coder Agent
 
 <p align="center">
   <b>An open-source, enterprise-grade CLI agent coding tool</b><br/>
@@ -14,7 +14,7 @@
 
 ---
 
-**Kode Agent** is an open-source CLI coding agent that brings enterprise-grade Agent Team orchestration, multi-provider LLM support, and deep extensibility through its hook system. It runs in your terminal, reads and writes code, executes shell commands, and orchestrates multiple AI agents to solve complex engineering tasks — all with fine-grained permission control and comprehensive context management.
+**Coder Agent** is an open-source CLI coding agent that brings enterprise-grade Agent Team orchestration, multi-provider LLM support, and deep extensibility through its hook system. It runs in your terminal, reads and writes code, executes shell commands, and orchestrates multiple AI agents to solve complex engineering tasks — all with fine-grained permission control and comprehensive context management.
 
 ---
 
@@ -32,8 +32,8 @@ pnpm build
 # Configure your API key
 export ANTHROPIC_API_KEY="sk-ant-api03-your-key-here"
 
-# Or store it in ~/.kode/settings.json
-cat > ~/.kode/settings.json << 'EOF'
+# Or store it in ~/.coder/settings.json
+cat > ~/.coder/settings.json << 'EOF'
 {
   "theme": "dark",
   "model_list": [
@@ -56,18 +56,18 @@ cat > ~/.kode/settings.json << 'EOF'
 }
 EOF
 
-# Run Kode Agent
+# Run Coder Agent
 node packages/cli/dist/entry.js
 
 # Or install globally
 pnpm link --global
-kode
+coder
 ```
 
 For a guided setup, run the installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kode-agent/kode-agent/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/AgenticMatrix/Coder-Agent/main/install.sh | bash
 ```
 
 ---
@@ -82,10 +82,10 @@ curl -fsSL https://raw.githubusercontent.com/kode-agent/kode-agent/main/install.
 
 ```bash
 # Coordinator mode with 4 workers
-kode --coordinator --workers 4 "Fix all TypeScript errors across the codebase"
+coder --coordinator --workers 4 "Fix all TypeScript errors across the codebase"
 
 # Worker mode (joins an existing team)
-kode --worker --team my-team-id
+coder --worker --team my-team-id
 ```
 
 ### 🔌 Multi-Provider
@@ -108,13 +108,13 @@ Full session lifecycle: `create`, `resume`, `fork` from turn N to explore altern
 
 ```bash
 # Resume most recent session
-kode --continue
+coder --continue
 
 # Resume specific session
-kode --resume sess_abc123
+coder --resume sess_abc123
 
 # Fork a session from turn 5
-kode --fork-session sess_abc123 --fork-turn 5
+coder --fork-session sess_abc123 --fork-turn 5
 ```
 
 ### 🎨 Terminal UI (TUI)
@@ -150,14 +150,14 @@ Type `/` during an interactive session to access built-in commands:
 | `/tools` | Enable or disable tools |
 | `/rollback` | List, diff, or restore checkpoints |
 | `/status` | Show live session info |
-| `/quit` | Exit Kode Agent |
+| `/quit` | Exit Coder Agent |
 | `/init` | Bootstrap a project context file |
 
 ---
 
 ## Skill System
 
-Kode Agent features a **self-evolving skill system** powered by `SKILL.md` files. Skills are discovered, loaded, and improved automatically through a three-phase lifecycle:
+Coder Agent features a **self-evolving skill system** powered by `SKILL.md` files. Skills are discovered, loaded, and improved automatically through a three-phase lifecycle:
 
 1. **Create** — The agent detects repeated task patterns across sessions and auto-proposes new skills. Users can also manually install skills from the community hub via `/skills install`.
 
@@ -165,7 +165,7 @@ Kode Agent features a **self-evolving skill system** powered by `SKILL.md` files
 
 3. **Improve** — After each skill execution, the agent evaluates the outcome. If improvements are detected (shorter execution, fewer turns, fewer errors), the skill is auto-updated. This creates a virtuous cycle where skills compound in quality over time.
 
-Skills are stored in `~/.kode/skills/` and can be managed via:
+Skills are stored in `~/.coder/skills/` and can be managed via:
 
 ```bash
 /skills list        # List installed skills
@@ -175,7 +175,7 @@ Skills are stored in `~/.kode/skills/` and can be managed via:
 /skills search      # Search community skills by keyword
 ```
 
-Configure skill auto-creation and auto-improvement in `~/.kode/config.yaml`:
+Configure skill auto-creation and auto-improvement in `~/.coder/config.yaml`:
 
 ```yaml
 skills:
@@ -190,7 +190,7 @@ skills:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        TUI Layer (@kode/tui)                │
+│                        TUI Layer (@coder/tui)                │
 │            React Ink Terminal Renderer + Gateway            │
 │                    query-bridge.ts ↔ GatewayEvent            │
 └─────────────────────────────────────────────────────────────┘
@@ -219,21 +219,21 @@ skills:
 
 | Package | Description |
 |---------|-------------|
-| `@kode/cli` | Terminal entry point, TUI gateway, engine wiring, slash commands |
-| `@kode/core` | Agent Loop, QueryEngine, Hooks, Context, Checkpoint, Session, Cron |
-| `@kode/shared` | Types, utilities, protocol definitions, config loader |
-| `@kode/provider` | Anthropic, OpenAI, DeepSeek adapters + Auto Router |
-| `@kode/tools` | Tool system: registry, orchestrator, permission engine |
-| `@kode/skills` | SKILL.md discovery, Progressive Disclosure, self-evolution |
-| `@kode/mcp` | MCP Client & Server (JSON-RPC 2.0 over stdio) |
-| `@kode/tui` | React Ink terminal renderer with Yoga Layout, ANSI processing |
+| `@coder/cli` | Terminal entry point, TUI gateway, engine wiring, slash commands |
+| `@coder/core` | Agent Loop, QueryEngine, Hooks, Context, Checkpoint, Session, Cron |
+| `@coder/shared` | Types, utilities, protocol definitions, config loader |
+| `@coder/provider` | Anthropic, OpenAI, DeepSeek adapters + Auto Router |
+| `@coder/tools` | Tool system: registry, orchestrator, permission engine |
+| `@coder/skills` | SKILL.md discovery, Progressive Disclosure, self-evolution |
+| `@coder/mcp` | MCP Client & Server (JSON-RPC 2.0 over stdio) |
+| `@coder/tui` | React Ink terminal renderer with Yoga Layout, ANSI processing |
 | `teams/` | Team topology definitions and role configurations |
 
 ---
 
 ## Comparison
 
-| Feature | Kode Agent | Claude Code | Hermes-Agent |
+| Feature | Coder Agent | Claude Code | Hermes-Agent |
 |---------|-----------|-------------|--------------|
 | **License** | MIT | Proprietary | MIT |
 | **Multi-Provider** | ✅ Anthropic + OpenAI + DeepSeek + Auto | ❌ Anthropic only | ✅ Multi-provider |
@@ -251,7 +251,7 @@ skills:
 | **Worktree** | ✅ Git worktree isolation | ✅ Git worktree | ❌ No |
 | **FTS5 Memory** | ✅ Semantic search | ✅ Memory system | ❌ No |
 
-> **Kode Agent** stands out in enterprise scenarios with its **Agent Teams**, **multi-provider flexibility**, **deep hook system**, and **fine-grained permission control**. If you need a single-agent coding tool, Claude Code is excellent. If you need AI agent orchestration with extensibility, Kode Agent is the right choice.
+> **Coder Agent** stands out in enterprise scenarios with its **Agent Teams**, **multi-provider flexibility**, **deep hook system**, and **fine-grained permission control**. If you need a single-agent coding tool, Claude Code is excellent. If you need AI agent orchestration with extensibility, Coder Agent is the right choice.
 
 ---
 
@@ -259,13 +259,13 @@ skills:
 
 ### API Key
 
-Kode Agent primarily uses `ANTHROPIC_API_KEY` for authentication. The legacy `ANTHROPIC_AUTH_TOKEN` is also supported as a fallback.
+Coder Agent primarily uses `ANTHROPIC_API_KEY` for authentication. The legacy `ANTHROPIC_AUTH_TOKEN` is also supported as a fallback.
 
 Priority order for API key resolution:
 1. `ANTHROPIC_API_KEY` environment variable
 2. `ANTHROPIC_AUTH_TOKEN` environment variable
-3. `~/.kode/settings.json` → `env.ANTHROPIC_API_KEY`
-4. `~/.kode/settings.json` → `env.ANTHROPIC_AUTH_TOKEN`
+3. `~/.coder/settings.json` → `env.ANTHROPIC_API_KEY`
+4. `~/.coder/settings.json` → `env.ANTHROPIC_AUTH_TOKEN`
 
 ```bash
 # Recommended: set ANTHROPIC_API_KEY
@@ -275,23 +275,23 @@ export ANTHROPIC_API_KEY="sk-ant-api03-..."
 export ANTHROPIC_AUTH_TOKEN="sk-ant-api03-..."
 ```
 
-For OpenAI or DeepSeek, set the `KODE_PROVIDER` environment variable:
+For OpenAI or DeepSeek, set the `CODER_PROVIDER` environment variable:
 
 ```bash
 # Use OpenAI
-export KODE_PROVIDER=openai
+export CODER_PROVIDER=openai
 export OPENAI_API_KEY="sk-..."
 
 # Use DeepSeek with Anthropic-compatible endpoint
-export KODE_PROVIDER=anthropic
+export CODER_PROVIDER=anthropic
 export ANTHROPIC_API_KEY="sk-..."
 export ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 export ANTHROPIC_MODEL="deepseek-chat"
 ```
 
-### Configuration File (~/.kode/config.yaml)
+### Configuration File (~/.coder/config.yaml)
 
-For persistent configuration, use `~/.kode/config.yaml`:
+For persistent configuration, use `~/.coder/config.yaml`:
 
 ```yaml
 provider: anthropic
@@ -320,7 +320,7 @@ maxTurns: 100
 contextBudget: 180000
 ```
 
-You can also use `~/.kode/settings.json` (JSON format) for environment variables:
+You can also use `~/.coder/settings.json` (JSON format) for environment variables:
 
 ```json
 {
@@ -345,18 +345,18 @@ You can also use `~/.kode/settings.json` (JSON format) for environment variables
 }
 ```
 
-> **Note:** `ANTHROPIC_BASE_URL` can also be configured per-provider in `~/.kode/config.yaml` under the `providers` section, rather than as a global environment variable.
+> **Note:** `ANTHROPIC_BASE_URL` can also be configured per-provider in `~/.coder/config.yaml` under the `providers` section, rather than as a global environment variable.
 
 ### Hook Configuration
 
-Place hook definitions in `~/.kode/hooks/*.json`:
+Place hook definitions in `~/.coder/hooks/*.json`:
 
 ```json
 {
   "event": "PreToolUse",
   "handler": {
     "type": "shell",
-    "command": "/usr/local/bin/kode-guard",
+    "command": "/usr/local/bin/coder-guard",
     "timeout": 30000
   }
 }
@@ -366,7 +366,7 @@ Supported events: `SessionStart`, `UserPromptSubmit`, `PreMessage`, `PostMessage
 
 ### Project Configuration (CLAUDE.md)
 
-Place a `CLAUDE.md` file in your project root for project-specific instructions. Kode Agent automatically loads this as context at the start of every session:
+Place a `CLAUDE.md` file in your project root for project-specific instructions. Coder Agent automatically loads this as context at the start of every session:
 
 ```markdown
 # Project Overview
@@ -385,7 +385,7 @@ This is a Next.js e-commerce application with Prisma ORM and PostgreSQL.
 - API routes follow RESTful conventions
 ```
 
-Use `/init` in an interactive session to have Kode Agent auto-generate a `CLAUDE.md` for your project.
+Use `/init` in an interactive session to have Coder Agent auto-generate a `CLAUDE.md` for your project.
 
 ---
 
@@ -443,10 +443,10 @@ pnpm ci
 
 ## License
 
-MIT © Kode Agent Contributors
+MIT © Coder Agent Contributors
 
 ---
 
 <p align="center">
-  <sub>Built with TypeScript, React Ink, and ❤️ by the Kode Agent community</sub>
+  <sub>Built with TypeScript, React Ink, and ❤️ by the Coder Agent community</sub>
 </p>

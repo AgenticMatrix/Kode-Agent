@@ -2,7 +2,7 @@
  * EditTool — Precise search-and-replace editing
  *
  * Performs exact string replacement in files.
- * Uses the shared `applySearchReplace` utility from @kode/shared.
+ * Uses the shared `applySearchReplace` utility from @coder/shared.
  *
  * Risk: MUTATION — modifies filesystem.
  */
@@ -16,7 +16,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // I/O Types

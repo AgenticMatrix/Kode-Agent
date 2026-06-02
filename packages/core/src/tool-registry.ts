@@ -14,7 +14,7 @@ import {
   type ToolDefinition,
   type ToolContext,
   type ToolExecutionResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Tool Registry

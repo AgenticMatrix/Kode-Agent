@@ -4,7 +4,7 @@
 
 ### Added
 
-- Initial open-source release of Kode Agent
+- Initial open-source release of Coder Agent
 - Multi-provider LLM support (Anthropic, OpenAI, DeepSeek) with auto-routing
 - Agent Teams with Coordinator/Worker pattern and SubagentBus
 - 27-event lifecycle hook system (Shell + JS handlers)

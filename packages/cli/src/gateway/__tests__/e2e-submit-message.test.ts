@@ -17,15 +17,15 @@ import type {
   StreamEvent,
   AssistantMessage,
   CompletionUsage,
-} from '@kode/shared';
+} from '@coder/shared';
 import {
   QueryEngine,
   ToolRegistry,
   SessionManager,
   CheckpointManager,
-} from '@kode/core';
-import type { CallModelParams } from '@kode/core';
-import type { QueryEngineEvent } from '@kode/core';
+} from '@coder/core';
+import type { CallModelParams } from '@coder/core';
+import type { QueryEngineEvent } from '@coder/core';
 
 // ---------------------------------------------------------------------------
 // Mock callModel — simple text response (no tool calls)

@@ -1,7 +1,7 @@
 /**
  * loader.ts — SkillLoader: SKILL.md discovery, parsing, and Progressive Disclosure
  *
- * Scans ~/.kode/skills/ for <skill-name>/SKILL.md files, parses YAML
+ * Scans ~/.coder/skills/ for <skill-name>/SKILL.md files, parses YAML
  * frontmatter + Markdown body, and exposes Progressive Disclosure
  * summaries (name + description + triggers only) for System Prompt injection.
  *
@@ -22,7 +22,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_SKILLS_DIR = join(homedir(), '.kode', 'skills');
+const DEFAULT_SKILLS_DIR = join(homedir(), '.coder', 'skills');
 const SKILL_FILE = 'SKILL.md';
 
 // ---------------------------------------------------------------------------

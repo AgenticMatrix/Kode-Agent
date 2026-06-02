@@ -6,7 +6,7 @@
  * navigation, Enter to execute, and Escape to dismiss.
  */
 import React, { useMemo } from 'react'
-import { Box, Text, useStdout } from '@kode/tui'
+import { Box, Text, useStdout } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 
 import type { SlashCommand } from '../app/slash/types.js'

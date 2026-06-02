@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, type ScrollBoxHandle, stringWidth, Text } from '@kode/tui'
+import { Box, type ScrollBoxHandle, stringWidth, Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 import unicodeSpinners from 'unicode-animations'

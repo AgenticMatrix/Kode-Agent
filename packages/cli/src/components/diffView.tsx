@@ -2,13 +2,13 @@
  * DiffView — Interactive unified / split diff viewer
  *
  * Renders as a full-overlay component in the TUI.  Uses Myers diff from
- * @kode/shared.  Supports keyboard navigation (j/k/↑↓), view mode toggling
+ * @coder/shared.  Supports keyboard navigation (j/k/↑↓), view mode toggling
  * (u/s), and optional accept/reject callbacks.
  */
 import React, { useCallback, useMemo, useState } from 'react'
-import { Box, Text, useInput } from '@kode/tui'
-import { diffLines } from '@kode/shared'
-import type { DiffEdit } from '@kode/shared'
+import { Box, Text, useInput } from '@coder/tui'
+import { diffLines } from '@coder/shared'
+import type { DiffEdit } from '@coder/shared'
 
 import type { DiffViewState } from '../app/interfaces.js'
 import { patchOverlayState } from '../app/overlayStore.js'

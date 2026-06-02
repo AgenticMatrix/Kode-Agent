@@ -17,8 +17,8 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 // ===========================================================================
 
 /**
- * Given:  用户执行 `kode --coordinator "Fix auth bug"`
- *         环境变量 KODE_COORDINATOR_MODE=1
+ * Given:  用户执行 `coder --coordinator "Fix auth bug"`
+ *         环境变量 CODER_COORDINATOR_MODE=1
  *         SystemPromptAssembler 已注册 Coordinator prompt 部分
  * When:   QueryEngine.init() 调用 SystemPromptAssembler.assemble()
  * Then:   SystemPrompt.prompt 包含 Coordinator 指令关键词:
@@ -393,7 +393,7 @@ describe('AgentMessage 上下文复用', () => {
 // ===========================================================================
 
 /**
- * Given:  ~/.kode/scratchpad/ 目录存在
+ * Given:  ~/.coder/scratchpad/ 目录存在
  *         Worker1 (agent-x1) 和 Worker2 (agent-x2) 共享此目录
  * When:   Worker1 执行 WriteTool → scratchpad/auth-files.txt
  *         Worker2 执行 ReadTool → scratchpad/auth-files.txt
@@ -413,7 +413,7 @@ describe('Scratchpad 读写', () => {
   let worker2Ctx: ToolContext;
 
   beforeEach(() => {
-    scratchDir = join(tmpdir(), `kode-scratchpad-${randomUUID()}`);
+    scratchDir = join(tmpdir(), `coder-scratchpad-${randomUUID()}`);
     mkdirSync(scratchDir, { recursive: true });
     worker1Ctx = { sessionId: 'agent-x1', cwd: scratchDir, signal: new AbortController().signal };
     worker2Ctx = { sessionId: 'agent-x2', cwd: scratchDir, signal: new AbortController().signal };
@@ -495,7 +495,7 @@ describe('Scratchpad 读写', () => {
 // ===========================================================================
 
 /**
- * Given:  SkillCreator 监听 ~/.kode/activity-log/ 中的任务模式
+ * Given:  SkillCreator 监听 ~/.coder/activity-log/ 中的任务模式
  *         已记录 3 次相似任务:
  *           - Turn 4:  "Create React+TS project with Vite"
  *           - Turn 12: "Initialize React app with TypeScript"
@@ -504,14 +504,14 @@ describe('Scratchpad 读写', () => {
  * When:   SkillCreator.analyze() → LLM judge 返回:
  *           { should_create_skill: true, pattern: "React+TS project setup",
  *             steps: ["npm create vite", "tsconfig setup", "eslint config"] }
- *         SkillCreator.create() → 写入 ~/.kode/skills/react-ts-setup/SKILL.md
+ *         SkillCreator.create() → 写入 ~/.coder/skills/react-ts-setup/SKILL.md
  * Then:   SKILL.md 存在且包含 Frontmatter (name, description, triggers)
  *         内容包含 LLM judge 返回的步骤
  *         SkillLoader 可以扫描到新创建的 Skill
  *
  * Mock 策略:
  *   - Mock callModel (LLM judge) → 返回固定的 JSON 判断结果
- *   - Mock 文件系统 (memfs) 用于 ~/.kode/skills/ 读写
+ *   - Mock 文件系统 (memfs) 用于 ~/.coder/skills/ 读写
  *   - Mock SkillLoader.scan() 返回新 Skill
  */
 
@@ -520,7 +520,7 @@ describe('Skill 自动创建', () => {
   let mockJudge: (tasks: string[]) => Promise<string>;
 
   beforeEach(() => {
-    skillDir = join(tmpdir(), `.kode-skills-${randomUUID()}`);
+    skillDir = join(tmpdir(), `.coder-skills-${randomUUID()}`);
     mkdirSync(skillDir, { recursive: true });
     mkdirSync(join(skillDir, 'skills'), { recursive: true });
 
@@ -627,7 +627,7 @@ ${parsed.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}
 // ===========================================================================
 
 /**
- * Given:  SKILL.md 存在于 ~/.kode/skills/react-ts-setup/
+ * Given:  SKILL.md 存在于 ~/.coder/skills/react-ts-setup/
  *         Agent 使用 Skill 工具调用: Skill.use("react-ts-setup")
  * When:   SkillLoader.load() → 读取完整 SKILL.md
  *         System Prompt 注入 Skill 内容到 Agent 上下文
@@ -650,7 +650,7 @@ describe('Skill 加载与改进', () => {
   let originalSkillContent: string;
 
   beforeEach(() => {
-    skillDir = join(tmpdir(), `.kode-skills-${randomUUID()}`);
+    skillDir = join(tmpdir(), `.coder-skills-${randomUUID()}`);
     mkdirSync(join(skillDir, 'skills', 'react-ts-setup'), { recursive: true });
 
     originalSkillContent = `---
@@ -802,7 +802,7 @@ triggers:
 
 /**
  * Given:  Coordinator Mode + SubagentBus + Scratchpad + Skills 全部就绪
- * When:   用户运行 `kode --coordinator "Investigate and fix auth bug"`
+ * When:   用户运行 `coder --coordinator "Investigate and fix auth bug"`
  * Then:   端到端流程通过:
  *         1. Coordinator System Prompt 注入 ✅
  *         2. spawn 2 Workers (Research + Implement) ✅

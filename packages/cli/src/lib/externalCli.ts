@@ -5,11 +5,11 @@ export interface LaunchResult {
   error?: string
 }
 
-const resolveKodeBin = () => process.env.KODE_BIN?.trim() || 'kode'
+const resolveCoderBin = () => process.env.CODER_BIN?.trim() || 'coder'
 
-export const launchKodeCommand = (args: string[]): Promise<LaunchResult> =>
+export const launchCoderCommand = (args: string[]): Promise<LaunchResult> =>
   new Promise(resolve => {
-    const child = spawn(resolveKodeBin(), args, { stdio: 'inherit' })
+    const child = spawn(resolveCoderBin(), args, { stdio: 'inherit' })
 
     child.on('error', err => resolve({ code: null, error: err.message }))
     child.on('exit', code => resolve({ code }))

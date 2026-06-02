@@ -7,11 +7,11 @@
  * overlay. When the user responds, resolvePermission() resolves the
  * deferred promise, unblocking the Agent Loop.
  *
- * @deprecated For the TypeScript QueryEngine backend (KodeGatewayClient),
+ * @deprecated For the TypeScript QueryEngine backend (CoderGatewayClient),
  *   this module's global `pendingPermissions` Map is NOT used. The Agent
  *   Loop (query.ts) creates DeferredPermission objects INLINE without
  *   registering them here. Instead, query-bridge.ts stores them in
- *   `bridgeState.pendingApprovals` and kode-client.ts resolves them via
+ *   `bridgeState.pendingApprovals` and coder-client.ts resolves them via
  *   `approval.deferred.resolve(allowed)`. Calling resolvePermission() from
  *   this module against a QueryEngine-created permission is a silent no-op.
  *
@@ -21,7 +21,7 @@
  *   3. Third-party consumers that use deferred.ts directly
  */
 
-import type { DeferredPermission } from '@kode/shared';
+import type { DeferredPermission } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Pending Permissions Registry

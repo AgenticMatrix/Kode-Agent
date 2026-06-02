@@ -1,11 +1,11 @@
 # Configuration Reference
 
-Kode Agent is configured through a combination of `~/.kode/config.yaml`,
+Coder Agent is configured through a combination of `~/.coder/config.yaml`,
 environment variables, and CLI flags.
 
 ## Config File
 
-The primary configuration file lives at `~/.kode/config.yaml`. It is created
+The primary configuration file lives at `~/.coder/config.yaml`. It is created
 automatically on first run if it doesn't exist.
 
 ### Full Schema
@@ -45,7 +45,7 @@ permissions:
 # ── Sessions ──────────────────────────────────────────────────────────────
 sessions:
   maxSessions: 50            # Maximum stored sessions before rotation
-  autoResume: true           # Auto-resume last session on kode (no args)
+  autoResume: true           # Auto-resume last session on coder (no args)
 
 # ── Skills ────────────────────────────────────────────────────────────────
 skills:
@@ -56,14 +56,14 @@ skills:
 # ── Sandbox ───────────────────────────────────────────────────────────────
 sandbox:
   mode: docker               # docker | local | disabled
-  image: kode-agent/sandbox  # Sandbox Docker image
+  image: coder-agent/sandbox  # Sandbox Docker image
   networkDisabled: true      # Disable network in sandbox
   readOnlyRootfs: true       # Read-only filesystem (except workspace)
 
 # ── Telemetry ─────────────────────────────────────────────────────────────
 telemetry:
   enabled: false
-  endpoint: https://telemetry.kode.dev
+  endpoint: https://telemetry.coder.dev
 ```
 
 ## Environment Variables
@@ -76,23 +76,23 @@ Environment variables take precedence over the config file.
 | `ANTHROPIC_API_KEY` | Anthropic API key | — |
 | `DEEPSEEK_API_KEY` | DeepSeek API key | — |
 | `OPENAI_API_KEY` | OpenAI API key | — |
-| `KODE_PROVIDER` | LLM provider name | `anthropic` |
-| `KODE_MODEL` | Model identifier | provider default |
-| `KODE_MAX_TURNS` | Maximum turns per query | `100` |
-| `KODE_CONTEXT_BUDGET` | Token budget before compaction | `180000` |
-| `KODE_COMPACT_THRESHOLD` | Compaction trigger threshold | `0.7` |
-| `KODE_PERMISSION_MODE` | Permission mode | `default` |
-| `KODE_SANDBOX_MODE` | Sandbox mode | `docker` |
-| `KODE_SANDBOX_IMAGE` | Sandbox Docker image | `kode-agent/sandbox` |
-| `KODE_SESSION_DIR` | Session storage directory | `~/.kode/sessions` |
-| `KODE_SKILLS_DIR` | Skills storage directory | `~/.kode/skills` |
-| `KODE_SCRATCHPAD_DIR` | Scratchpad directory | `~/.kode/scratchpad` |
-| `KODE_TELEMETRY_ENABLED` | Enable telemetry | `false` |
-| `KODE_COORDINATOR_MODE` | Force coordinator mode | `false` |
-| `KODE_WORKER_MODE` | Force worker mode | `false` |
-| `KODE_TEAM_ID` | Team identifier for multi-agent | — |
-| `KODE_DEBUG` | Enable debug logging | `false` |
-| `KODE_HEAPDUMP_ON_START` | Write heap dump at startup | `false` |
+| `CODER_PROVIDER` | LLM provider name | `anthropic` |
+| `CODER_MODEL` | Model identifier | provider default |
+| `CODER_MAX_TURNS` | Maximum turns per query | `100` |
+| `CODER_CONTEXT_BUDGET` | Token budget before compaction | `180000` |
+| `CODER_COMPACT_THRESHOLD` | Compaction trigger threshold | `0.7` |
+| `CODER_PERMISSION_MODE` | Permission mode | `default` |
+| `CODER_SANDBOX_MODE` | Sandbox mode | `docker` |
+| `CODER_SANDBOX_IMAGE` | Sandbox Docker image | `coder-agent/sandbox` |
+| `CODER_SESSION_DIR` | Session storage directory | `~/.coder/sessions` |
+| `CODER_SKILLS_DIR` | Skills storage directory | `~/.coder/skills` |
+| `CODER_SCRATCHPAD_DIR` | Scratchpad directory | `~/.coder/scratchpad` |
+| `CODER_TELEMETRY_ENABLED` | Enable telemetry | `false` |
+| `CODER_COORDINATOR_MODE` | Force coordinator mode | `false` |
+| `CODER_WORKER_MODE` | Force worker mode | `false` |
+| `CODER_TEAM_ID` | Team identifier for multi-agent | — |
+| `CODER_DEBUG` | Enable debug logging | `false` |
+| `CODER_HEAPDUMP_ON_START` | Write heap dump at startup | `false` |
 
 ## Provider Configuration
 
@@ -181,8 +181,8 @@ permissions:
 
 ## Session Storage
 
-Sessions are stored as JSON files in `~/.kode/sessions/` (configurable via
-`KODE_SESSION_DIR`). Each session file contains:
+Sessions are stored as JSON files in `~/.coder/sessions/` (configurable via
+`CODER_SESSION_DIR`). Each session file contains:
 
 ```json
 {
@@ -206,25 +206,25 @@ Sessions are stored as JSON files in `~/.kode/sessions/` (configurable via
 
 ```bash
 # List recent sessions
-kode --sessions
+coder --sessions
 
 # Resume a specific session
-kode --resume sess_abc123
+coder --resume sess_abc123
 
 # Continue the most recent session
-kode --continue
+coder --continue
 ```
 
 ## Sandbox Configuration
 
-Kode Agent can execute code and shell commands in an isolated Docker container.
+Coder Agent can execute code and shell commands in an isolated Docker container.
 
 ### Docker Sandbox (Default)
 
 ```yaml
 sandbox:
   mode: docker
-  image: kode-agent/sandbox:latest
+  image: coder-agent/sandbox:latest
   networkDisabled: true
   readOnlyRootfs: true
   workspaceMount: /workspace
@@ -259,13 +259,13 @@ No code execution. The agent can only read and edit files.
 Enable extended thinking for complex tasks:
 
 ```bash
-kode --thinking "Design the database schema for a multi-tenant SaaS"
+coder --thinking "Design the database schema for a multi-tenant SaaS"
 ```
 
 Control the thinking budget (in tokens):
 
 ```bash
-kode --thinking --thinking-budget 4096 "Architect the microservices"
+coder --thinking --thinking-budget 4096 "Architect the microservices"
 ```
 
 ## Advanced
@@ -303,6 +303,6 @@ compactThreshold: 0.7      # Start compacting at 126K tokens
 
 ### Multiple Projects
 
-Configuration is global (`~/.kode/config.yaml`), but project-specific
+Configuration is global (`~/.coder/config.yaml`), but project-specific
 instructions go in `CLAUDE.md` at the project root. The agent reads this
 file at the start of every session.

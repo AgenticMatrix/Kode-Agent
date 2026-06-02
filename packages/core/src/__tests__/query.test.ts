@@ -13,14 +13,14 @@ import { ToolRegistry } from '../tool-registry.js';
 import { PermissionEngine } from '../permission/engine.js';
 import { SessionManager } from '../session.js';
 import { CheckpointManager } from '../checkpoint.js';
-import { BaseTool, RiskLevel, PermissionMode } from '@kode/shared';
+import { BaseTool, RiskLevel, PermissionMode } from '@coder/shared';
 import type {
   ToolDefinition,
   ToolContext,
   StreamEvent,
   AssistantMessage,
   QueryMessage,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Mock Tool

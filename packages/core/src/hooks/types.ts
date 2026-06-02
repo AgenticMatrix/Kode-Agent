@@ -2,7 +2,7 @@
  * hooks/types.ts — Core-specific hook types
  *
  * Re-exports shared hook types and adds core-specific execution result types.
- * The canonical hook type definitions live in @kode/shared/src/types/hook.ts.
+ * The canonical hook type definitions live in @coder/shared/src/types/hook.ts.
  *
  * Architecture reference: ARCHITECTURE.md §4.6
  */
@@ -41,7 +41,7 @@ import type {
   SetupContext,
   CwdChangedContext,
   UserPromptExpansionContext,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Re-exports from shared

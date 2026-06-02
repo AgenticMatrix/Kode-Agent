@@ -5,17 +5,17 @@
  * Uses raw fetch + manual SSE parsing — no openai SDK dependency.
  *
  * Message format conversion:
- *   Kode Message[] → OpenAI ChatCompletionMessageParam[]
+ *   Coder Message[] → OpenAI ChatCompletionMessageParam[]
  *   - system prompt → messages[0].role = "system"
  *   - tool_use → assistant message with tool_calls
  *   - tool_result → tool message with tool_call_id
  *
  * Tool format conversion:
- *   Kode ToolDefinition[] → OpenAI FunctionDefinition[]
+ *   Coder ToolDefinition[] → OpenAI FunctionDefinition[]
  */
 
-import type { Message } from '@kode/shared';
-import type { ToolDefinition } from '@kode/shared';
+import type { Message } from '@coder/shared';
+import type { ToolDefinition } from '@coder/shared';
 
 import type {
   Provider,
@@ -505,7 +505,7 @@ export class OpenAICompatProvider implements Provider {
   }
 
   // -----------------------------------------------------------------------
-  // Message Conversion (Kode → OpenAI)
+  // Message Conversion (Coder → OpenAI)
   // -----------------------------------------------------------------------
 
   private convertMessages(system: string, messages: Message[]): OpenAIMessage[] {
@@ -606,7 +606,7 @@ export class OpenAICompatProvider implements Provider {
   }
 
   // -----------------------------------------------------------------------
-  // Tool Conversion (Kode → OpenAI)
+  // Tool Conversion (Coder → OpenAI)
   // -----------------------------------------------------------------------
 
   private convertTools(tools: ToolDefinition[]): OpenAITool[] {

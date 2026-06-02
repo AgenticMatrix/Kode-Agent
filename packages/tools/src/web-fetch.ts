@@ -23,7 +23,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -130,7 +130,7 @@ function performFetch(targetUrl: string, signal?: AbortSignal): Promise<FetchRes
         path: parsed.pathname + parsed.search,
         method: 'GET',
         headers: {
-          'User-Agent': 'KodeAgent/1.0 (web-fetch)',
+          'User-Agent': 'CoderAgent/1.0 (web-fetch)',
           'Accept': 'text/html, application/xhtml+xml, text/plain;q=0.9',
           'Accept-Language': 'en-US,en;q=0.5',
         },

@@ -22,15 +22,15 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 import {
   getSubagentBus,
   WorkerRole,
   ROLE_TOOLS,
   isValidWorkerRole,
   getDefaultToolsForRole,
-} from '@kode/shared';
-import type { WorkerConfig } from '@kode/shared';
+} from '@coder/shared';
+import type { WorkerConfig } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types

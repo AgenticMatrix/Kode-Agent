@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useStdout } from '@kode/tui'
+import { Box, Text, useStdout } from '@coder/tui'
 import { useEffect, useState } from 'react'
 import unicodeSpinners from 'unicode-animations'
 
@@ -385,7 +385,7 @@ export function SessionPanel({ info, maxWidth, sid, t }: SessionPanelProps) {
               - run{' '}
             </Text>
             <Text bold color={t.color.warn}>
-              {info.update_command || 'kode update'}
+              {info.update_command || 'coder update'}
             </Text>
             <Text bold={false} color={t.color.warn} dimColor>
               {' '}

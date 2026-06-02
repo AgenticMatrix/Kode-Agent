@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Link, stringWidth, Text } from '@kode/tui'
+import { Box, Link, stringWidth, Text } from '@coder/tui'
 import { Fragment, memo, type ReactNode, useMemo } from 'react'
 
 import { ensureEmojiPresentation } from '../lib/emoji.js'

@@ -6,7 +6,7 @@
  *   1. Shell commands (string) — executed as child processes via execFile
  *   2. JavaScript functions — executed in-process with a timeout wrapper
  *
- * Hook files live in ~/.kode/hooks/ as JSON config files. Each file describes
+ * Hook files live in ~/.coder/hooks/ as JSON config files. Each file describes
  * one or more hooks with their event, handler, and configuration.
  *
  * Architecture reference: ARCHITECTURE.md §4.6
@@ -47,10 +47,10 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_HOOK_TIMEOUT_MS = 30_000;
 
 /** Directory where hook JSON configuration files are stored */
-const HOOKS_DIR = join(homedir(), '.kode', 'hooks');
+const HOOKS_DIR = join(homedir(), '.coder', 'hooks');
 
 // ---------------------------------------------------------------------------
-// Hook file format (~/.kode/hooks/*.json)
+// Hook file format (~/.coder/hooks/*.json)
 // ---------------------------------------------------------------------------
 
 interface HookFileEntry {
@@ -703,7 +703,7 @@ export class HookManager implements HookManagerLike {
       event: 'PreMessage',
       // Only pass message summaries for shell hook safety; function hooks
       // that need full messages should use direct sessionManager access.
-      messages: messages.slice(-10) as unknown[] as import('@kode/shared').Message[],
+      messages: messages.slice(-10) as unknown[] as import('@coder/shared').Message[],
       systemPrompt,
       model,
       turnCount,
@@ -743,8 +743,8 @@ export class HookManager implements HookManagerLike {
       event: 'PostMessage',
       // Use a lightweight message representation to avoid serializing
       // full AssistantMessage (which contains ContentBlock[] arrays).
-      message: { role: 'assistant', content: messageContent, usage } as unknown as import('@kode/shared').AssistantMessage,
-      messages: messages.slice(-10) as unknown[] as import('@kode/shared').Message[],
+      message: { role: 'assistant', content: messageContent, usage } as unknown as import('@coder/shared').AssistantMessage,
+      messages: messages.slice(-10) as unknown[] as import('@coder/shared').Message[],
       model,
       turnCount,
       usage,
@@ -1077,7 +1077,7 @@ export class HookManager implements HookManagerLike {
    * Timeout is controlled by HttpHookConfig.timeout (defaults to 5000ms).
    */
   private async executeHttpHook(
-    config: import('@kode/shared').HttpHookConfig,
+    config: import('@coder/shared').HttpHookConfig,
     ctx: HookContext,
     timeoutMs: number,
   ): Promise<HookResult | null> {
@@ -1182,7 +1182,7 @@ export class HookManager implements HookManagerLike {
 
       if (hook.type === 'http' && typeof hook.handler === 'object' && 'url' in hook.handler) {
         return await this.executeHttpHook(
-          hook.handler as import('@kode/shared').HttpHookConfig,
+          hook.handler as import('@coder/shared').HttpHookConfig,
           ctx,
           timeoutMs,
         );
@@ -1260,8 +1260,8 @@ export class HookManager implements HookManagerLike {
         maxBuffer: 1024 * 1024, // 1MB
         env: {
           ...process.env,
-          KODE_HOOK_EVENT: ctx.event,
-          KODE_HOOK_CTX: ctxJson,
+          CODER_HOOK_EVENT: ctx.event,
+          CODER_HOOK_CTX: ctxJson,
         },
       });
 
@@ -1319,7 +1319,7 @@ export class HookManager implements HookManagerLike {
   // ---------------------------------------------------------------------------
 
   /**
-   * Load hook configuration files from ~/.kode/hooks/.
+   * Load hook configuration files from ~/.coder/hooks/.
    *
    * Each file is a JSON file with a `hooks` array.
    * Example:

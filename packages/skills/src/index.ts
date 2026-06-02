@@ -1,5 +1,5 @@
 /**
- * @kode/skills — Kode Agent Skills System
+ * @coder/skills — Coder Agent Skills System
  *
  * SKILL.md discovery, Progressive Disclosure, and self-evolution.
  * Architecture reference: ARCHITECTURE.md §4.11

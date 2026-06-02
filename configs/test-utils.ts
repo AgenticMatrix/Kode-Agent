@@ -1,5 +1,5 @@
 /**
- * Test utility helpers for Kode Agent.
+ * Test utility helpers for Coder Agent.
  *
  * Provides factory functions and assertion helpers commonly used across
  * the test suite. Modeled after Hermes Agent's e2e/conftest.py fixture
@@ -62,7 +62,7 @@ export function createTestContext(
 ): TestAgentContext {
   return {
     sessionId: `test-session-${Date.now()}`,
-    workingDir: '/tmp/kode-test-workspace',
+    workingDir: '/tmp/coder-test-workspace',
     maxTurns: 10,
     tools: ['read', 'write', 'bash', 'grep', 'glob'],
     model: 'deepseek-v4-pro',

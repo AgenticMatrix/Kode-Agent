@@ -1,7 +1,7 @@
 {
-  "name": "@kode/core",
+  "name": "@coder/core",
   "version": "0.1.0",
-  "description": "Kode Agent core runtime — Agent Loop, QueryEngine, System Prompt, Context, Hooks",
+  "description": "Coder Agent core runtime — Agent Loop, QueryEngine, System Prompt, Context, Hooks",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,8 +15,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@kode/shared": "workspace:*",
-    "@kode/provider": "workspace:*"
+    "@coder/shared": "workspace:*",
+    "@coder/provider": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

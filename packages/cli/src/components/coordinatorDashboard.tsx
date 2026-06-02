@@ -10,7 +10,7 @@
  */
 
 import React from 'react'
-import { Box, NoSelect, Text } from '@kode/tui'
+import { Box, NoSelect, Text } from '@coder/tui'
 import { useStore } from '@nanostores/react'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -109,10 +109,10 @@ export function CoordinatorDashboard({ t, onClose }: CoordinatorDashboardProps) 
   const totals = useMemo(() => treeTotals(tree), [tree])
 
   const coordinatorEnabled =
-    process.env.KODE_COORDINATOR_MODE === 'true'
-  const teamId = process.env.KODE_TEAM_ID ?? '(none)'
-  const maxWorkers = process.env.KODE_MAX_WORKERS
-    ? parseInt(process.env.KODE_MAX_WORKERS, 10)
+    process.env.CODER_COORDINATOR_MODE === 'true'
+  const teamId = process.env.CODER_TEAM_ID ?? '(none)'
+  const maxWorkers = process.env.CODER_MAX_WORKERS
+    ? parseInt(process.env.CODER_MAX_WORKERS, 10)
     : 3
 
   const activeCount = totals.activeCount

@@ -1,7 +1,7 @@
 /**
  * team-delete.ts — TeamDelete tool: remove an Agent Team configuration
  *
- * Deletes the JSON configuration file at ~/.kode/teams/<name>.json.
+ * Deletes the JSON configuration file at ~/.coder/teams/<name>.json.
  * Safety check: prevents deletion of the default team.
  *
  * Architecture reference: ARCHITECTURE.md §4.3 (Sub-Agent System)
@@ -16,13 +16,13 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TEAMS_DIR = join(homedir(), '.kode', 'teams');
+const DEFAULT_TEAMS_DIR = join(homedir(), '.coder', 'teams');
 const PROTECTED_TEAMS = new Set(['default']);
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ export interface TeamDeleteOutput {
 
 const TEAM_DELETE_DESCRIPTION = `Delete an Agent Team configuration.
 
-Removes the team config file from ~/.kode/teams/. Running agents that are
+Removes the team config file from ~/.coder/teams/. Running agents that are
 part of this team are NOT affected — the deletion only prevents new agents
 from being spawned with this team config.
 

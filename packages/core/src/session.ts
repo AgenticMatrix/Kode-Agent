@@ -2,7 +2,7 @@
  * SessionManager — Session lifecycle management
  *
  * Manages session creation, resume, fork, rewind, and persistence.
- * Sessions are stored as JSON files in ~/.kode/sessions/.
+ * Sessions are stored as JSON files in ~/.coder/sessions/.
  *
  * Session management for persisting agent conversation state.
  */
@@ -16,14 +16,14 @@ import type {
   SessionFilter,
   SessionSummary,
   TokenUsageSummary,
-} from '@kode/shared';
-import type { Message } from '@kode/shared';
+} from '@coder/shared';
+import type { Message } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SESSIONS_DIR = join(homedir(), '.kode', 'sessions');
+const SESSIONS_DIR = join(homedir(), '.coder', 'sessions');
 
 // ---------------------------------------------------------------------------
 // SessionManager

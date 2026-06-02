@@ -13,7 +13,7 @@
  * Architecture reference: ARCHITECTURE.md §4.5
  */
 
-import type { Message, ContentBlock, StreamEvent } from '@kode/shared';
+import type { Message, ContentBlock, StreamEvent } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Types

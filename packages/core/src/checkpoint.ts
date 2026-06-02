@@ -6,7 +6,7 @@
  *   2. Auto file-change checkpoints (autoCreate/list/get/cleanup) — for /rewind
  *
  * Auto-checkpoints are created in fire-and-forget mode after every Write/Edit.
- * They persist as JSONL lines in ~/.kode/checkpoints/<sessionId>.jsonl.
+ * They persist as JSONL lines in ~/.coder/checkpoints/<sessionId>.jsonl.
  *
  * Content truncation rules:
  *   · ≤10KB → full content stored
@@ -265,7 +265,7 @@ export class CheckpointManager {
       // ── Generate diff ───────────────────────────────────────────────
       if (entry.contentBefore !== undefined && entry.contentAfter !== undefined) {
         // Lazy-import diff to avoid circular dependency issues at module load
-        const { unifiedDiff } = await import('@kode/shared');
+        const { unifiedDiff } = await import('@coder/shared');
         const diff = unifiedDiff(
           entry.contentBefore,
           entry.contentAfter,
@@ -362,7 +362,7 @@ export class CheckpointManager {
     // Strategy: load from memory first, then scan all session files.
     // For now, scan the last 5 session dirs (most likely to hit).
 
-    const checkpointsDir = join(homedir(), '.kode', 'checkpoints');
+    const checkpointsDir = join(homedir(), '.coder', 'checkpoints');
     if (!existsSync(checkpointsDir)) return null;
 
     const files = readdirSync(checkpointsDir)
@@ -398,7 +398,7 @@ export class CheckpointManager {
    * Called automatically after each autoCreate, and can be called manually.
    */
   async cleanup(sessionId?: string, maxAge = DEFAULT_CLEANUP_AGE_MS): Promise<number> {
-    const checkpointsDir = join(homedir(), '.kode', 'checkpoints');
+    const checkpointsDir = join(homedir(), '.coder', 'checkpoints');
     if (!existsSync(checkpointsDir)) return 0;
 
     const cutoff = Date.now() - maxAge;
@@ -494,7 +494,7 @@ export class CheckpointManager {
    * Append an auto-checkpoint entry as a JSONL line.
    */
   private appendAutoCheckpoint(sessionId: string, entry: AutoCheckpointEntry): void {
-    const dir = join(homedir(), '.kode', 'checkpoints');
+    const dir = join(homedir(), '.coder', 'checkpoints');
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
@@ -535,9 +535,9 @@ export class CheckpointManager {
 // ---------------------------------------------------------------------------
 
 function getSessionDir(sessionId: string): string {
-  return join(homedir(), '.kode', 'sessions', sessionId);
+  return join(homedir(), '.coder', 'sessions', sessionId);
 }
 
 function getAutoCheckpointPath(sessionId: string): string {
-  return join(homedir(), '.kode', 'checkpoints', `${sessionId}.jsonl`);
+  return join(homedir(), '.coder', 'checkpoints', `${sessionId}.jsonl`);
 }

@@ -1,5 +1,5 @@
 /**
- * @kode/provider — Kode Agent provider abstraction layer.
+ * @coder/provider — Coder Agent provider abstraction layer.
  *
  * Phase 1: Anthropic Messages API (streaming + withRetry).
  * Phase 4: OpenAI-compatible, DeepSeek, auto-routing via ProviderRouter.

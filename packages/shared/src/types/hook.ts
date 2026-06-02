@@ -306,7 +306,7 @@ export interface PostCompactContext extends BaseHookContext {
 /**
  * Fires after the System Prompt assembler completes. Non-blockable —
  * the prompt is already assembled. Hooks can log what was loaded
- * (KODE.md, MEMORY, Skills, etc.) for diagnostics.
+ * (CODER.md, MEMORY, Skills, etc.) for diagnostics.
  */
 export interface InstructionsLoadedContext extends BaseHookContext {
   event: 'InstructionsLoaded';

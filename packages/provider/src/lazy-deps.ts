@@ -150,7 +150,7 @@ export async function ensureProviderSDK(
   if (sdk.requiresConfirmation) {
     // Future: prompt user for confirmation
     console.warn(
-      `[kode:provider] SDK "${sdk.installSpec}" is required for ${providerName}. ` +
+      `[coder:provider] SDK "${sdk.installSpec}" is required for ${providerName}. ` +
       `Run: npm install ${sdk.installSpec}`,
     );
     throw new Error(
@@ -160,7 +160,7 @@ export async function ensureProviderSDK(
   }
 
   // Auto-install
-  console.warn(`[kode:provider] Installing ${sdk.installSpec} (required for ${providerName})...`);
+  console.warn(`[coder:provider] Installing ${sdk.installSpec} (required for ${providerName})...`);
   const installed = installPackage(sdk.installSpec, fromDir);
 
   if (!installed) {
@@ -169,7 +169,7 @@ export async function ensureProviderSDK(
     );
   }
 
-  console.warn(`[kode:provider] ${sdk.installSpec} installed successfully.`);
+  console.warn(`[coder:provider] ${sdk.installSpec} installed successfully.`);
   return sdk;
 }
 

@@ -4,10 +4,10 @@
 import './lib/forceTruecolor.js'
 import React from 'react'
 
-import type { FrameEvent } from '@kode/tui'
+import type { FrameEvent } from '@coder/tui'
 
 import { TERMUX_TUI_MODE } from './config/env.js'
-import { KodeGatewayClient } from './gateway/kode-client.js'
+import { CoderGatewayClient } from './gateway/coder-client.js'
 import { setupGracefulExit } from './lib/gracefulExit.js'
 import { openExternalUrl } from './lib/openExternalUrl.js'
 import { resetTerminalModes } from './lib/terminalModes.js'
@@ -129,33 +129,33 @@ const cliArgs = parseCliArgs(process.argv.slice(2))
 
 // Sync CLI args to env vars so child processes and engine-factory can read them
 if (cliArgs.coordinator) {
-  process.env.KODE_COORDINATOR_MODE = 'true'
+  process.env.CODER_COORDINATOR_MODE = 'true'
 }
 if (cliArgs.team) {
-  process.env.KODE_TEAM_ID = cliArgs.team
+  process.env.CODER_TEAM_ID = cliArgs.team
 }
 if (cliArgs.worker) {
-  process.env.KODE_WORKER_MODE = 'true'
+  process.env.CODER_WORKER_MODE = 'true'
 }
 if (cliArgs.thinking) {
-  process.env.KODE_THINKING_MODE = 'true'
+  process.env.CODER_THINKING_MODE = 'true'
 }
 if (cliArgs.thinkingBudget != null) {
-  process.env.KODE_THINKING_BUDGET = String(cliArgs.thinkingBudget)
+  process.env.CODER_THINKING_BUDGET = String(cliArgs.thinkingBudget)
 }
 if (cliArgs.model) {
-  process.env.KODE_MODEL = cliArgs.model
+  process.env.CODER_MODEL = cliArgs.model
 }
 if (cliArgs.provider) {
-  process.env.KODE_PROVIDER = cliArgs.provider
+  process.env.CODER_PROVIDER = cliArgs.provider
 }
 if (cliArgs.systemPrompt) {
-  process.env.KODE_APPEND_SYSTEM_PROMPT = cliArgs.systemPrompt
+  process.env.CODER_APPEND_SYSTEM_PROMPT = cliArgs.systemPrompt
 }
 
 // --help: print usage and exit (non-TUI mode)
 if (cliArgs.help) {
-  console.log(`Usage: kode [options]
+  console.log(`Usage: coder [options]
 
 Options:
   --help, -h            Show this help message and exit
@@ -180,7 +180,7 @@ Options:
 
 // --print: print last session summary and exit (non-TUI mode)
 if (cliArgs.print) {
-  const { SessionManager } = await import('@kode/core');
+  const { SessionManager } = await import('@coder/core');
   const sm = new SessionManager();
   const sessions = sm.listSessions(10);
   if (sessions.length === 0) {
@@ -201,7 +201,7 @@ if (cliArgs.version) {
   const { fileURLToPath } = await import('node:url');
   const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-  console.log(`kode-agent ${pkg.version}`);
+  console.log(`coder-agent ${pkg.version}`);
   console.log(`node ${process.version}`);
   console.log(`${process.platform} ${process.arch}`);
   process.exit(0);
@@ -209,7 +209,7 @@ if (cliArgs.version) {
 
 // TTY check after --help/--print/--version handlers so those flags work without a terminal
 if (!process.stdin.isTTY) {
-  console.log('kode-tui: no TTY (use --help, --print, or --version for non-TTY usage)')
+  console.log('coder-tui: no TTY (use --help, --print, or --version for non-TTY usage)')
   process.exit(0)
 }
 
@@ -226,7 +226,7 @@ if (TERMUX_TUI_MODE) {
   process.stdout.write('\x1b[2J\x1b[H\x1b[3J')
 }
 
-const gw = new KodeGatewayClient({
+const gw = new CoderGatewayClient({
   coordinatorMode: cliArgs.coordinator || cliArgs.worker,
   teamId: cliArgs.team,
   workerMode: cliArgs.worker,
@@ -250,11 +250,11 @@ setupGracefulExit({
   onError: (scope, err) => {
     const message = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err)
 
-    process.stderr.write(`kode-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
+    process.stderr.write(`coder-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
   },
   onSignal: signal => {
     resetTerminalModes()
-    process.stderr.write(`kode-tui lifecycle: received ${signal}\n`)
+    process.stderr.write(`coder-tui lifecycle: received ${signal}\n`)
   }
 })
 
@@ -268,13 +268,13 @@ const stopMemoryMonitor = (() => {
       import('./lib/memoryMonitor.js'),
     ]);
     const dumpNotice = (snap: { level: string; heapUsed: number }, dump: { heapPath?: string } | null) =>
-      `kode-tui: ${snap.level} memory (${formatBytes(snap.heapUsed)}) — auto heap dump → ${dump?.heapPath ?? '(failed)'}\n`;
+      `coder-tui: ${snap.level} memory (${formatBytes(snap.heapUsed)}) — auto heap dump → ${dump?.heapPath ?? '(failed)'}\n`;
     stop = start({
       onCritical: (snap, dump) => {
         resetTerminalModes();
-        process.stderr.write(`kode-tui lifecycle: memory critical exit heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}\n`);
+        process.stderr.write(`coder-tui lifecycle: memory critical exit heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}\n`);
         process.stderr.write(dumpNotice(snap, dump));
-        process.stderr.write('kode-tui: exiting to avoid OOM; restart to recover\n');
+        process.stderr.write('coder-tui: exiting to avoid OOM; restart to recover\n');
         process.exit(137);
       },
       onHigh: (snap, dump) => process.stderr.write(dumpNotice(snap, dump)),
@@ -283,7 +283,7 @@ const stopMemoryMonitor = (() => {
   return () => stop?.();
 })();
 
-if (process.env.KODE_HEAPDUMP_ON_START === '1') {
+if (process.env.CODER_HEAPDUMP_ON_START === '1') {
   setImmediate(() => {
     import('./lib/memory.js').then(m => void m.performHeapDump('manual'));
   });
@@ -292,7 +292,7 @@ if (process.env.KODE_HEAPDUMP_ON_START === '1') {
 process.on('beforeExit', () => stopMemoryMonitor())
 
 const [ink, { App }, { logFrameEvent }, { trackFrame }] = await Promise.all([
-  import('@kode/tui'),
+  import('@coder/tui'),
   import('./app.js'),
   import('./lib/perfPane.js'),
   import('./lib/fpsStore.js')
@@ -323,6 +323,6 @@ try {
 } catch (err) {
   resetTerminalModes()
   const message = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err)
-  process.stderr.write(`kode-tui: render failed — ${message.slice(0, 2000)}\n`)
+  process.stderr.write(`coder-tui: render failed — ${message.slice(0, 2000)}\n`)
   process.exit(1)
 }

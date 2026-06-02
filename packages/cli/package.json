@@ -1,12 +1,12 @@
 {
-  "name": "@kode/cli",
+  "name": "@coder/cli",
   "version": "0.1.0",
-  "description": "Kode Agent terminal CLI — React Ink TUI, streaming, diff view",
+  "description": "Coder Agent terminal CLI — React Ink TUI, streaming, diff view",
   "type": "module",
   "main": "./dist/entry.js",
   "types": "./dist/entry.d.ts",
   "bin": {
-    "kode": "./dist/entry.js"
+    "coder": "./dist/entry.js"
   },
   "scripts": {
     "build": "tsc -b",
@@ -16,11 +16,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@kode/core": "workspace:*",
-    "@kode/provider": "workspace:*",
-    "@kode/shared": "workspace:*",
-    "@kode/tools": "workspace:*",
-    "@kode/tui": "workspace:*",
+    "@coder/core": "workspace:*",
+    "@coder/provider": "workspace:*",
+    "@coder/shared": "workspace:*",
+    "@coder/tools": "workspace:*",
+    "@coder/tui": "workspace:*",
     "@nanostores/react": "^1.1.0",
     "ink": "^6.8.0",
     "ink-text-input": "^6.0.0",

@@ -16,9 +16,9 @@ describe('shouldUseAnsiDim', () => {
   })
 
   it('honors explicit env override', () => {
-    expect(shouldUseAnsiDim({ KODE_TUI_DIM: '1', VTE_VERSION: '7603' } as NodeJS.ProcessEnv)).toBe(true)
-    expect(shouldUseAnsiDim({ KODE_TUI_DIM: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBe(true)
-    expect(shouldUseAnsiDim({ KODE_TUI_DIM: '0' } as NodeJS.ProcessEnv)).toBe(false)
+    expect(shouldUseAnsiDim({ CODER_TUI_DIM: '1', VTE_VERSION: '7603' } as NodeJS.ProcessEnv)).toBe(true)
+    expect(shouldUseAnsiDim({ CODER_TUI_DIM: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBe(true)
+    expect(shouldUseAnsiDim({ CODER_TUI_DIM: '0' } as NodeJS.ProcessEnv)).toBe(false)
   })
 })
 
@@ -32,7 +32,7 @@ describe('dimColorFallback', () => {
   })
 
   it('does not apply when dim is explicitly configured', () => {
-    expect(dimColorFallback({ KODE_TUI_DIM: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBeUndefined()
-    expect(dimColorFallback({ KODE_TUI_DIM: '0', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBeUndefined()
+    expect(dimColorFallback({ CODER_TUI_DIM: '1', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBeUndefined()
+    expect(dimColorFallback({ CODER_TUI_DIM: '0', TERM_PROGRAM: 'Apple_Terminal' } as NodeJS.ProcessEnv)).toBeUndefined()
   })
 })

@@ -27,7 +27,7 @@ const buildUiState = (): UiState => ({
   slashCommandOpen: false,
   slashCommandFilter: '',
   slashCommandSelectedIndex: 0,
-  status: 'summoning Kode…',
+  status: 'summoning Coder…',
   statusBar: 'top',
   streaming: true,
   theme: DEFAULT_THEME,

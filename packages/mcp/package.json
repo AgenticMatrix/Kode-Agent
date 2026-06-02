@@ -1,7 +1,7 @@
 {
-  "name": "@kode/mcp",
+  "name": "@coder/mcp",
   "version": "0.1.0",
-  "description": "Kode Agent MCP Client & Server — JSON-RPC 2.0 over stdio",
+  "description": "Coder Agent MCP Client & Server — JSON-RPC 2.0 over stdio",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,6 +16,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@kode/shared": "workspace:*"
+    "@coder/shared": "workspace:*"
   }
 }

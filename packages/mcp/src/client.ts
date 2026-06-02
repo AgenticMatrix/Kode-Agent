@@ -22,7 +22,7 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -229,7 +229,7 @@ export class MCPClient {
           tools: {},
         },
         clientInfo: {
-          name: 'kode-agent',
+          name: 'coder-agent',
           version: '0.1.0',
         },
       }) as MCPInitializeResult;
@@ -442,7 +442,7 @@ export class MCPClient {
   }
 
   /**
-   * Convert MCP tools to Kode ToolDefinition format.
+   * Convert MCP tools to Coder ToolDefinition format.
    */
   async getToolDefinitions(): Promise<ToolDefinition[]> {
     const tools = await this.listTools();
@@ -459,7 +459,7 @@ export class MCPClient {
    * Wrap all MCP tools as BaseTool instances suitable for ToolRegistry.
    *
    * Each tool is namespaced as `mcp__<label>__<tool-name>` to avoid
-   * collisions with built-in Kode tools and tools from other MCP servers.
+   * collisions with built-in Coder tools and tools from other MCP servers.
    */
   async wrapAsBaseTools(): Promise<BaseTool[]> {
     const tools = await this.listTools();

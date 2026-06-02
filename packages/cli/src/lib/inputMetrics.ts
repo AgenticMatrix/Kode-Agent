@@ -1,4 +1,4 @@
-import { stringWidth, wrapAnsi } from '@kode/tui'
+import { stringWidth, wrapAnsi } from '@coder/tui'
 
 import type { Role } from '../types.js'
 

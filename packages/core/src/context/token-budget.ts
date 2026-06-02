@@ -17,7 +17,7 @@
  * Architecture reference: ARCHITECTURE.md §4.5
  */
 
-import type { Message, ContentBlock } from '@kode/shared';
+import type { Message, ContentBlock } from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // TokenBudget type (canonical definition)

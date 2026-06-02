@@ -1,13 +1,13 @@
 /**
  * cron-list.ts — CronListTool: List all scheduled cron tasks
  *
- * Reads ~/.kode/scheduled_tasks.json and returns all tasks with their
+ * Reads ~/.coder/scheduled_tasks.json and returns all tasks with their
  * configuration and next run times.
  *
  * Reference: Claude Code's CronList tool
  */
 
-import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@kode/shared';
+import { BaseTool, RiskLevel, type ToolContext, type ToolDefinition, type ValidationResult } from '@coder/shared';
 import { loadScheduledTasks } from './cron-create.js';
 import type { ScheduledTask } from './cron-create.js';
 
@@ -30,7 +30,7 @@ export interface CronListOutput {
 
 const CRON_LIST_DESCRIPTION = `List all scheduled cron tasks.
 
-Returns every task in ~/.kode/scheduled_tasks.json including their cron
+Returns every task in ~/.coder/scheduled_tasks.json including their cron
 expressions, prompts, recurrence settings, and next scheduled run times.
 
 Use this to review what automated tasks are set up before modifying or

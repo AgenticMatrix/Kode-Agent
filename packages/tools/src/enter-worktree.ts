@@ -1,7 +1,7 @@
 /**
  * EnterWorktreeTool — Git worktree isolation
  *
- * Creates a new git worktree in .kode/worktrees/ on a new branch,
+ * Creates a new git worktree in .coder/worktrees/ on a new branch,
  * or enters an existing worktree by path. The returned path should be
  * used as the cwd for subsequent tool calls.
  *
@@ -19,14 +19,14 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const GIT_TIMEOUT_MS = 30_000;
-const WORKTREE_BASE_DIR = '.kode/worktrees';
+const WORKTREE_BASE_DIR = '.coder/worktrees';
 const MAX_OUTPUT_LENGTH = 2000;
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ Creates an isolated git worktree and switches the current session into it.
 - \`path\` (optional): Path to an existing worktree of the current repository to enter instead of creating one. Mutually exclusive with \`name\`.
 
 ## Behavior
-- In a git repository: creates a new git worktree inside \`.kode/worktrees/\` on a new branch. The base ref defaults to origin/<default-branch> or HEAD.
+- In a git repository: creates a new git worktree inside \`.coder/worktrees/\` on a new branch. The base ref defaults to origin/<default-branch> or HEAD.
 - Enters an existing worktree when \`path\` is provided and it appears in \`git worktree list\`.
 - Use ExitWorktree to leave the worktree mid-session (keep or remove).`;
 

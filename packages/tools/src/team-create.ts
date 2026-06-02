@@ -1,7 +1,7 @@
 /**
  * team-create.ts — TeamCreate tool: create Agent Team configuration
  *
- * Creates a JSON configuration file at ~/.kode/teams/<name>.json that
+ * Creates a JSON configuration file at ~/.coder/teams/<name>.json that
  * defines a team of Worker agents with assigned roles and models.
  *
  * Architecture reference: ARCHITECTURE.md §4.3 (Sub-Agent System)
@@ -16,13 +16,13 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ValidationResult,
-} from '@kode/shared';
+} from '@coder/shared';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TEAMS_DIR = join(homedir(), '.kode', 'teams');
+const DEFAULT_TEAMS_DIR = join(homedir(), '.coder', 'teams');
 const DEFAULT_MAX_TURNS = 50;
 const VALID_ROLES = ['coordinator', 'explore', 'builder', 'reviewer'];
 
@@ -80,8 +80,8 @@ Roles:
 - builder: Code author — read, write, edit, shell execution
 - reviewer: Code auditor — read, grep, shell for tests/linting
 
-The team configuration is saved to ~/.kode/teams/<name>.json and can be
-loaded at startup via KODE_TEAM=<name>.`;
+The team configuration is saved to ~/.coder/teams/<name>.json and can be
+loaded at startup via CODER_TEAM=<name>.`;
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -223,7 +223,7 @@ export class TeamCreateTool extends BaseTool<TeamCreateInput, TeamCreateOutput> 
     }
 
     const now = new Date().toISOString();
-    const scratchpadDir = input.scratchpadDir ?? join(homedir(), '.kode', 'scratchpad', input.name);
+    const scratchpadDir = input.scratchpadDir ?? join(homedir(), '.coder', 'scratchpad', input.name);
 
     const config: TeamConfig = {
       name: input.name,

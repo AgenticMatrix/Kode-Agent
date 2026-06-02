@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useInput, useStdout } from '@kode/tui'
+import { Box, Text, useInput, useStdout } from '@coder/tui'
 import { useEffect, useMemo, useState } from 'react'
 
 import { providerDisplayNames } from '../domain/providers.js'
@@ -180,7 +180,7 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
                         authenticated: false,
                         models: [],
                         total_models: 0,
-                        warning: p.key_env ? `paste ${p.key_env} to activate` : 'run `kode model` to configure'
+                        warning: p.key_env ? `paste ${p.key_env} to activate` : 'run `coder model` to configure'
                       }
                     : p
                 )
@@ -237,7 +237,7 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
             setKeyError('')
           }
 
-          // Other auth types: no-op (warning shown tells them to run kode model)
+          // Other auth types: no-op (warning shown tells them to run coder model)
           return
         }
 
@@ -307,7 +307,7 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
         </Text>
 
         <Text color={t.color.muted} wrap="truncate-end">
-          Paste your API key below (saved to ~/.kode/.env)
+          Paste your API key below (saved to ~/.coder/.env)
         </Text>
 
         <Text color={t.color.muted} wrap="truncate-end">

@@ -60,6 +60,15 @@ function inferProvider(name: string): string {
   return 'anthropic'
 }
 
+function upsertModelList(list: ModelEntry[], newEntry: ModelEntry): void {
+  const idx = list.findIndex(m => m.model === newEntry.model && m.provider === newEntry.provider)
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...newEntry }
+  } else {
+    list.push(newEntry)
+  }
+}
+
 interface ClaudeSettings {
   env?: Record<string, string>
   theme?: string
@@ -522,6 +531,21 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
               if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = entry.auth_token_env
               settings.default_model = value
 
+              // Smart merge into model_list (match by model + provider)
+              settings.model_list = settings.model_list ?? []
+              const existingIdx = settings.model_list.findIndex(
+                (m: ModelEntry) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
+              )
+              if (existingIdx >= 0) {
+                settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry }
+              } else {
+                settings.model_list.push(entry)
+              }
+
+              // Export to process env for immediate effect
+              process.env.CODER_MODEL = entry.model
+              if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url
+
               // Persist to disk
               writeFileSync(
                 join(homedir(), '.coder', 'settings.json'),
@@ -537,12 +561,41 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
                 name: entry.name,
                 provider: entry.provider ?? inferProvider(entry.name),
               }
-              this.log(`config.set model=${value} → ${entry.model} (provider=${this.modelConfig.provider})`)
+              this.log(`config.set model=${value} -> ${entry.model} (provider=${this.modelConfig.provider})`)
             }
+          } else if (key === 'CODER_MODEL' && value) {
+            // Direct model name set: upsert to model_list
+            settings.env = settings.env ?? {}
+            settings.env.CODER_MODEL = value
+            settings.model_list = settings.model_list ?? []
+            const existingIdx = settings.model_list.findIndex(
+              (m: ModelEntry) => (m.model === value || m.name === value)
+            )
+            if (existingIdx >= 0) {
+              settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], model: value, name: value }
+            } else {
+              settings.model_list.push({ name: value, model: value, provider: inferProvider(value) })
+            }
+            settings.default_model = value
+            process.env.CODER_MODEL = value
+            writeFileSync(
+              join(homedir(), '.coder', 'settings.json'),
+              JSON.stringify(settings, null, 2),
+            )
+            this.log(`config.set CODER_MODEL=${value}`)
           } else {
             // Generic key: update env[key] in settings and persist
             settings.env = settings.env ?? {}
             settings.env[key] = value
+            // Also update the current default model entry in model_list
+            if (settings.model_list && settings.default_model) {
+              const defEntry = settings.model_list.find((m: ModelEntry) => m.name === settings.default_model)
+              if (defEntry) {
+                if (key === 'CODER_BASE_URL') defEntry.base_url = value
+                if (key === 'CODER_AUTH_TOKEN') defEntry.auth_token_env = 'CODER_AUTH_TOKEN'
+              }
+            }
+            process.env[key] = value
             writeFileSync(
               join(homedir(), '.coder', 'settings.json'),
               JSON.stringify(settings, null, 2),

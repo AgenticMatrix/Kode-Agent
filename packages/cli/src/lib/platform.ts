@@ -52,10 +52,10 @@ export const isCopyShortcut = (
 
 /**
  * Voice recording toggle key — configurable via ``voice.record_key`` in
- * ``config.yaml`` (default ``ctrl+b``).
+ * ``settings.json`` (default ``ctrl+b``).
  *
  * Documented in tips.py, the Python CLI prompt_toolkit handler, and the
- * config.yaml default. The TUI honours the same config knob (#18994);
+ * settings.json default. The TUI honours the same config knob (#18994);
  * when ``voice.record_key`` is e.g. ``ctrl+o`` the TUI binds Ctrl+O.
  *
  * Only the documented default (``ctrl+b``) additionally accepts the

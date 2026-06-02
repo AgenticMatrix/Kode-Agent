@@ -196,38 +196,90 @@ echo "Press Enter for default (deepseek-chat):"
 read -r -p "> " coder_model
 coder_model="${coder_model:-deepseek-chat}"
 
+# -- Infer provider from base_url --
+if [ -n "$coder_base_url" ]; then
+  case "$coder_base_url" in
+    *deepseek*)  coder_provider="deepseek" ;;
+    *anthropic*) coder_provider="anthropic" ;;
+    *openai*)    coder_provider="openai" ;;
+    *)           coder_provider="${coder_model}" ;;
+  esac
+else
+  coder_provider="deepseek"
+fi
+
 # -- CODER_AUTH_TOKEN --
 echo ""
 echo -e "${CYAN}API Key / Auth Token${NC}"
 echo "Press Enter to skip (you can set CODER_AUTH_TOKEN env var later):"
 read -r -p "> " coder_auth_token
 
+# Escape special characters for JSON safety (prevent JSON injection)
+coder_model_escaped=$(echo "$coder_model" | sed 's/\\/\\\\/g; s/"/\\"/g')
+coder_base_url_escaped=$(echo "$coder_base_url" | sed 's/\\/\\\\/g; s/"/\\"/g')
+coder_auth_token_escaped=$(echo "$coder_auth_token" | sed 's/\\/\\\\/g; s/"/\\"/g')
+coder_provider_escaped=$(echo "$coder_provider" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
 # Build settings.json
 SETTINGS_JSON=$(cat <<SETEOF
 {
   "theme": "dark",
-  "default_model": "${coder_model}",
+  "default_model": "${coder_model_escaped}",
   "model_list": [
     {
-      "name": "${coder_model}",
-      "model": "${coder_model}",
-      "base_url": "${coder_base_url}",
-      "auth_token_env": "CODER_AUTH_TOKEN",
-      "provider": "deepseek"
+      "name": "${coder_model_escaped}",
+      "model": "${coder_model_escaped}",
+      "base_url": "${coder_base_url_escaped}",
+      "auth_token_env": "${coder_auth_token_escaped}",
+      "provider": "${coder_provider_escaped}"
     }
   ],
   "env": {
-    "CODER_MODEL": "${coder_model}",
-    "CODER_BASE_URL": "${coder_base_url}",
-    "CODER_AUTH_TOKEN": "${coder_auth_token}"
+    "CODER_MODEL": "${coder_model_escaped}",
+    "CODER_BASE_URL": "${coder_base_url_escaped}",
+    "CODER_AUTH_TOKEN": "${coder_auth_token_escaped}"
   }
 }
 SETEOF
 )
 
-# Write settings.json
-echo "$SETTINGS_JSON" > "$SETTINGS_FILE"
-echo -e "${GREEN}✅ Created ${SETTINGS_FILE}${NC}"
+# Write settings.json with smart merge (Issue 2: don't destructively overwrite)
+if [ -f "$SETTINGS_FILE" ]; then
+  if command -v jq &> /dev/null; then
+    echo -e "${YELLOW}Existing settings.json found. Smart merging model_list...${NC}"
+    # Merge: if model+provider match, update entry; otherwise append new entry.
+    # Also update default_model and env to reflect the new choices.
+    jq \
+      --arg new_model "$coder_model_escaped" \
+      --arg new_provider "$coder_provider" \
+      --arg new_base_url "$coder_base_url_escaped" \
+      --arg new_auth_token "$coder_auth_token_escaped" \
+      '
+      .model_list = (if (.model_list // [] | map(select(.model == $new_model and .provider == $new_provider)) | length > 0) then
+        [.model_list[] | if .model == $new_model and .provider == $new_provider then
+          . * {name: $new_model, base_url: $new_base_url, auth_token_env: $new_auth_token}
+        else . end]
+      else
+        (.model_list // []) + [{name: $new_model, model: $new_model, base_url: $new_base_url, auth_token_env: $new_auth_token, provider: $new_provider}]
+      end) |
+      .default_model = $new_model |
+      .env.CODER_MODEL = $new_model |
+      .env.CODER_BASE_URL = $new_base_url |
+      .env.CODER_AUTH_TOKEN = $new_auth_token
+      ' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp" && mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+    echo -e "${GREEN}✅ Merged with existing ${SETTINGS_FILE}${NC}"
+  else
+    echo -e "${YELLOW}WARNING: Existing settings.json found but jq not available. Backing up and creating new.${NC}"
+    BACKUP_FILE="${SETTINGS_FILE}.bak.$(date +%s)"
+    cp "$SETTINGS_FILE" "$BACKUP_FILE"
+    echo -e "${YELLOW}  Backup saved to ${BACKUP_FILE}${NC}"
+    echo "$SETTINGS_JSON" > "$SETTINGS_FILE"
+    echo -e "${GREEN}✅ Created ${SETTINGS_FILE}${NC}"
+  fi
+else
+  echo "$SETTINGS_JSON" > "$SETTINGS_FILE"
+  echo -e "${GREEN}✅ Created ${SETTINGS_FILE}${NC}"
+fi
 
 # Export env vars for immediate use
 if [ -n "$coder_base_url" ]; then

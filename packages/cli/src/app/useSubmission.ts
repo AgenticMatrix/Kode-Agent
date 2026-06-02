@@ -215,7 +215,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
     [interpolate, send, shellExec]
   )
 
-  // Honors `display.busy_input_mode` from config.yaml (CLI parity):
+  // Honors `display.busy_input_mode` from settings.json (CLI parity):
   //   - 'queue'     (legacy): append to queueRef; drains on busy → false
   //   - 'steer'     : inject into the current turn via session.steer; falls
   //                   back to queue when steer is rejected (no agent / no

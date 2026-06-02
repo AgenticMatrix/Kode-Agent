@@ -147,7 +147,7 @@ export const opsCommands: SlashCommand[] = [
 
       if (!['connect', 'disconnect', 'status'].includes(action)) {
         return ctx.transcript.sys(
-          'usage: /browser [connect|disconnect|status] [url] · persistent: set browser.cdp_url in config.yaml'
+          'usage: /browser [connect|disconnect|status] [url] · persistent: set browser.cdp_url in settings.json'
         )
       }
 
@@ -172,7 +172,7 @@ export const opsCommands: SlashCommand[] = [
               return ctx.transcript.sys(
                 r.connected
                   ? `browser connected: ${r.url || '(url unavailable)'}`
-                  : 'browser not connected (try /browser connect <url> or set browser.cdp_url in config.yaml)'
+                  : 'browser not connected (try /browser connect <url> or set browser.cdp_url in settings.json)'
               )
             }
 

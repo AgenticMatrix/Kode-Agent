@@ -18,7 +18,7 @@ export const SECTION_NAMES = ['thinking', 'tools', 'subagents', 'activity'] as c
 //   - subagents: not set — falls through to the global details_mode so
 //     Spawn trees stay under a chevron until a delegation actually happens.
 //
-// Opt out of any of these with `display.sections.<name>` in config.yaml
+// Opt out of any of these with `display.sections.<name>` in settings.json
 // or at runtime via `/details <name> collapsed|hidden`.
 const SECTION_DEFAULTS: SectionVisibility = {
   thinking: 'collapsed',

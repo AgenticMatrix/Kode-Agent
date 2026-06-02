@@ -234,7 +234,7 @@ export const sessionCommands: SlashCommand[] = [
           ctx.voice.setVoiceEnabled(!!r.enabled)
           ctx.voice.setVoiceTts(!!r.tts)
 
-          // Render the configured record key (config.yaml ``voice.record_key``)
+          // Render the configured record key (settings.json ``voice.record_key``)
           // instead of hardcoded "Ctrl+B" — the gateway response carries the
           // current value so /voice status and /voice on stay in sync with
           // both the CLI and the TUI's actual binding (#18994).

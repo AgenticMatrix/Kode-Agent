@@ -237,6 +237,19 @@ if (cliArgs.model || process.argv.includes('--model')) {
       settings.env.CODER_MODEL = entry.model;
       if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
       if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
+      // Smart merge into model_list (match by model + provider)
+      settings.model_list = settings.model_list ?? [];
+      const existingIdx = settings.model_list.findIndex(
+        (m: any) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
+      );
+      if (existingIdx >= 0) {
+        settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry };
+      } else {
+        settings.model_list.push(entry);
+      }
+      // Export env vars for immediate effect
+      process.env.CODER_MODEL = entry.model;
+      if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url;
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
       console.log(`Default model set to: ${entry.name} (${entry.model})`);
     } else {
@@ -267,6 +280,19 @@ if (cliArgs.model || process.argv.includes('--model')) {
       settings.env.CODER_MODEL = entry.model;
       if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
       if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
+      // Smart merge into model_list (match by model + provider)
+      settings.model_list = settings.model_list ?? [];
+      const existingIdx = settings.model_list.findIndex(
+        (m: any) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
+      );
+      if (existingIdx >= 0) {
+        settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry };
+      } else {
+        settings.model_list.push(entry);
+      }
+      // Export env vars for immediate effect
+      process.env.CODER_MODEL = entry.model;
+      if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url;
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
       console.log(`Default model set to: ${entry.name} (${entry.model})`);
     } else {

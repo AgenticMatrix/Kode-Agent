@@ -15,7 +15,7 @@ const VISIBLE = 12
 const MIN_WIDTH = 40
 const MAX_WIDTH = 90
 
-type Stage = 'provider' | 'key' | 'model' | 'disconnect'
+type Stage = 'provider' | 'key' | 'model' | 'disconnect' | 'custom_provider' | 'custom_model' | 'remove_provider' | 'remove_model'
 
 export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect, sessionId, t }: ModelPickerProps) {
   const [providers, setProviders] = useState<ModelOptionProvider[]>([])
@@ -29,6 +29,19 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
   const [keyInput, setKeyInput] = useState('')
   const [keySaving, setKeySaving] = useState(false)
   const [keyError, setKeyError] = useState('')
+  const [customProviderSlug, setCustomProviderSlug] = useState('')
+  const [customProviderUrl, setCustomProviderUrl] = useState('')
+  const [customProviderKey, setCustomProviderKey] = useState('')
+  const [customProviderField, setCustomProviderField] = useState(0)
+  const [customSaving, setCustomSaving] = useState(false)
+  const [customError, setCustomError] = useState('')
+  const [customModelName, setCustomModelName] = useState('')
+  const [customModelSaving, setCustomModelSaving] = useState(false)
+  const [customModelError, setCustomModelError] = useState('')
+  const [lastProviderIdx, setLastProviderIdx] = useState(0)
+  const [lastModelIdx, setLastModelIdx] = useState(0)
+  const [removeSaving, setRemoveSaving] = useState(false)
+  const [removeError, setRemoveError] = useState('')
 
   const { stdout } = useStdout()
   // Pin the picker to a stable width so the FloatBox parent (which shrinks-
@@ -74,7 +87,7 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
   const names = useMemo(() => providerDisplayNames(providers), [providers])
 
   const back = () => {
-    if (stage === 'model' || stage === 'key' || stage === 'disconnect') {
+    if (stage === 'model' || stage === 'key' || stage === 'disconnect' || stage === 'custom_provider' || stage === 'custom_model' || stage === 'remove_provider' || stage === 'remove_model') {
       setStage('provider')
       setModelIdx(0)
       setKeyInput('')
@@ -153,6 +166,145 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
       return
     }
 
+    // Custom provider creation stage
+    if (stage === 'custom_provider') {
+      if (customSaving) {
+        return
+      }
+
+      if (key.return) {
+        if (customProviderField < 2) {
+          setCustomProviderField(f => f + 1)
+        } else {
+          // Save on last field
+          const slug = customProviderSlug.trim()
+          if (!slug) {
+            return
+          }
+
+          setCustomSaving(true)
+          setCustomError('')
+          gw.request<{ provider?: ModelOptionProvider }>('model.add_custom_provider', {
+            slug,
+            name: slug,
+            base_url: customProviderUrl.trim() || undefined,
+            api_key: customProviderKey.trim() || undefined,
+            ...(sessionId ? { session_id: sessionId } : {})
+          })
+            .then(raw => {
+              const r = asRpcResult<{ provider?: ModelOptionProvider }>(raw)
+
+              if (!r?.provider) {
+                setCustomError('failed to add provider')
+                setCustomSaving(false)
+
+                return
+              }
+
+              setProviders(prev => [...prev, r.provider!])
+              setCustomProviderSlug('')
+              setCustomProviderUrl('')
+              setCustomProviderKey('')
+              setCustomProviderField(0)
+              setCustomSaving(false)
+              setProviderIdx(providers.length)
+              setStage('model')
+              setModelIdx(0)
+            })
+            .catch((e: unknown) => {
+              setCustomError(rpcErrorMessage(e))
+              setCustomSaving(false)
+            })
+        }
+
+        return
+      }
+
+      if (key.backspace || key.delete) {
+        const setters = [setCustomProviderSlug, setCustomProviderUrl, setCustomProviderKey]
+        setters[customProviderField](v => v.slice(0, -1))
+
+        return
+      }
+
+      if (ch === '') {
+        const setters = [setCustomProviderSlug, setCustomProviderUrl, setCustomProviderKey]
+        setters[customProviderField]('')
+
+        return
+      }
+
+      if (ch && !key.ctrl && !key.meta) {
+        const setters = [setCustomProviderSlug, setCustomProviderUrl, setCustomProviderKey]
+        setters[customProviderField](v => v + ch)
+      }
+
+      return
+    }
+
+    // Custom model name stage
+    if (stage === 'custom_model') {
+      if (customModelSaving) {
+        return
+      }
+
+      if (key.return) {
+        const model = customModelName.trim()
+        if (!model) {
+          return
+        }
+
+        setCustomModelSaving(true)
+        setCustomModelError('')
+        gw.request<{ provider?: ModelOptionProvider }>('model.add_custom_model', {
+          slug: provider?.slug,
+          model,
+          ...(sessionId ? { session_id: sessionId } : {})
+        })
+          .then(raw => {
+            const r = asRpcResult<{ provider?: ModelOptionProvider }>(raw)
+
+            if (!r?.provider) {
+              setCustomModelError('failed to add model')
+              setCustomModelSaving(false)
+
+              return
+            }
+
+            setProviders(prev => prev.map(p => (p.slug === r.provider!.slug ? r.provider! : p)))
+            setCustomModelName('')
+            setCustomModelSaving(false)
+            onSelect(
+              `${model} --provider ${provider!.slug}${allowPersistGlobal && persistGlobal ? ' --global' : ` ${TUI_SESSION_MODEL_FLAG}`}`
+            )
+          })
+          .catch((e: unknown) => {
+            setCustomModelError(rpcErrorMessage(e))
+            setCustomModelSaving(false)
+          })
+
+        return
+      }
+
+      if (key.backspace || key.delete) {
+        setCustomModelName(v => v.slice(0, -1))
+
+        return
+      }
+
+      if (ch === '') {
+        setCustomModelName('')
+
+        return
+      }
+
+      if (ch && !key.ctrl && !key.meta) {
+        setCustomModelName(v => v + ch)
+      }
+
+      return
+    }
+
     // Disconnect confirmation stage
     if (stage === 'disconnect') {
       if (ch.toLowerCase() === 'y' || key.return) {
@@ -207,24 +359,164 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
       return
     }
 
-    const count = stage === 'provider' ? providers.length : models.length
+    // Remove provider confirmation stage
+    if (stage === 'remove_provider') {
+      if (removeSaving) {
+        return
+      }
+
+      const targetProvider = providers[lastProviderIdx]
+      if (!targetProvider) {
+        setStage('provider')
+
+        return
+      }
+
+      if (ch.toLowerCase() === 'y' || key.return) {
+        setRemoveSaving(true)
+        setRemoveError('')
+        gw.request<{ removed?: boolean }>('model.remove_provider', {
+          slug: targetProvider.slug,
+          ...(sessionId ? { session_id: sessionId } : {})
+        })
+          .then(raw => {
+            const r = asRpcResult<{ removed?: boolean }>(raw)
+
+            if (r?.removed) {
+              setProviders(prev => prev.filter(p => p.slug !== targetProvider.slug))
+            }
+
+            setRemoveSaving(false)
+            setStage('provider')
+            if (lastProviderIdx >= providers.length - 1) {
+              setProviderIdx(Math.max(0, providers.length - 2))
+            }
+          })
+          .catch((e: unknown) => {
+            setRemoveError(rpcErrorMessage(e))
+            setRemoveSaving(false)
+          })
+
+        return
+      }
+
+      if (ch.toLowerCase() === 'n' || key.escape) {
+        setStage('provider')
+
+        return
+      }
+
+      return
+    }
+
+    // Remove model confirmation stage
+    if (stage === 'remove_model') {
+      if (removeSaving) {
+        return
+      }
+
+      const modelToRemove = models[lastModelIdx]
+      if (!modelToRemove || !provider) {
+        setStage('provider')
+
+        return
+      }
+
+      if (ch.toLowerCase() === 'y' || key.return) {
+        setRemoveSaving(true)
+        setRemoveError('')
+        gw.request<{ removed?: boolean }>('model.remove_model', {
+          slug: provider.slug,
+          model: modelToRemove,
+          ...(sessionId ? { session_id: sessionId } : {})
+        })
+          .then(raw => {
+            const r = asRpcResult<{ removed?: boolean }>(raw)
+
+            if (r?.removed) {
+              setProviders(prev =>
+                prev.map(p =>
+                  p.slug === provider.slug
+                    ? { ...p, models: p.models?.filter(m => m !== modelToRemove) ?? [], total_models: (p.total_models ?? 0) - 1 }
+                    : p
+                )
+              )
+            }
+
+            setRemoveSaving(false)
+            if (models.length <= 1) {
+              setStage('provider')
+            } else {
+              setStage('model')
+              setModelIdx(Math.max(0, lastModelIdx >= models.length - 1 ? models.length - 2 : lastModelIdx))
+            }
+          })
+          .catch((e: unknown) => {
+            setRemoveError(rpcErrorMessage(e))
+            setRemoveSaving(false)
+          })
+
+        return
+      }
+
+      if (ch.toLowerCase() === 'n' || key.escape) {
+        setStage('model')
+
+        return
+      }
+
+      return
+    }
+
+    const count =
+      stage === 'provider'
+        ? providers.length + 2
+        : stage === 'model'
+          ? (models.length > 0 ? models.length + 2 : models.length + 1)
+          : 0
     const sel = stage === 'provider' ? providerIdx : modelIdx
     const setSel = stage === 'provider' ? setProviderIdx : setModelIdx
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      const next = sel - 1
+      setSel(next)
+      if (stage === 'provider' && next < providers.length) setLastProviderIdx(next)
+      if (stage === 'model' && next < models.length) setLastModelIdx(next)
 
       return
     }
 
     if (key.downArrow && sel < count - 1) {
-      setSel(v => v + 1)
+      const next = sel + 1
+      setSel(next)
+      if (stage === 'provider' && next < providers.length) setLastProviderIdx(next)
+      if (stage === 'model' && next < models.length) setLastModelIdx(next)
 
       return
     }
 
     if (key.return) {
       if (stage === 'provider') {
+        if (providerIdx === providers.length) {
+          setStage('custom_provider')
+          setCustomProviderSlug('')
+          setCustomProviderUrl('')
+          setCustomProviderKey('')
+          setCustomProviderField(0)
+          setCustomSaving(false)
+          setCustomError('')
+
+          return
+        }
+
+        if (providerIdx === providers.length + 1) {
+          setStage('remove_provider')
+          setRemoveSaving(false)
+          setRemoveError('')
+
+          return
+        }
+
         if (!provider) {
           return
         }
@@ -243,6 +535,23 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
 
         setStage('model')
         setModelIdx(0)
+
+        return
+      }
+
+      if (modelIdx === models.length) {
+        setStage('custom_model')
+        setCustomModelName('')
+        setCustomModelSaving(false)
+        setCustomModelError('')
+
+        return
+      }
+
+      if (modelIdx === models.length + 1 && models.length > 0) {
+        setStage('remove_model')
+        setRemoveSaving(false)
+        setRemoveError('')
 
         return
       }
@@ -382,16 +691,144 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
     )
   }
 
+  // ── Remove provider confirmation stage ────────────────────────────────
+  if (stage === 'remove_provider') {
+    const targetProvider = providers[lastProviderIdx]
+
+    if (!targetProvider) {
+      return (
+        <Box flexDirection="column" width={width}>
+          <Text color={t.color.label}>No provider selected to remove.</Text>
+          <OverlayHint t={t}>Esc back</OverlayHint>
+        </Box>
+      )
+    }
+
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent} wrap="truncate-end">
+          Remove {targetProvider.name}?
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          This permanently removes {targetProvider.name} from settings.
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          All associated models and credentials will be removed.
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        {removeError ? (
+          <Text color={t.color.label} wrap="truncate-end">
+            error: {removeError}
+          </Text>
+        ) : removeSaving ? (
+          <Text color={t.color.muted} wrap="truncate-end">
+            removing…
+          </Text>
+        ) : (
+          <OverlayHint t={t}>y/Enter confirm · n/Esc cancel</OverlayHint>
+        )}
+      </Box>
+    )
+  }
+
+  // ── Custom provider creation stage ────────────────────────────────────
+  if (stage === 'custom_provider') {
+    const fieldLabels = ['Provider slug', 'Base URL (optional)', 'API Key (optional)']
+    const fieldValues = [customProviderSlug, customProviderUrl, customProviderKey]
+    const fieldMasked = [false, false, true]
+
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent} wrap="truncate-end">
+          Custom Provider Setup
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          Enter provider details · Enter advances to next field
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        {fieldLabels.map((label, i) => {
+          const isActive = customProviderField === i
+          const raw = fieldValues[i]
+          const display = fieldMasked[i] && raw ? '•'.repeat(Math.min(raw.length, 40)) : raw || '(empty)'
+
+          return (
+            <Box key={label} flexDirection="column">
+              <Text
+                bold={isActive}
+                color={isActive ? t.color.accent : t.color.muted}
+                wrap="truncate-end"
+              >
+                {isActive ? '▸ ' : '  '}{label}:
+              </Text>
+              <Text
+                color={isActive ? t.color.accent : t.color.muted}
+                wrap="truncate-end"
+              >
+                {'    '}{display}{isActive && !customSaving ? '▎' : ''}
+              </Text>
+            </Box>
+          )
+        })}
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        {customError ? (
+          <Text color={t.color.label} wrap="truncate-end">
+            error: {customError}
+          </Text>
+        ) : customSaving ? (
+          <Text color={t.color.muted} wrap="truncate-end">
+            saving…
+          </Text>
+        ) : (
+          <Text color={t.color.muted} wrap="truncate-end">
+            {' '}
+          </Text>
+        )}
+
+        <OverlayHint t={t}>
+          {customProviderField < 2
+            ? 'Enter next field · Ctrl+U clear field · Esc back'
+            : 'Enter save · Ctrl+U clear field · Esc back'}
+        </OverlayHint>
+      </Box>
+    )
+  }
+
   // ── Provider selection stage ─────────────────────────────────────────
   if (stage === 'provider') {
     const rows = providers.map((p, i) => {
       const authMark = p.authenticated === false ? '○' : p.is_current ? '*' : '●'
       const modelCount = p.total_models ?? p.models?.length ?? 0
       const suffix =
-        p.authenticated === false ? (p.auth_type === 'api_key' ? '(no key)' : '(needs setup)') : `${modelCount} models`
+        p.authenticated === false
+          ? (p.auth_type === 'api_key' ? '(no key)' : '(needs setup)')
+          : p.is_current
+            ? `${modelCount} models  <- currently active`
+            : `${modelCount} models`
 
       return `${authMark} ${names[i]} · ${suffix}`
     })
+
+    rows.push('Custom new provider')
+    rows.push('Remove provider')
 
     const { items, offset } = windowItems(rows, providerIdx, VISIBLE)
 
@@ -453,7 +890,8 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
   }
 
   // ── Model selection stage ────────────────────────────────────────────
-  const { items, offset } = windowItems(models, modelIdx, VISIBLE)
+  const displayModels = models.length > 0 ? [...models, 'Custom model name', 'Remove model'] : [...models, 'Custom model name']
+  const { items, offset } = windowItems(displayModels, modelIdx, VISIBLE)
 
   return (
     <Box flexDirection="column" width={width}>
@@ -504,7 +942,7 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
       })}
 
       <Text color={t.color.muted} wrap="truncate-end">
-        {offset + VISIBLE < models.length ? ` ↓ ${models.length - offset - VISIBLE} more` : ' '}
+        {offset + VISIBLE < displayModels.length ? ` ↓ ${displayModels.length - offset - VISIBLE} more` : ' '}
       </Text>
 
       <Text color={t.color.muted} wrap="truncate-end">
@@ -516,6 +954,101 @@ export function ModelPicker({ allowPersistGlobal = true, gw, onCancel, onSelect,
       </OverlayHint>
     </Box>
   )
+
+  // ── Remove model confirmation stage ───────────────────────────────────
+  if (stage === 'remove_model' && provider) {
+    const modelToRemove = models[lastModelIdx]
+
+    if (!modelToRemove) {
+      return (
+        <Box flexDirection="column" width={width}>
+          <Text color={t.color.label}>No model selected to remove.</Text>
+          <OverlayHint t={t}>Esc back</OverlayHint>
+        </Box>
+      )
+    }
+
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent} wrap="truncate-end">
+          Remove model from {provider.name}?
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          Model: {modelToRemove}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        {removeError ? (
+          <Text color={t.color.label} wrap="truncate-end">
+            error: {removeError}
+          </Text>
+        ) : removeSaving ? (
+          <Text color={t.color.muted} wrap="truncate-end">
+            removing…
+          </Text>
+        ) : (
+          <OverlayHint t={t}>y/Enter confirm · n/Esc cancel</OverlayHint>
+        )}
+      </Box>
+    )
+  }
+
+  // ── Custom model name stage ───────────────────────────────────────────
+  if (stage === 'custom_model' && provider) {
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent} wrap="truncate-end">
+          Custom Model for {provider.name}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          Enter the model name/ID (e.g. gpt-4o, claude-sonnet-4-20250514)
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          Model name:
+        </Text>
+
+        <Text color={t.color.accent} wrap="truncate-end">
+          {'  '}
+          {customModelName || '(empty)'}
+          {customModelSaving ? '' : '▎'}
+        </Text>
+
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+
+        {customModelError ? (
+          <Text color={t.color.label} wrap="truncate-end">
+            error: {customModelError}
+          </Text>
+        ) : customModelSaving ? (
+          <Text color={t.color.muted} wrap="truncate-end">
+            saving…
+          </Text>
+        ) : (
+          <Text color={t.color.muted} wrap="truncate-end">
+            {' '}
+          </Text>
+        )}
+
+        <OverlayHint t={t}>Enter save · Ctrl+U clear · Esc back</OverlayHint>
+      </Box>
+    )
+  }
 }
 
 interface ModelPickerProps {

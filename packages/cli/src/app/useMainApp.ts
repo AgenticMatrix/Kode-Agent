@@ -200,7 +200,13 @@ export function useMainApp(gw: IGatewayClient) {
   const terminalHintsShownRef = useRef(new Set<string>())
   const historyItemsRef = useRef(historyItems)
   const lastUserMsgRef = useRef(lastUserMsg)
-  const msgIdsRef = useRef(new WeakMap<Msg, string>())
+  // Content-keyed Map instead of object-reference-keyed WeakMap.
+  // WeakMap compares by object identity (===), so mergeToolShelfInto's
+  // new Msg objects always miss the cache → new ID → virtual row key
+  // changes → ToolTrail remounts → useState collapses.  Hashing on
+  // messageHeightKey (a stable content digest) makes identical content
+  // always resolve to the same ID regardless of object identity.
+  const msgIdsRef = useRef(new Map<string, string>())
   const msgIdSeqRef = useRef(0)
   const heightCachesRef = useRef(new Map<string, Map<string, number>>())
 
@@ -284,15 +290,16 @@ export function useMainApp(gw: IGatewayClient) {
   }, [])
 
   const messageId = useCallback((msg: Msg) => {
-    const hit = msgIdsRef.current.get(msg)
+    const key = messageHeightKey(msg)
+    const hit = msgIdsRef.current.get(key)
 
     if (hit) {
       return hit
     }
 
-    const next = `${messageHeightKey(msg)}:${++msgIdSeqRef.current}`
+    const next = `${key}:${++msgIdSeqRef.current}`
 
-    msgIdsRef.current.set(msg, next)
+    msgIdsRef.current.set(key, next)
 
     return next
   }, [])

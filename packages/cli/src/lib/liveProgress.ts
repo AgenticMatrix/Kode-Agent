@@ -12,10 +12,24 @@ export const isToolShelfMessage = (msg: Msg | undefined) =>
 export const canHoldToolShelf = (msg: Msg | undefined) =>
   Boolean(msg?.kind === 'trail' && !msg.text && (msg.thinking?.trim() || msg.tools?.length))
 
-export const mergeToolShelfInto = (target: Msg, source: Msg): Msg => ({
-  ...target,
-  tools: [...(target.tools ?? []), ...(source.tools ?? [])]
-})
+export const mergeToolShelfInto = (target: Msg, source: Msg): Msg => {
+  const currentTools = target.tools ?? []
+  const newTools = source.tools ?? []
+
+  // Preserve object identity when there is nothing new to add.
+  // This avoids creating a fresh Msg reference that would skip
+  // AppendToolShelfMessage's shallow array copy and churn downstream
+  // content-keyed caches (messageId, vdom reconciliation).
+  if (newTools.length === 0) return target
+
+  const merged = [...currentTools, ...newTools]
+
+  // If every incoming tool was already present (merged length equals
+  // current length) there is no actual change — keep the same reference.
+  if (merged.length === currentTools.length) return target
+
+  return { ...target, tools: merged }
+}
 
 const isBarrierMessage = (msg: Msg | undefined) => {
   if (!msg) {

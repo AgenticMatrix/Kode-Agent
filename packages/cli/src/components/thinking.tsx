@@ -757,11 +757,15 @@ export const ToolTrail = memo(function ToolTrail({
   }, [openTools, tools.length, visible.tools])
 
   useEffect(() => {
-    setOpenThinking(visible.thinking === 'expanded')
-    setOpenTools(visible.tools === 'expanded')
+    if (!thinkingUserToggledRef.current) {
+      setOpenThinking(visible.thinking === 'expanded')
+    }
+    if (!toolsUserToggledRef.current) {
+      setOpenTools(visible.tools === 'expanded')
+    }
     setOpenSubagents(visible.subagents === 'expanded')
     setOpenMeta(visible.activity === 'expanded')
-  }, [visible])
+  }, [visible.thinking, visible.tools, visible.subagents, visible.activity])
 
   const cot = useMemo(() => thinkingPreview(reasoning, 'full', THINKING_COT_MAX), [reasoning])
 

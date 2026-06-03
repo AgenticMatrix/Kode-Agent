@@ -46,11 +46,16 @@ const execFileAsync = promisify(execFile)
 // ---------------------------------------------------------------------------
 
 interface ModelEntry {
-  name: string           // Display name, also key for default_model
-  model: string          // Actual model ID to send to API
+  model: string[]        // List of model IDs available for this provider
   base_url?: string      // Provider endpoint URL
   auth_token_env?: string // API key / auth token
   provider?: string      // e.g. "anthropic", "deepseek", "openai"
+  price?: {
+    input: number
+    output: number
+    currency: string
+    unit: string
+  }
 }
 
 function inferProvider(name: string): string {
@@ -61,7 +66,7 @@ function inferProvider(name: string): string {
 }
 
 function upsertModelList(list: ModelEntry[], newEntry: ModelEntry): void {
-  const idx = list.findIndex(m => m.model === newEntry.model && m.provider === newEntry.provider)
+  const idx = list.findIndex(m => m.provider === newEntry.provider)
   if (idx >= 0) {
     list[idx] = { ...list[idx], ...newEntry }
   } else {
@@ -95,25 +100,50 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   name: string
   provider: string
 } {
+  // Helper: parse "provider/model-name" format
+  const parseDefaultModel = (raw: string): { providerName: string; modelName: string | undefined } => {
+    const parts = raw.split('/')
+    return {
+      providerName: parts[0],
+      modelName: parts.length > 1 ? parts[1] : undefined,
+    }
+  }
+
+  // Helper: resolve a model from a model_list entry
+  const resolveFromEntry = (entry: ModelEntry, preferredModel?: string) => {
+    const selectedModel = preferredModel
+      ? (entry.model.find(m => m === preferredModel) ?? entry.model[0])
+      : entry.model[0]
+    return {
+      model: selectedModel,
+      baseUrl: entry.base_url,
+      apiKey: entry.auth_token_env,
+      name: selectedModel,
+      provider: entry.provider ?? inferProvider(selectedModel),
+    }
+  }
+
   // 0. CODER_MODEL env var — highest priority (overrides all other sources)
   const coderModel = process.env.CODER_MODEL
   if (coderModel) {
-    // Look up in model_list first
     if (settings.model_list) {
-      const entry = settings.model_list.find(
-        m => m.name === coderModel || m.model === coderModel,
-      )
-      if (entry) {
-        return {
-          model: entry.model,
-          baseUrl: entry.base_url,
-          apiKey: entry.auth_token_env,
-          name: entry.name,
-          provider: entry.provider ?? inferProvider(entry.name),
+      // Try parsing as "provider/model-name"
+      const { providerName, modelName } = parseDefaultModel(coderModel)
+      if (providerName) {
+        const entry = settings.model_list.find(m => m.provider === providerName)
+        if (entry && entry.model.length > 0) {
+          return resolveFromEntry(entry, modelName)
+        }
+      }
+      // Fallback: try matching any model name in any entry's model array
+      for (const entry of settings.model_list) {
+        const matched = entry.model.find(m => m === coderModel)
+        if (matched) {
+          return resolveFromEntry(entry, matched)
         }
       }
     }
-    // Not in model_list — use CODER_MODEL directly as the model name
+    // Not in model_list — use directly
     return {
       model: coderModel,
       name: coderModel,
@@ -121,29 +151,20 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
     }
   }
 
-  // 1. Find default model from model_list
+  // 1. Find default model from model_list using "provider/model-name" format
   const defaultName = settings.default_model
   if (defaultName && settings.model_list) {
-    const entry = settings.model_list.find(m => m.name === defaultName)
-    if (entry) {
-      return {
-        model: entry.model,
-        baseUrl: entry.base_url,
-        apiKey: entry.auth_token_env,
-        name: entry.name,
-        provider: entry.provider ?? inferProvider(entry.name),
-      }
+    const { providerName, modelName } = parseDefaultModel(defaultName)
+    const entry = settings.model_list.find(m => m.provider === providerName)
+    if (entry && entry.model.length > 0) {
+      return resolveFromEntry(entry, modelName)
     }
   }
   // 2. Fall back to first model in list
   if (settings.model_list && settings.model_list.length > 0) {
     const entry = settings.model_list[0]!
-    return {
-      model: entry.model,
-      baseUrl: entry.base_url,
-      apiKey: entry.auth_token_env,
-      name: entry.name,
-      provider: entry.provider ?? inferProvider(entry.name),
+    if (entry.model.length > 0) {
+      return resolveFromEntry(entry)
     }
   }
   // 3. Legacy env fallback
@@ -227,25 +248,48 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
     const coderModel = process.env.CODER_MODEL
     let resolved: { model: string; baseUrl?: string; apiKey?: string; name: string; provider: string }
     if (coderModel) {
-      // Look up in model_list to get base_url / auth_token_env
-      const entry = settings.model_list?.find(
-        m => m.name === coderModel || m.model === coderModel,
-      )
-      if (entry) {
-        resolved = {
-          model: entry.model,
+      // Helper: resolve from a model_list entry
+      const resolveEntry = (entry: ModelEntry, preferredModel?: string) => {
+        const selectedModel = preferredModel
+          ? (entry.model.find(m => m === preferredModel) ?? entry.model[0])
+          : entry.model[0]
+        return {
+          model: selectedModel,
           baseUrl: entry.base_url,
           apiKey: entry.auth_token_env,
-          name: entry.name,
-          provider: entry.provider ?? inferProvider(entry.name),
-        }
-      } else {
-        resolved = {
-          model: coderModel,
-          name: coderModel,
-          provider: inferProvider(coderModel),
+          name: selectedModel,
+          provider: entry.provider ?? inferProvider(selectedModel),
         }
       }
+
+      // Try parsing as "provider/model-name"
+      const parts = coderModel.split('/')
+      const providerName = parts.length > 1 ? parts[0] : undefined
+      const modelName = parts.length > 1 ? parts[1] : parts[0]
+
+      // Default fallback
+      let entryResult: ReturnType<typeof resolveEntry> | null = null
+
+      if (settings.model_list && settings.model_list.length > 0) {
+        // Try matching by provider first
+        const entry = providerName
+          ? settings.model_list.find(m => m.provider === providerName)
+          : undefined
+        if (entry && entry.model.length > 0) {
+          entryResult = resolveEntry(entry, modelName)
+        } else {
+          // Fallback: try matching any model name in any model array
+          for (const e of settings.model_list) {
+            const matched = e.model.find(m => m === modelName)
+            if (matched) {
+              entryResult = resolveEntry(e, matched)
+              break
+            }
+          }
+        }
+      }
+
+      resolved = entryResult ?? { model: modelName, name: modelName, provider: providerName ?? inferProvider(modelName) }
     } else {
       resolved = resolveModelConfig(settings, 'claude-sonnet-4-6')
     }
@@ -520,31 +564,29 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
           const settings = loadClaudeSettings()
 
           if (key === 'model' && value) {
-            // Find the model in model_list by name
+            // default_model format: "provider/model-name" (e.g., "deepseek/deepseek-v4-pro")
+            const parts = value.split('/')
+            const providerName = parts[0]
+            const modelName = parts.length > 1 ? parts[1] : undefined
+
             const modelList = settings.model_list ?? []
-            const entry = modelList.find(m => m.name === value)
-            if (entry) {
+            const entry = modelList.find(m => m.provider === providerName)
+
+            if (entry && entry.model.length > 0) {
+              const selectedModel = modelName
+                ? (entry.model.find(m => m === modelName) ?? entry.model[0])
+                : entry.model[0]
+
               // Update env vars in settings to match the selected model entry
               settings.env = settings.env ?? {}
-              settings.env.CODER_MODEL = entry.model
+              settings.env.CODER_MODEL = selectedModel
               if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url
               if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = entry.auth_token_env
               settings.default_model = value
 
-              // Smart merge into model_list (match by model + provider)
-              settings.model_list = settings.model_list ?? []
-              const existingIdx = settings.model_list.findIndex(
-                (m: ModelEntry) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
-              )
-              if (existingIdx >= 0) {
-                settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry }
-              } else {
-                settings.model_list.push(entry)
-              }
-
-              // Export to process env for immediate effect
-              process.env.CODER_MODEL = entry.model
-              if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url
+              // Smart merge into model_list (match by provider)
+              upsertModelList(modelList, entry)
+              settings.model_list = modelList
 
               // Persist to disk
               writeFileSync(
@@ -552,32 +594,38 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
                 JSON.stringify(settings, null, 2),
               )
 
-              // Update runtime state so the change takes effect immediately
-              this.model = entry.model
+              // Update runtime state
+              this.model = selectedModel
               this.modelConfig = {
-                model: entry.model,
+                model: selectedModel,
                 baseUrl: entry.base_url,
                 apiKey: entry.auth_token_env,
-                name: entry.name,
-                provider: entry.provider ?? inferProvider(entry.name),
+                name: selectedModel,
+                provider: entry.provider ?? inferProvider(selectedModel),
               }
-              this.log(`config.set model=${value} -> ${entry.model} (provider=${this.modelConfig.provider})`)
+              this.log(`config.set model=${value} -> ${selectedModel} (provider=${this.modelConfig.provider})`)
             }
           } else if (key === 'CODER_MODEL' && value) {
-            // Direct model name set: upsert to model_list
+            // Direct default_model set: format as "provider/model-name"
+            const parts = value.split('/')
+            const providerName = parts[0]
+            const modelName = parts.length > 1 ? parts[1] : value
+
             settings.env = settings.env ?? {}
             settings.env.CODER_MODEL = value
             settings.model_list = settings.model_list ?? []
             const existingIdx = settings.model_list.findIndex(
-              (m: ModelEntry) => (m.model === value || m.name === value)
+              (m: ModelEntry) => m.provider === providerName
             )
             if (existingIdx >= 0) {
-              settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], model: value, name: value }
+              const existing = settings.model_list[existingIdx]
+              if (!existing.model.includes(modelName)) {
+                existing.model = [modelName, ...existing.model]
+              }
             } else {
-              settings.model_list.push({ name: value, model: value, provider: inferProvider(value) })
+              settings.model_list.push({ model: [modelName], provider: providerName })
             }
             settings.default_model = value
-            process.env.CODER_MODEL = value
             writeFileSync(
               join(homedir(), '.coder', 'settings.json'),
               JSON.stringify(settings, null, 2),
@@ -589,13 +637,14 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
             settings.env[key] = value
             // Also update the current default model entry in model_list
             if (settings.model_list && settings.default_model) {
-              const defEntry = settings.model_list.find((m: ModelEntry) => m.name === settings.default_model)
+              const parts = settings.default_model.split('/')
+              const providerName = parts[0]
+              const defEntry = settings.model_list.find((m: ModelEntry) => m.provider === providerName)
               if (defEntry) {
                 if (key === 'CODER_BASE_URL') defEntry.base_url = value
-                if (key === 'CODER_AUTH_TOKEN') defEntry.auth_token_env = 'CODER_AUTH_TOKEN'
+                if (key === 'CODER_AUTH_TOKEN') defEntry.auth_token_env = value
               }
             }
-            process.env[key] = value
             writeFileSync(
               join(homedir(), '.coder', 'settings.json'),
               JSON.stringify(settings, null, 2),
@@ -993,9 +1042,13 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
     // Check model_list entries
     if (settings.model_list && settings.model_list.length > 0) {
       const defaultName = settings.default_model
-      const entry = defaultName
-        ? settings.model_list.find(m => m.name === defaultName)
-        : settings.model_list[0]
+      let entry: ModelEntry | undefined
+      if (defaultName) {
+        const parts = defaultName.split('/')
+        const providerName = parts[0]
+        entry = settings.model_list.find(m => m.provider === providerName)
+      }
+      if (!entry) entry = settings.model_list[0]
       if (entry?.auth_token_env) return true
     }
 

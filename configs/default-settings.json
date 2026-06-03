@@ -1,0 +1,115 @@
+{
+  "theme": "dark",
+  "default_model": "deepseek/deepseek-v4-pro",
+  "model_list": [
+    {
+      "model": ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
+      "base_url": "https://api.deepseek.com/anthropic",
+      "auth_token_env": "YOUR_DEEPSEEK_API_KEY",
+      "provider": "deepseek",
+      "price": {
+        "input": 0.14,
+        "output": 0.28,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["claude-sonnet-2025", "opus-4.8"],
+      "base_url": "https://api.deepseek.com/anthropic",
+      "auth_token_env": "YOUR_ANTHROPIC_API_KEY",
+      "provider": "anthropic",
+      "price": {
+        "input": 3.0,
+        "output": 15.0,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["glm-4-plus", "glm-4-flash", "glm-4-air"],
+      "base_url": "https://open.bigmodel.cn/api/paas/v4",
+      "auth_token_env": "YOUR_ZHIPU_API_KEY",
+      "provider": "glm",
+      "price": {
+        "input": 0.1,
+        "output": 0.1,
+        "currency": "CNY",
+        "unit": "1K tokens"
+      }
+    },
+    {
+      "model": ["MiniMax-Text-01", "abab7-chat", "abab6.5s-chat"],
+      "base_url": "https://api.minimax.chat/v1",
+      "auth_token_env": "YOUR_MINIMAX_API_KEY",
+      "provider": "minimax",
+      "price": {
+        "input": 10.0,
+        "output": 10.0,
+        "currency": "CNY",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["local-llama3-70b", "local-qwen-32b", "local-mistral"],
+      "base_url": "http://localhost:8000/v1",
+      "auth_token_env": "LOCAL_NO_KEY",
+      "provider": "local",
+      "price": {
+        "input": 0,
+        "output": 0,
+        "currency": "USD",
+        "unit": "free"
+      }
+    },
+    {
+      "model": ["qwen-max", "qwen-plus", "qwen-turbo"],
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "auth_token_env": "YOUR_QWEN_API_KEY",
+      "provider": "qwen",
+      "price": {
+        "input": 0.02,
+        "output": 0.06,
+        "currency": "CNY",
+        "unit": "1K tokens"
+      }
+    },
+    {
+      "model": ["gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo"],
+      "base_url": "https://api.openai.com/v1",
+      "auth_token_env": "YOUR_OPENAI_API_KEY",
+      "provider": "openai",
+      "price": {
+        "input": 10.0,
+        "output": 30.0,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["grok-1", "grok-beta", "grok-vision-beta"],
+      "base_url": "https://api.x.ai/v1",
+      "auth_token_env": "YOUR_GROK_API_KEY",
+      "provider": "grok",
+      "price": {
+        "input": 5.0,
+        "output": 15.0,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
+      "base_url": "https://generativelanguage.googleapis.com/v1",
+      "auth_token_env": "YOUR_GOOGLE_API_KEY",
+      "provider": "google",
+      "price": {
+        "input": 3.5,
+        "output": 10.5,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    }
+  ],
+  "env": {}
+}

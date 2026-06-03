@@ -219,7 +219,7 @@ if (cliArgs.model || process.argv.includes('--model')) {
     settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
   } catch {}
 
-  const modelList: Array<{name: string; model: string; base_url?: string; auth_token_env?: string; provider?: string}> =
+  const modelList: Array<{model: string[]; base_url?: string; auth_token_env?: string; provider: string}> =
     settings.model_list ?? [];
 
   if (modelList.length === 0) {
@@ -229,78 +229,224 @@ if (cliArgs.model || process.argv.includes('--model')) {
 
   const targetModel = cliArgs.model;
   if (targetModel) {
-    // Non-interactive: set specific model
-    const entry = modelList.find(m => m.name === targetModel || m.model === targetModel);
-    if (entry) {
-      settings.default_model = entry.name;
-      settings.env = settings.env ?? {};
-      settings.env.CODER_MODEL = entry.model;
-      if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
-      if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
-      // Smart merge into model_list (match by model + provider)
-      settings.model_list = settings.model_list ?? [];
-      const existingIdx = settings.model_list.findIndex(
-        (m: any) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
-      );
-      if (existingIdx >= 0) {
-        settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry };
-      } else {
-        settings.model_list.push(entry);
-      }
-      // Export env vars for immediate effect
-      process.env.CODER_MODEL = entry.model;
-      if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url;
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-      console.log(`Default model set to: ${entry.name} (${entry.model})`);
+    // Non-interactive: parse "provider/model-name" format
+    const slashIdx = targetModel.indexOf('/');
+    let providerName: string;
+    let modelName: string;
+    if (slashIdx >= 0) {
+      providerName = targetModel.slice(0, slashIdx);
+      modelName = targetModel.slice(slashIdx + 1);
     } else {
-      console.log(`Model "${targetModel}" not found in model_list.`);
+      // Fallback: treat as model name, find first matching provider
+      const found = modelList.find(m => m.model.includes(targetModel));
+      if (found) {
+        providerName = found.provider;
+        modelName = targetModel;
+      } else {
+        console.log(`Model "${targetModel}" not found in model_list.`);
+        process.exit(0);
+      }
     }
+
+    const providerEntry = modelList.find(m => m.provider === providerName);
+    if (!providerEntry || !providerEntry.model.includes(modelName)) {
+      console.log(`Model "${targetModel}" not found in model_list.`);
+      process.exit(0);
+    }
+
+    settings.default_model = `${providerEntry.provider}/${modelName}`;
+    settings.env = settings.env ?? {};
+    settings.env.CODER_MODEL = modelName;
+    if (providerEntry.base_url) settings.env.CODER_BASE_URL = providerEntry.base_url;
+    if (providerEntry.auth_token_env) settings.env.CODER_AUTH_TOKEN = providerEntry.auth_token_env;
+
+    // Smart merge into model_list (match by provider)
+    settings.model_list = settings.model_list ?? [];
+    const existingIdx = settings.model_list.findIndex(
+      (m: any) => m.provider === providerEntry.provider
+    );
+    if (existingIdx >= 0) {
+      settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...providerEntry };
+    } else {
+      settings.model_list.push(providerEntry);
+    }
+
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    console.log(`Default model set to: ${providerEntry.provider}/${modelName}`);
     process.exit(0);
   }
 
-  // Interactive: show model list and let user choose
-  console.log('Available models:');
-  modelList.forEach((m, i) => {
-    const marker = settings.default_model === m.name ? ' [default]' : '';
-    console.log(`  ${i + 1}. ${m.name} (${m.model})${marker}`);
-  });
-  console.log('');
+  // Interactive: arrow-key radio-button selector for provider → model → auth_token
+  const stdin = process.stdin;
+  const stdout = process.stdout;
 
-  // Use readline for interactive input
-  const readline = await import('node:readline');
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-
-  rl.question(`Select model (1-${modelList.length}) or press Enter to exit: `, (answer) => {
-    rl.close();
-    const idx = parseInt(answer.trim(), 10) - 1;
-    if (idx >= 0 && idx < modelList.length) {
-      const entry = modelList[idx]!;
-      settings.default_model = entry.name;
-      settings.env = settings.env ?? {};
-      settings.env.CODER_MODEL = entry.model;
-      if (entry.base_url) settings.env.CODER_BASE_URL = entry.base_url;
-      if (entry.auth_token_env) settings.env.CODER_AUTH_TOKEN = process.env.CODER_AUTH_TOKEN ?? '';
-      // Smart merge into model_list (match by model + provider)
-      settings.model_list = settings.model_list ?? [];
-      const existingIdx = settings.model_list.findIndex(
-        (m: any) => m.model === entry.model && (m.provider ?? '') === (entry.provider ?? '')
-      );
-      if (existingIdx >= 0) {
-        settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...entry };
-      } else {
-        settings.model_list.push(entry);
+  // ── radioSelect helper ────────────────────────────────────────────────────
+  function radioSelect(options: string[], activeIndex: number, title: string): Promise<number> {
+    return new Promise((resolve) => {
+      if (!stdin.isTTY) {
+        // Non-TTY fallback: just return default
+        console.log(`${title}\n  (non-TTY mode, using default)\n`);
+        resolve(activeIndex);
+        return;
       }
-      // Export env vars for immediate effect
-      process.env.CODER_MODEL = entry.model;
-      if (entry.base_url) process.env.CODER_BASE_URL = entry.base_url;
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-      console.log(`Default model set to: ${entry.name} (${entry.model})`);
-    } else {
-      console.log('No change.');
-    }
-    process.exit(0);
+
+      let selected = activeIndex;
+      let firstRender = true;
+      const totalLines = options.length + 2; // title + options + hint
+      const rawModeWas = stdin.isRaw;
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdout.write('\x1B[?25l'); // hide cursor
+
+      function render() {
+        if (!firstRender) {
+          // Move cursor back up to overwrite previous render
+          stdout.write(`\x1B[${totalLines}A`);
+        }
+        firstRender = false;
+
+        stdout.write(`\x1B[K${title}\n`);
+        options.forEach((opt, i) => {
+          const marker = i === selected ? '\x1B[1m●\x1B[0m' : '○';
+          stdout.write(`\x1B[K  ${marker} ${opt}\n`);
+        });
+        stdout.write(`\x1B[K\n  \x1B[2m↑↓ to navigate, Enter to confirm\x1B[0m`);
+      }
+
+      render();
+
+      function onData(data: Buffer) {
+        const key = data[0];
+        // Enter
+        if (key === 13) {
+          cleanup();
+          resolve(selected);
+          return;
+        }
+        // Ctrl+C
+        if (key === 3) {
+          cleanup();
+          stdout.write('\n');
+          process.exit(0);
+        }
+        // Arrow key sequences (escape [ A/B)
+        if (key === 27 && data.length >= 3) {
+          if (data[1] === 91) {
+            if (data[2] === 65) {
+              // Up
+              selected = (selected - 1 + options.length) % options.length;
+              render();
+            } else if (data[2] === 66) {
+              // Down
+              selected = (selected + 1) % options.length;
+              render();
+            }
+          }
+        }
+      }
+
+      function cleanup() {
+        stdin.setRawMode(rawModeWas);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+        stdout.write('\x1B[?25h\n'); // show cursor, newline
+      }
+
+      stdin.on('data', onData);
+    });
+  }
+
+  // ── Step 1: Provider selection ────────────────────────────────────────────
+  const defaultModel = settings.default_model ?? '';
+  const defaultProvider = defaultModel ? defaultModel.split('/')[0] : 'deepseek';
+  let providerActiveIdx = modelList.findIndex(m => m.provider === defaultProvider);
+  if (providerActiveIdx < 0) providerActiveIdx = 0;
+
+  const providerOptions = modelList.map(m => {
+    const firstModel = m.model[0] ?? 'unknown';
+    return `${m.provider} (${firstModel}...)`;
   });
-  // Exit is handled in the readline callback above — don't fall through to TTY check
+
+  const selectedProviderIdx = await radioSelect(
+    providerOptions,
+    providerActiveIdx,
+    'Available providers:',
+  );
+
+  const selectedProvider = modelList[selectedProviderIdx]!;
+  console.log(`Selected provider: ${selectedProvider.provider}\n`);
+
+  // ── Step 2: Model selection ───────────────────────────────────────────────
+  const currentDefaultModel = defaultModel.split('/')[1] ?? selectedProvider.model[0] ?? '';
+  let modelActiveIdx = selectedProvider.model.findIndex(m => m === currentDefaultModel);
+  if (modelActiveIdx < 0) modelActiveIdx = 0;
+
+  const modelOptions = selectedProvider.model.map(m => m);
+
+  const selectedModelIdx = await radioSelect(
+    modelOptions,
+    modelActiveIdx,
+    `Available models for ${selectedProvider.provider}:`,
+  );
+
+  const selectedModel = selectedProvider.model[selectedModelIdx]!;
+  console.log(`Selected model: ${selectedModel}\n`);
+
+  // ── Step 3: auth_token_env display/edit ───────────────────────────────────
+  const currentToken = selectedProvider.auth_token_env ?? '';
+  let displayToken: string;
+  if (!currentToken) {
+    displayToken = '(not set)';
+  } else if (currentToken.startsWith('YOUR_') || currentToken === 'LOCAL_NO_KEY') {
+    displayToken = currentToken;
+  } else if (currentToken.length > 12) {
+    displayToken = `${currentToken.slice(0, 6)}******${currentToken.slice(-6)}`;
+  } else {
+    displayToken = currentToken;
+  }
+
+  console.log('API Key (auth_token_env):');
+  console.log(`  Current: ${displayToken}`);
+
+  const readline = await import('node:readline');
+  const rl = readline.createInterface({ input: stdin, output: stdout });
+  const newToken = await new Promise<string>((resolve) => {
+    rl.question('  Press Enter to keep, or type a new key: ', (answer) => {
+      resolve(answer.trim());
+    });
+  });
+  rl.close();
+
+  if (newToken) {
+    selectedProvider.auth_token_env = newToken;
+    console.log('  Token updated.\n');
+  } else {
+    console.log('  Keeping current token.\n');
+  }
+
+  // ── Update settings.json ──────────────────────────────────────────────────
+  settings.default_model = `${selectedProvider.provider}/${selectedModel}`;
+  settings.env = settings.env ?? {};
+  settings.env.CODER_MODEL = selectedModel;
+  if (selectedProvider.base_url) settings.env.CODER_BASE_URL = selectedProvider.base_url;
+  if (selectedProvider.auth_token_env) settings.env.CODER_AUTH_TOKEN = selectedProvider.auth_token_env;
+
+  // Smart merge into model_list (match by provider)
+  settings.model_list = settings.model_list ?? [];
+  {
+    const existingIdx = settings.model_list.findIndex(
+      (m: any) => m.provider === selectedProvider.provider
+    );
+    if (existingIdx >= 0) {
+      settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...selectedProvider };
+    } else {
+      settings.model_list.push(selectedProvider);
+    }
+  }
+
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  console.log(`Default model set to: ${selectedProvider.provider}/${selectedModel}`);
+  process.exit(0);
 }
 
 // TTY check — skip for non-interactive flags handled above

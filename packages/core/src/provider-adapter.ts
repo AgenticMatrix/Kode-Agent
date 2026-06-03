@@ -27,6 +27,7 @@ export function createCallModelFromProvider(
   provider: Provider,
   model: string,
   thinking?: ThinkingConfig,
+  maxTokens?: number,
 ): (params: CallModelParams) => AsyncGenerator<SharedStreamEvent | AssistantMessage> {
   return async function* callModel(
     params: CallModelParams,
@@ -70,8 +71,11 @@ export function createCallModelFromProvider(
       if (out) { enqueue(out); if (drain) { const d = drain; drain = null; d(); } }
     };
 
-    // Build ModelConfig with optional thinking configuration
+    // Build ModelConfig with optional thinking configuration and maxTokens
     const modelConfig: ModelConfig = { model };
+    if (maxTokens !== undefined) {
+      modelConfig.maxTokens = maxTokens;
+    }
     if (thinking && thinking.mode !== 'disabled') {
       modelConfig.thinking = thinking;
     }

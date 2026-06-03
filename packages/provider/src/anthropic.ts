@@ -161,7 +161,7 @@ export class AnthropicProvider implements Provider {
       model: modelConfig.model,
       system: system || undefined,
       messages: apiMessages as MessageParam[],
-      max_tokens: modelConfig.maxTokens ?? 8192,
+      max_tokens: modelConfig.maxTokens ?? 32768,
       temperature: modelConfig.temperature,
       tools: anthropicTools as Anthropic.MessageCreateParams['tools'],
       thinking: this.buildThinkingConfig(modelConfig),

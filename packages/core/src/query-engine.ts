@@ -81,6 +81,8 @@ export interface QueryEngineConfig {
   mode?: 'default' | 'coordinator' | 'worker';
   /** Extended thinking configuration (passed to Provider via ModelConfig.thinking) */
   thinkingConfig?: ThinkingConfig;
+  /** Maximum output tokens for the model (default: provider-specific fallback, 32768) */
+  maxTokens?: number;
   /** Optional HookManager for lifecycle hook execution (UserPromptSubmit, etc.) */
   hookManager?: HookManager;
 }
@@ -391,6 +393,7 @@ export class QueryEngine {
         this.config.provider,
         this.config.providerModel,
         this.config.thinkingConfig,
+        this.config.maxTokens,
       );
     }
     return mockCallModel;

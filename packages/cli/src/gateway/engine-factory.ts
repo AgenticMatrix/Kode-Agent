@@ -116,6 +116,8 @@ export interface EngineFactoryOptions {
   thinkingMode?: boolean;
   /** Extended thinking budget in tokens (default: 1024) */
   thinkingBudget?: number;
+  /** Maximum output tokens for the model (default: 32768) */
+  maxTokens?: number;
   /** External SessionManager — when provided, the engine shares the same
    *  instance as the gateway (session.create/list/resume RPCs). Without
    *  this, each engine creates its own instance, leading to session state
@@ -350,6 +352,7 @@ export function createQueryEngine(
     mode: engineMode,
     thinkingConfig,
     hookManager,
+    maxTokens: opts.maxTokens,
   });
 
   // ── 7. Interrupt function ──────────────────────────────────────────

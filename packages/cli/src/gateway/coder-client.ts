@@ -50,6 +50,7 @@ interface ModelEntry {
   base_url?: string      // Provider endpoint URL
   auth_token_env?: string // API key / auth token
   proxy?: string         // HTTP/HTTPS proxy URL for this provider (e.g. "http://127.0.0.1:7890")
+  max_tokens?: number    // Maximum output tokens for this model (default: 32768)
   provider?: string      // e.g. "anthropic", "deepseek", "openai"
   price?: {
     input: number
@@ -80,6 +81,7 @@ interface ClaudeSettings {
   theme?: string
   model_list?: ModelEntry[]
   default_model?: string
+  max_tokens?: number    // Global max output tokens for all providers (default: 32768)
   display?: {
     tui_auto_resume_recent?: boolean
   }
@@ -99,6 +101,7 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
   baseUrl?: string
   apiKey?: string
   proxy?: string
+  maxTokens?: number
   name: string
   provider: string
 } {
@@ -121,6 +124,7 @@ function resolveModelConfig(settings: ClaudeSettings, fallbackModel: string): {
       baseUrl: entry.base_url,
       apiKey: entry.auth_token_env,
       proxy: entry.proxy,
+      maxTokens: entry.max_tokens,
       name: selectedModel,
       provider: entry.provider ?? inferProvider(selectedModel),
     }
@@ -227,7 +231,7 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
   private thinkingBudget: number
 
   // ── Model config ────────────────────────────────────────────────────
-  private modelConfig: { model: string; baseUrl?: string; apiKey?: string; proxy?: string; name: string; provider: string } | null = null
+  private modelConfig: { model: string; baseUrl?: string; apiKey?: string; proxy?: string; maxTokens?: number; name: string; provider: string } | null = null
 
   // ── Session fork config ─────────────────────────────────────────────
   private forkSessionId?: string
@@ -249,7 +253,7 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
     // CODER_MODEL env var — highest-priority model override.
     // Check before resolveModelConfig so the env var wins over settings.json.
     const coderModel = process.env.CODER_MODEL
-    let resolved: { model: string; baseUrl?: string; apiKey?: string; proxy?: string; name: string; provider: string }
+    let resolved: { model: string; baseUrl?: string; apiKey?: string; proxy?: string; maxTokens?: number; name: string; provider: string }
     if (coderModel) {
       // Helper: resolve from a model_list entry
       const resolveEntry = (entry: ModelEntry, preferredModel?: string) => {
@@ -261,6 +265,7 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
           baseUrl: entry.base_url,
           apiKey: entry.auth_token_env,
           proxy: entry.proxy,
+          maxTokens: entry.max_tokens,
           name: selectedModel,
           provider: entry.provider ?? inferProvider(selectedModel),
         }
@@ -838,6 +843,12 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
       env.CODER_PROXY ??
       process.env.CODER_PROXY
 
+    // Resolve maxTokens: env var > per-model entry > global settings > undefined (uses provider default)
+    const maxTokens =
+      process.env.CODER_MAX_TOKENS
+        ? parseInt(process.env.CODER_MAX_TOKENS, 10)
+        : (modelCfg?.maxTokens ?? settings.max_tokens)
+
     // Check CODER_COORDINATOR_MODE env var (set by entry.tsx or manually)
     const coordinatorMode =
       this.coordinatorMode ||
@@ -858,6 +869,7 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
       model: this.model,
       providerName: modelCfg?.provider,
       maxTurns: 100,
+      maxTokens,
       sessionId: this.gatewaySessionId ?? undefined,
       sessionManager,
       coordinatorMode,

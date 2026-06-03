@@ -220,7 +220,7 @@ export const DEFAULT_CODER_CONFIG: CoderConfig = {
   model: {
     provider: 'anthropic',
     model: 'claude-sonnet-4-6',
-    maxTokens: 8192,
+    maxTokens: 32768,
     thinking: {
       mode: 'adaptive',
       budgetTokens: 16000,

@@ -1,5 +1,6 @@
 {
   "theme": "dark",
+  "max_tokens": 32768,
   "default_model": "deepseek/deepseek-v4-pro",
   "model_list": [
     {

@@ -214,6 +214,324 @@ if (cliArgs.version) {
   process.exit(0);
 }
 
+// ── Reusable interactive model setup (shared by --model and --setup) ────────
+// Returns true if the user completed setup (selected a model), false if they
+// skipped (no changes made).
+async function runInteractiveModelSetup(
+  settings: any,
+  modelList: Array<{model: string[]; base_url?: string; auth_token_env?: string; provider: string; proxy?: string | null; price?: any}>,
+  settingsPath: string,
+  stdin: typeof process.stdin,
+  stdout: typeof process.stdout,
+  writeFileSync: (path: string, data: string) => void,
+): Promise<boolean> {
+  // ── radioSelect helper ────────────────────────────────────────────────────
+  function radioSelect(options: string[], activeIndex: number, title: string): Promise<number> {
+    return new Promise((resolve) => {
+      if (!stdin.isTTY) {
+        console.log(`${title}\n  (non-TTY mode, using default)\n`);
+        resolve(activeIndex);
+        return;
+      }
+
+      let selected = activeIndex;
+      let firstRender = true;
+      const totalLines = options.length + 2;
+      const rawModeWas = stdin.isRaw;
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdout.write('\x1B[?25l');
+
+      function render() {
+        if (!firstRender) {
+          stdout.write(`\x1B[${totalLines}A\r`);
+        }
+        firstRender = false;
+
+        stdout.write(`\x1B[K${title}\n`);
+        options.forEach((opt, i) => {
+          const marker = i === selected ? '\x1B[1m●\x1B[0m' : '○';
+          stdout.write(`\x1B[K  ${marker} ${opt}\n`);
+        });
+        stdout.write(`\x1B[K\n\x1B[K  \x1B[2m↑↓ to navigate, Enter to confirm\x1B[0m`);
+      }
+
+      render();
+
+      function onData(data: Buffer) {
+        const key = data[0];
+        if (key === 13) {
+          cleanup();
+          resolve(selected);
+          return;
+        }
+        if (key === 3) {
+          cleanup();
+          stdout.write('\n');
+          process.exit(0);
+        }
+        if (key === 27 && data.length >= 3) {
+          if (data[1] === 91) {
+            if (data[2] === 65) {
+              selected = (selected - 1 + options.length) % options.length;
+              render();
+            } else if (data[2] === 66) {
+              selected = (selected + 1) % options.length;
+              render();
+            }
+          }
+        }
+      }
+
+      function cleanup() {
+        stdin.setRawMode(rawModeWas);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+        stdout.write('\x1B[?25h\n');
+      }
+
+      stdin.on('data', onData);
+    });
+  }
+
+  // ── Step 1: Provider selection ────────────────────────────────────────────
+  const defaultModel = settings.default_model ?? '';
+  const defaultProvider = defaultModel ? defaultModel.split('/')[0] : 'deepseek';
+  let selectedProvider: any;
+  let providerDone = false;
+  while (!providerDone) {
+  let providerActiveIdx = modelList.findIndex(m => m.provider === defaultProvider);
+  if (providerActiveIdx < 0) providerActiveIdx = 0;
+
+  const providerOptions = modelList.map(m => {
+    const firstModel = m.model[0] ?? 'unknown';
+    const isActive = m.provider === defaultProvider;
+    return `${m.provider} (${firstModel}...)${isActive ? '  <- currently active' : ''}`;
+  });
+  providerOptions.push('Custom new provider');
+  providerOptions.push('Remove provider');
+  providerOptions.push('Skip');
+
+  const selectedProviderIdx = await radioSelect(
+    providerOptions,
+    providerActiveIdx,
+    'Available providers:',
+  );
+
+  if (selectedProviderIdx === modelList.length) {
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const name = await new Promise<string>(resolve => rl.question('Enter provider name (e.g. myprovider): ', resolve));
+    const url = await new Promise<string>(resolve => rl.question('Enter base URL (e.g. https://api.example.com/v1): ', resolve));
+    const key = await new Promise<string>(resolve => rl.question('Enter API key (or press Enter to skip): ', resolve));
+    const proxy = await new Promise<string>(resolve => rl.question('Enter proxy URL (e.g. http://127.0.0.1:7890, or press Enter to skip): ', resolve));
+    rl.close();
+    selectedProvider = {
+      provider: name.trim(),
+      model: [],
+      base_url: url.trim() || undefined,
+      auth_token_env: key.trim() || `YOUR_${name.trim().toUpperCase()}_API_KEY`,
+      proxy: proxy.trim() || null,
+      price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' }
+    };
+    modelList.push(selectedProvider);
+    providerDone = true;
+  } else if (selectedProviderIdx === modelList.length + 1) {
+    const removeProviderOptions = modelList.map(m => m.provider);
+    const removeIdx = await radioSelect(
+      removeProviderOptions,
+      0,
+      'Select provider to remove:',
+    );
+    const targetProvider = modelList[removeIdx]!.provider;
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const confirm = await new Promise<string>(resolve => rl.question(
+      `Remove provider "${targetProvider}" from settings? (y/N): `,
+      resolve
+    ));
+    rl.close();
+    if (confirm.trim().toLowerCase() === 'y') {
+      settings.model_list = (settings.model_list ?? []).filter(
+        (m: any) => m.provider !== targetProvider
+      );
+      if (settings.default_model?.startsWith(targetProvider + '/')) {
+        settings.default_model = '';
+      }
+      const mdlIdx = modelList.findIndex((m: any) => m.provider === targetProvider);
+      if (mdlIdx >= 0) modelList.splice(mdlIdx, 1);
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+      console.log(`Provider "${targetProvider}" removed. Returning to provider selection...\n`);
+      continue;
+    } else {
+      console.log('Cancelled. Returning to provider selection...\n');
+      continue;
+    }
+  } else if (selectedProviderIdx === modelList.length + 2) {
+    // Skip - exit without changes
+    console.log('Skipped. No changes made.');
+    return false;
+  } else {
+    selectedProvider = modelList[selectedProviderIdx]!;
+    providerDone = true;
+  }
+  } // end while
+  console.log(`Selected provider: ${selectedProvider.provider}\n`);
+
+  // ── Provider config: base_url + api_key + proxy ───────────────────────────
+  // URL
+  {
+    const currentUrl = selectedProvider.base_url ?? '(not set)';
+    console.log(`Base URL: ${currentUrl}`);
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const newUrl = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a new URL: ', resolve));
+    rl.close();
+    if (newUrl.trim()) {
+      selectedProvider.base_url = newUrl.trim();
+      console.log('  URL updated.\n');
+    } else {
+      console.log('  Keeping current URL.\n');
+    }
+  }
+  // API Key
+  {
+    const currentToken = selectedProvider.auth_token_env ?? '';
+    let displayToken: string;
+    if (!currentToken) {
+      displayToken = '(not set)';
+    } else if (currentToken.startsWith('YOUR_') || currentToken === 'LOCAL_NO_KEY') {
+      displayToken = currentToken;
+    } else if (currentToken.length > 12) {
+      displayToken = `${currentToken.slice(0, 6)}******${currentToken.slice(-6)}`;
+    } else {
+      displayToken = currentToken;
+    }
+    console.log(`API Key (auth_token_env): ${displayToken}`);
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const newToken = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a new key: ', resolve));
+    rl.close();
+    if (newToken.trim()) {
+      selectedProvider.auth_token_env = newToken.trim();
+      console.log('  Token updated.\n');
+    } else {
+      console.log('  Keeping current token.\n');
+    }
+  }
+  // Proxy
+  {
+    const currentProxy = selectedProvider.proxy ?? 'None (no proxy)';
+    console.log(`Proxy: ${currentProxy}`);
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const newProxy = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a proxy URL (or "none" to disable): ', resolve));
+    rl.close();
+    if (newProxy.trim().toLowerCase() === 'none') {
+      selectedProvider.proxy = undefined;
+      console.log('  Proxy disabled.\n');
+    } else if (newProxy.trim()) {
+      selectedProvider.proxy = newProxy.trim();
+      console.log('  Proxy updated.\n');
+    } else {
+      console.log('  Keeping current proxy.\n');
+    }
+  }
+
+  // ── Step 2: Model selection ───────────────────────────────────────────────
+  const currentDefaultModel = defaultModel.split('/')[1] ?? selectedProvider.model[0] ?? '';
+  let selectedModel = '';
+  let modelDone = false;
+  while (!modelDone) {
+  let modelActiveIdx = selectedProvider.model.findIndex((m: string) => m === currentDefaultModel);
+  if (modelActiveIdx < 0) modelActiveIdx = 0;
+
+  const modelOptions = selectedProvider.model.map((m: string) => {
+    const isActive = m === currentDefaultModel;
+    return `${m}${isActive ? '  <- currently active' : ''}`;
+  });
+  modelOptions.push('Custom model name');
+  modelOptions.push('Remove model');
+  modelOptions.push('Skip');
+
+  const selectedModelIdx = await radioSelect(
+    modelOptions,
+    modelActiveIdx,
+    `Available models for ${selectedProvider.provider}:`,
+  );
+
+  if (selectedModelIdx === selectedProvider.model.length) {
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const name = await new Promise<string>(resolve => rl.question('Enter model name (e.g. my-model-v1): ', resolve));
+    rl.close();
+    const modelName = name.trim();
+    selectedProvider.model.push(modelName);
+    selectedModel = modelName;
+  } else if (selectedModelIdx === selectedProvider.model.length + 1) {
+    const removeModelOptions = selectedProvider.model.map((m: string) => m);
+    const removeIdx = await radioSelect(
+      removeModelOptions,
+      0,
+      `Select model to remove from ${selectedProvider.provider}:`,
+    );
+    const modelToRemove = selectedProvider.model[removeIdx]!;
+    const readline = await import('node:readline');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const confirm = await new Promise<string>(resolve => rl.question(
+      `Remove model "${modelToRemove}" from ${selectedProvider.provider}? (y/N): `,
+      resolve
+    ));
+    rl.close();
+    if (confirm.trim().toLowerCase() === 'y') {
+      selectedProvider.model = selectedProvider.model.filter((m: string) => m !== modelToRemove);
+      if (selectedProvider.model.length === 0) {
+        console.log(`Model "${modelToRemove}" removed. No models left.\n`);
+      } else {
+        console.log(`Model "${modelToRemove}" removed.\n`);
+      }
+      continue;
+    } else {
+      console.log('Cancelled.\n');
+      continue;
+    }
+  } else if (selectedModelIdx === selectedProvider.model.length + 2) {
+    selectedModel = selectedProvider.model[0] ?? '';
+    modelDone = true;
+    if (!selectedModel) {
+      console.log('No model selected. You can configure one later.\n');
+    }
+  } else {
+    selectedModel = selectedProvider.model[selectedModelIdx]!;
+    modelDone = true;
+  }
+  } // end while
+  console.log(`Selected model: ${selectedModel}\n`);
+
+  // ── Update settings.json ──────────────────────────────────────────────────
+  settings.default_model = `${selectedProvider.provider}/${selectedModel}`;
+  settings.env = settings.env ?? {};
+  settings.env.CODER_MODEL = selectedModel;
+  if (selectedProvider.base_url) settings.env.CODER_BASE_URL = selectedProvider.base_url;
+  if (selectedProvider.auth_token_env) settings.env.CODER_AUTH_TOKEN = selectedProvider.auth_token_env;
+
+  settings.model_list = settings.model_list ?? [];
+  {
+    const existingIdx = settings.model_list.findIndex(
+      (m: any) => m.provider === selectedProvider.provider
+    );
+    if (existingIdx >= 0) {
+      settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...selectedProvider };
+    } else {
+      settings.model_list.push(selectedProvider);
+    }
+  }
+
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  console.log(`Default model set to: ${selectedProvider.provider}/${selectedModel}`);
+  return true;
+}
+
 // --model: interactive model selection (non-TUI mode)
 if (cliArgs.model || process.argv.includes('--model')) {
   const { readFileSync, writeFileSync } = await import('node:fs');
@@ -284,326 +602,8 @@ if (cliArgs.model || process.argv.includes('--model')) {
     process.exit(0);
   }
 
-  // Interactive: arrow-key radio-button selector for provider → model → auth_token
-  const stdin = process.stdin;
-  const stdout = process.stdout;
-
-  // ── radioSelect helper ────────────────────────────────────────────────────
-  function radioSelect(options: string[], activeIndex: number, title: string): Promise<number> {
-    return new Promise((resolve) => {
-      if (!stdin.isTTY) {
-        // Non-TTY fallback: just return default
-        console.log(`${title}\n  (non-TTY mode, using default)\n`);
-        resolve(activeIndex);
-        return;
-      }
-
-      let selected = activeIndex;
-      let firstRender = true;
-      const totalLines = options.length + 2; // title + options + blank line + hint
-      const rawModeWas = stdin.isRaw;
-      stdin.setRawMode(true);
-      stdin.resume();
-      stdout.write('\x1B[?25l'); // hide cursor
-
-      function render() {
-        if (!firstRender) {
-          // Move cursor back up to overwrite previous render
-          stdout.write(`\x1B[${totalLines}A\r`);
-        }
-        firstRender = false;
-
-        stdout.write(`\x1B[K${title}\n`);
-        options.forEach((opt, i) => {
-          const marker = i === selected ? '\x1B[1m●\x1B[0m' : '○';
-          stdout.write(`\x1B[K  ${marker} ${opt}\n`);
-        });
-        stdout.write(`\x1B[K\n\x1B[K  \x1B[2m↑↓ to navigate, Enter to confirm\x1B[0m`);
-      }
-
-      render();
-
-      function onData(data: Buffer) {
-        const key = data[0];
-        // Enter
-        if (key === 13) {
-          cleanup();
-          resolve(selected);
-          return;
-        }
-        // Ctrl+C
-        if (key === 3) {
-          cleanup();
-          stdout.write('\n');
-          process.exit(0);
-        }
-        // Arrow key sequences (escape [ A/B)
-        if (key === 27 && data.length >= 3) {
-          if (data[1] === 91) {
-            if (data[2] === 65) {
-              // Up
-              selected = (selected - 1 + options.length) % options.length;
-              render();
-            } else if (data[2] === 66) {
-              // Down
-              selected = (selected + 1) % options.length;
-              render();
-            }
-          }
-        }
-      }
-
-      function cleanup() {
-        stdin.setRawMode(rawModeWas);
-        stdin.pause();
-        stdin.removeListener('data', onData);
-        stdout.write('\x1B[?25h\n'); // show cursor, newline
-      }
-
-      stdin.on('data', onData);
-    });
-  }
-
-  // ── Step 1: Provider selection ────────────────────────────────────────────
-  const defaultModel = settings.default_model ?? '';
-  const defaultProvider = defaultModel ? defaultModel.split('/')[0] : 'deepseek';
-  let selectedProvider;
-  let providerDone = false;
-  while (!providerDone) {
-  let providerActiveIdx = modelList.findIndex(m => m.provider === defaultProvider);
-  if (providerActiveIdx < 0) providerActiveIdx = 0;
-
-  const providerOptions = modelList.map(m => {
-    const firstModel = m.model[0] ?? 'unknown';
-    const isActive = m.provider === defaultProvider;
-    return `${m.provider} (${firstModel}...)${isActive ? '  <- currently active' : ''}`;
-  });
-  providerOptions.push('Custom new provider');
-  providerOptions.push('Remove provider');
-  providerOptions.push('Skip');
-
-  const selectedProviderIdx = await radioSelect(
-    providerOptions,
-    providerActiveIdx,
-    'Available providers:',
-  );
-
-  if (selectedProviderIdx === modelList.length) {
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const name = await new Promise<string>(resolve => rl.question('Enter provider name (e.g. myprovider): ', resolve));
-    const url = await new Promise<string>(resolve => rl.question('Enter base URL (e.g. https://api.example.com/v1): ', resolve));
-    const key = await new Promise<string>(resolve => rl.question('Enter API key (or press Enter to skip): ', resolve));
-    const proxy = await new Promise<string>(resolve => rl.question('Enter proxy URL (e.g. http://127.0.0.1:7890, or press Enter to skip): ', resolve));
-    rl.close();
-    selectedProvider = {
-      provider: name.trim(),
-      model: [],
-      base_url: url.trim() || undefined,
-      auth_token_env: key.trim() || `YOUR_${name.trim().toUpperCase()}_API_KEY`,
-      proxy: proxy.trim() || null,
-      price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' }
-    };
-    modelList.push(selectedProvider);
-    providerDone = true;
-  } else if (selectedProviderIdx === modelList.length + 1) {
-    // Let user pick which provider to remove
-    const removeProviderOptions = modelList.map(m => m.provider);
-    const removeIdx = await radioSelect(
-      removeProviderOptions,
-      0,
-      'Select provider to remove:',
-    );
-    const targetProvider = modelList[removeIdx]!.provider;
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const confirm = await new Promise<string>(resolve => rl.question(
-      `Remove provider "${targetProvider}" from settings? (y/N): `,
-      resolve
-    ));
-    rl.close();
-    if (confirm.trim().toLowerCase() === 'y') {
-      settings.model_list = (settings.model_list ?? []).filter(
-        (m: any) => m.provider !== targetProvider
-      );
-      if (settings.default_model?.startsWith(targetProvider + '/')) {
-        settings.default_model = '';
-      }
-      const mdlIdx = modelList.findIndex((m: any) => m.provider === targetProvider);
-      if (mdlIdx >= 0) modelList.splice(mdlIdx, 1);
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-      console.log(`Provider "${targetProvider}" removed. Returning to provider selection...\n`);
-      continue;
-    } else {
-      console.log('Cancelled. Returning to provider selection...\n');
-      continue;
-    }
-  } else if (selectedProviderIdx === modelList.length + 2) {
-    // Skip - exit without changes
-    console.log('Skipped. No changes made.');
-    process.exit(0);
-  } else {
-    selectedProvider = modelList[selectedProviderIdx]!;
-    providerDone = true;
-  }
-  } // end while
-  console.log(`Selected provider: ${selectedProvider.provider}\n`);
-
-  // ── Provider config: base_url + api_key ───────────────────────────────────
-  // URL
-  {
-    const currentUrl = selectedProvider.base_url ?? '(not set)';
-    console.log(`Base URL: ${currentUrl}`);
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const newUrl = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a new URL: ', resolve));
-    rl.close();
-    if (newUrl.trim()) {
-      selectedProvider.base_url = newUrl.trim();
-      console.log('  URL updated.\n');
-    } else {
-      console.log('  Keeping current URL.\n');
-    }
-  }
-  // API Key
-  {
-    const currentToken = selectedProvider.auth_token_env ?? '';
-    let displayToken: string;
-    if (!currentToken) {
-      displayToken = '(not set)';
-    } else if (currentToken.startsWith('YOUR_') || currentToken === 'LOCAL_NO_KEY') {
-      displayToken = currentToken;
-    } else if (currentToken.length > 12) {
-      displayToken = `${currentToken.slice(0, 6)}******${currentToken.slice(-6)}`;
-    } else {
-      displayToken = currentToken;
-    }
-    console.log(`API Key (auth_token_env): ${displayToken}`);
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const newToken = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a new key: ', resolve));
-    rl.close();
-    if (newToken.trim()) {
-      selectedProvider.auth_token_env = newToken.trim();
-      console.log('  Token updated.\n');
-    } else {
-      console.log('  Keeping current token.\n');
-    }
-  }
-
-  // Proxy
-  {
-    const currentProxy = selectedProvider.proxy ?? 'None (no proxy)';
-    console.log(`Proxy: ${currentProxy}`);
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const newProxy = await new Promise<string>(resolve => rl.question('Press Enter to keep, or type a proxy URL (or "none" to disable): ', resolve));
-    rl.close();
-    if (newProxy.trim().toLowerCase() === 'none') {
-      selectedProvider.proxy = undefined;
-      console.log('  Proxy disabled.\n');
-    } else if (newProxy.trim()) {
-      selectedProvider.proxy = newProxy.trim();
-      console.log('  Proxy updated.\n');
-    } else {
-      console.log('  Keeping current proxy.\n');
-    }
-  }
-
-  // ── Step 2: Model selection ───────────────────────────────────────────────
-  const currentDefaultModel = defaultModel.split('/')[1] ?? selectedProvider.model[0] ?? '';
-  let selectedModel = '';
-  let modelDone = false;
-  while (!modelDone) {
-  let modelActiveIdx = selectedProvider.model.findIndex(m => m === currentDefaultModel);
-  if (modelActiveIdx < 0) modelActiveIdx = 0;
-
-  const modelOptions = selectedProvider.model.map(m => {
-    const isActive = m === currentDefaultModel;
-    return `${m}${isActive ? '  <- currently active' : ''}`;
-  });
-  modelOptions.push('Custom model name');
-  modelOptions.push('Remove model');
-  modelOptions.push('Skip');
-
-  const selectedModelIdx = await radioSelect(
-    modelOptions,
-    modelActiveIdx,
-    `Available models for ${selectedProvider.provider}:`,
-  );
-
-  if (selectedModelIdx === selectedProvider.model.length) {
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const name = await new Promise<string>(resolve => rl.question('Enter model name (e.g. my-model-v1): ', resolve));
-    rl.close();
-    const modelName = name.trim();
-    selectedProvider.model.push(modelName);
-    selectedModel = modelName;
-  } else if (selectedModelIdx === selectedProvider.model.length + 1) {
-    // Let user pick which model to remove
-    const removeModelOptions = selectedProvider.model.map((m: string) => m);
-    const removeIdx = await radioSelect(
-      removeModelOptions,
-      0,
-      `Select model to remove from ${selectedProvider.provider}:`,
-    );
-    const modelToRemove = selectedProvider.model[removeIdx]!;
-    const readline = await import('node:readline');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const confirm = await new Promise<string>(resolve => rl.question(
-      `Remove model "${modelToRemove}" from ${selectedProvider.provider}? (y/N): `,
-      resolve
-    ));
-    rl.close();
-    if (confirm.trim().toLowerCase() === 'y') {
-      selectedProvider.model = selectedProvider.model.filter((m: string) => m !== modelToRemove);
-      if (selectedProvider.model.length === 0) {
-        console.log(`Model "${modelToRemove}" removed. No models left.\n`);
-      } else {
-        console.log(`Model "${modelToRemove}" removed.\n`);
-      }
-      continue;
-    } else {
-      console.log('Cancelled.\n');
-      continue;
-    }
-  } else if (selectedModelIdx === selectedProvider.model.length + 2) {
-    // Skip option
-    selectedModel = selectedProvider.model[0] ?? '';
-    modelDone = true;
-    if (!selectedModel) {
-      console.log('No model selected. You can configure one later.\n');
-    }
-  } else {
-    selectedModel = selectedProvider.model[selectedModelIdx]!;
-    modelDone = true;
-  }
-  } // end while
-  console.log(`Selected model: ${selectedModel}\n`);
-
-  // ── Update settings.json ──────────────────────────────────────────────────
-  settings.default_model = `${selectedProvider.provider}/${selectedModel}`;
-  settings.env = settings.env ?? {};
-  settings.env.CODER_MODEL = selectedModel;
-  if (selectedProvider.base_url) settings.env.CODER_BASE_URL = selectedProvider.base_url;
-  if (selectedProvider.auth_token_env) settings.env.CODER_AUTH_TOKEN = selectedProvider.auth_token_env;
-
-  // Smart merge into model_list (match by provider)
-  settings.model_list = settings.model_list ?? [];
-  {
-    const existingIdx = settings.model_list.findIndex(
-      (m: any) => m.provider === selectedProvider.provider
-    );
-    if (existingIdx >= 0) {
-      settings.model_list[existingIdx] = { ...settings.model_list[existingIdx], ...selectedProvider };
-    } else {
-      settings.model_list.push(selectedProvider);
-    }
-  }
-
-  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-  console.log(`Default model set to: ${selectedProvider.provider}/${selectedModel}`);
+  // Interactive: delegate to shared function
+  await runInteractiveModelSetup(settings, modelList, settingsPath, process.stdin, process.stdout, writeFileSync);
   process.exit(0);
 }
 
@@ -653,99 +653,15 @@ if (cliArgs.setup || process.argv.includes('setup')) {
     rl.close();
   }
 
-  // ── Step 3: Provider + Model ───────────────────────────────────────────────
+  // ── Step 3: Provider + Model (reuses --model interactive flow) ────────────
   const modelList: Array<any> = settings.model_list;
 
-  if (modelList.length === 0) {
-    console.log('No providers configured. Let us create one.\n');
-    const rl = readline.createInterface({ input: stdin, output: stdout });
+  console.log('Now let us configure your AI provider and model.\n');
+  await runInteractiveModelSetup(settings, modelList, settingsPath, process.stdin, process.stdout, writeFileSync);
 
-    const name = await new Promise<string>(resolve => {
-      rl.question('Provider name (e.g. deepseek): ', resolve);
-    });
-    const url = await new Promise<string>(resolve => {
-      rl.question('Base URL (e.g. https://api.deepseek.com/anthropic): ', resolve);
-    });
-    const key = await new Promise<string>(resolve => {
-      rl.question('API key: ', resolve);
-    });
-    const proxy = await new Promise<string>(resolve => {
-      rl.question('Proxy URL (or Enter to skip): ', resolve);
-    });
-    rl.close();
-
-    const providerName = name.trim();
-    const providerUrl = url.trim() || undefined;
-    const providerKey = key.trim() || `YOUR_${providerName.toUpperCase()}_API_KEY`;
-    const providerProxy = proxy.trim() || null;
-
-    const newProvider = {
-      provider: providerName,
-      model: [],
-      base_url: providerUrl,
-      auth_token_env: providerKey,
-      proxy: providerProxy,
-      price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' },
-    };
-    modelList.push(newProvider);
-    console.log(`  Provider created: ${providerName}\n`);
-  } else {
-    console.log(`Found ${modelList.length} existing provider(s).`);
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const skipModels = await new Promise<string>(resolve => {
-      rl.question('Skip provider configuration? (y/N): ', resolve);
-    });
-    rl.close();
-    if (skipModels.trim().toLowerCase() === 'y') {
-      console.log('  Skipping provider setup.\n');
-    } else {
-      // Show existing providers
-      for (let i = 0; i < modelList.length; i++) {
-        console.log(`  [${i + 1}] ${modelList[i].provider} — ${modelList[i].model?.join(', ') || 'no models'}`);
-      }
-      console.log(`  [${modelList.length + 1}] Add new provider`);
-      const rl2 = readline.createInterface({ input: stdin, output: stdout });
-      const choice = await new Promise<string>(resolve => {
-        rl2.question('\nSelect provider to configure: ', resolve);
-      });
-      rl2.close();
-
-      const idx = parseInt(choice.trim(), 10) - 1;
-      if (idx >= 0 && idx < modelList.length) {
-        const selected = modelList[idx];
-        console.log(`  Configuring: ${selected.provider}\n`);
-        const rl3 = readline.createInterface({ input: stdin, output: stdout });
-        const newModels = await new Promise<string>(resolve => {
-          rl3.question('Model IDs (comma-separated): ', resolve);
-        });
-        rl3.close();
-        selected.model = newModels.split(',').map(m => m.trim()).filter(Boolean);
-        settings.default_model = `${selected.provider}/${selected.model[0]}`;
-        console.log(`  Updated models for ${selected.provider}\n`);
-      } else if (idx === modelList.length) {
-        console.log('  Adding new provider...\n');
-        // Quick add (same flow as above)
-        const rl3 = readline.createInterface({ input: stdin, output: stdout });
-        const pName = await new Promise<string>(resolve => rl3.question('Provider name: ', resolve));
-        const pUrl = await new Promise<string>(resolve => rl3.question('Base URL: ', resolve));
-        const pKey = await new Promise<string>(resolve => rl3.question('API key: ', resolve));
-        const pProxy = await new Promise<string>(resolve => rl3.question('Proxy URL (or Enter to skip): ', resolve));
-        rl3.close();
-        modelList.push({
-          provider: pName.trim(),
-          model: [],
-          base_url: pUrl.trim() || undefined,
-          auth_token_env: pKey.trim() || `YOUR_${pName.trim().toUpperCase()}_API_KEY`,
-          proxy: pProxy.trim() || null,
-          price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' },
-        });
-        console.log(`  Provider added: ${pName}\n`);
-      }
-    }
-  }
-
-  // ── Save and exit ──────────────────────────────────────────────────────────
-  settings.model_list = modelList;
+  // ── Save and launch TUI ───────────────────────────────────────────────────
+  // runInteractiveModelSetup already saved settings.json, but ensure theme
+  // and max_tokens are persisted (they were set on the settings object above).
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 
   console.log('✅ Setup complete! Settings saved to ~/.coder/settings.json\n');
@@ -755,7 +671,7 @@ if (cliArgs.setup || process.argv.includes('setup')) {
 }
 
 // TTY check — skip for non-interactive flags handled above
-const isNonInteractive = cliArgs.help || cliArgs.version || cliArgs.print || cliArgs.model || cliArgs.setup || process.argv.includes('--model') || process.argv.includes('-m') || process.argv.includes('setup')
+const isNonInteractive = cliArgs.help || cliArgs.version || cliArgs.print || cliArgs.model || process.argv.includes('--model') || process.argv.includes('-m')
 if (isNonInteractive) {
   // Exit gracefully — the --model handler above uses readline callback to exit
   if (!cliArgs.model && !process.argv.includes('--model') && !process.argv.includes('-m')) {

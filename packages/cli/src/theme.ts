@@ -277,30 +277,28 @@ export const DARK_THEME: Theme = {
   color: {
     primary: '#FFD700',
     accent: '#FFBF00',
-    border: '#CD7F32',
+    border: '#C9A24B',
     text: '#FFF8DC',
-    muted: '#CC9B1F',
-    // Bumped from the old `#B8860B` darkgoldenrod (~53% luminance) which
-    // read as barely-visible on dark terminals for long body text.  The
-    // new value sits ~60% luminance — readable without losing the "muted /
-    // secondary" semantic.  Field labels still use `label` (65%) which
-    // stays brighter so hierarchy holds.
+    muted: '#E5C07B',
+    // Brightened from #CC9B1F (~60% luminance) to #E5C07B (~75% luminance)
+    // so secondary text stays clearly visible across all dark terminal profiles,
+    // including Apple_Terminal where ANSI dim is unavailable.
     completionBg: '#1a1a2e',
     completionCurrentBg: '#333355',
     completionMetaBg: '#1a1a2e',
     completionMetaCurrentBg: '#333355',
 
-    label: '#DAA520',
+    label: '#F0C040',
     ok: '#4caf50',
     error: '#ef5350',
     warn: '#ffa726',
 
     prompt: '#FFF8DC',
-    // sessionLabel/sessionBorder intentionally track the `dim` value — they
+    // sessionLabel/sessionBorder intentionally track the muted value — they
     // are "same role, same colour" by design.  fromSkin's banner_dim fallback
     // relies on this pairing (#11300).
-    sessionLabel: '#CC9B1F',
-    sessionBorder: '#CC9B1F',
+    sessionLabel: '#E5C07B',
+    sessionBorder: '#E5C07B',
 
     statusBg: '#1a1a2e',
     statusFg: '#C0C0C0',
@@ -314,7 +312,7 @@ export const DARK_THEME: Theme = {
     diffRemoved: 'rgb(255,220,220)',
     diffAddedWord: 'rgb(36,138,61)',
     diffRemovedWord: 'rgb(207,34,46)',
-    shellDollar: '#4dabf7'
+    shellDollar: '#64B5F6'
   },
 
   brand: BRAND,

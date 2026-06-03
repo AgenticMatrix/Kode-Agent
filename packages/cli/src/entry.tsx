@@ -419,6 +419,8 @@ if (cliArgs.model || process.argv.includes('--model')) {
       if (settings.default_model?.startsWith(targetProvider + '/')) {
         settings.default_model = '';
       }
+      const mdlIdx = modelList.findIndex((m: any) => m.provider === targetProvider);
+      if (mdlIdx >= 0) modelList.splice(mdlIdx, 1);
       writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
       console.log(`Provider "${targetProvider}" removed. Returning to provider selection...\n`);
       continue;

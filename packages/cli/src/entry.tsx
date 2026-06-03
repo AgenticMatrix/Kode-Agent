@@ -214,6 +214,81 @@ if (cliArgs.version) {
   process.exit(0);
 }
 
+// ── radioSelect helper (shared by --model and --setup) ──────────────────────
+function radioSelect(
+  options: string[],
+  activeIndex: number,
+  title: string,
+  stdin: typeof process.stdin,
+  stdout: typeof process.stdout,
+): Promise<number> {
+  return new Promise((resolve) => {
+    if (!stdin.isTTY) {
+      console.log(`${title}\n  (non-TTY mode, using default)\n`);
+      resolve(activeIndex);
+      return;
+    }
+
+    let selected = activeIndex;
+    let firstRender = true;
+    const totalLines = options.length + 2;
+    const rawModeWas = stdin.isRaw;
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdout.write('\x1B[?25l');
+
+    function render() {
+      if (!firstRender) {
+        stdout.write(`\x1B[${totalLines}A\r`);
+      }
+      firstRender = false;
+
+      stdout.write(`\x1B[K${title}\n`);
+      options.forEach((opt, i) => {
+        const marker = i === selected ? '\x1B[1m●\x1B[0m' : '○';
+        stdout.write(`\x1B[K  ${marker} ${opt}\n`);
+      });
+      stdout.write(`\x1B[K\n\x1B[K  \x1B[2m↑↓ to navigate, Enter to confirm\x1B[0m`);
+    }
+
+    render();
+
+    function onData(data: Buffer) {
+      const key = data[0];
+      if (key === 13) {
+        cleanup();
+        resolve(selected);
+        return;
+      }
+      if (key === 3) {
+        cleanup();
+        stdout.write('\n');
+        process.exit(0);
+      }
+      if (key === 27 && data.length >= 3) {
+        if (data[1] === 91) {
+          if (data[2] === 65) {
+            selected = (selected - 1 + options.length) % options.length;
+            render();
+          } else if (data[2] === 66) {
+            selected = (selected + 1) % options.length;
+            render();
+          }
+        }
+      }
+    }
+
+    function cleanup() {
+      stdin.setRawMode(rawModeWas);
+      stdin.pause();
+      stdin.removeListener('data', onData);
+      stdout.write('\x1B[?25h\n');
+    }
+
+    stdin.on('data', onData);
+  });
+}
+
 // ── Reusable interactive model setup (shared by --model and --setup) ────────
 // Returns true if the user completed setup (selected a model), false if they
 // skipped (no changes made).
@@ -225,81 +300,12 @@ async function runInteractiveModelSetup(
   stdout: typeof process.stdout,
   writeFileSync: (path: string, data: string) => void,
 ): Promise<boolean> {
-  // ── radioSelect helper ────────────────────────────────────────────────────
-  function radioSelect(options: string[], activeIndex: number, title: string): Promise<number> {
-    return new Promise((resolve) => {
-      if (!stdin.isTTY) {
-        console.log(`${title}\n  (non-TTY mode, using default)\n`);
-        resolve(activeIndex);
-        return;
-      }
-
-      let selected = activeIndex;
-      let firstRender = true;
-      const totalLines = options.length + 2;
-      const rawModeWas = stdin.isRaw;
-      stdin.setRawMode(true);
-      stdin.resume();
-      stdout.write('\x1B[?25l');
-
-      function render() {
-        if (!firstRender) {
-          stdout.write(`\x1B[${totalLines}A\r`);
-        }
-        firstRender = false;
-
-        stdout.write(`\x1B[K${title}\n`);
-        options.forEach((opt, i) => {
-          const marker = i === selected ? '\x1B[1m●\x1B[0m' : '○';
-          stdout.write(`\x1B[K  ${marker} ${opt}\n`);
-        });
-        stdout.write(`\x1B[K\n\x1B[K  \x1B[2m↑↓ to navigate, Enter to confirm\x1B[0m`);
-      }
-
-      render();
-
-      function onData(data: Buffer) {
-        const key = data[0];
-        if (key === 13) {
-          cleanup();
-          resolve(selected);
-          return;
-        }
-        if (key === 3) {
-          cleanup();
-          stdout.write('\n');
-          process.exit(0);
-        }
-        if (key === 27 && data.length >= 3) {
-          if (data[1] === 91) {
-            if (data[2] === 65) {
-              selected = (selected - 1 + options.length) % options.length;
-              render();
-            } else if (data[2] === 66) {
-              selected = (selected + 1) % options.length;
-              render();
-            }
-          }
-        }
-      }
-
-      function cleanup() {
-        stdin.setRawMode(rawModeWas);
-        stdin.pause();
-        stdin.removeListener('data', onData);
-        stdout.write('\x1B[?25h\n');
-      }
-
-      stdin.on('data', onData);
-    });
-  }
-
-  // ── Step 1: Provider selection ────────────────────────────────────────────
   const defaultModel = settings.default_model ?? '';
   const defaultProvider = defaultModel ? defaultModel.split('/')[0] : 'deepseek';
   let selectedProvider: any;
   let providerDone = false;
   while (!providerDone) {
+
   let providerActiveIdx = modelList.findIndex(m => m.provider === defaultProvider);
   if (providerActiveIdx < 0) providerActiveIdx = 0;
 
@@ -316,6 +322,8 @@ async function runInteractiveModelSetup(
     providerOptions,
     providerActiveIdx,
     'Available providers:',
+    stdin,
+    stdout,
   );
 
   if (selectedProviderIdx === modelList.length) {
@@ -342,6 +350,8 @@ async function runInteractiveModelSetup(
       removeProviderOptions,
       0,
       'Select provider to remove:',
+      stdin,
+      stdout,
     );
     const targetProvider = modelList[removeIdx]!.provider;
     const readline = await import('node:readline');
@@ -458,6 +468,8 @@ async function runInteractiveModelSetup(
     modelOptions,
     modelActiveIdx,
     `Available models for ${selectedProvider.provider}:`,
+    stdin,
+    stdout,
   );
 
   if (selectedModelIdx === selectedProvider.model.length) {
@@ -474,6 +486,8 @@ async function runInteractiveModelSetup(
       removeModelOptions,
       0,
       `Select model to remove from ${selectedProvider.provider}:`,
+      stdin,
+      stdout,
     );
     const modelToRemove = selectedProvider.model[removeIdx]!;
     const readline = await import('node:readline');
@@ -627,18 +641,18 @@ if (cliArgs.setup || process.argv.includes('setup')) {
 
   // ── Step 1: Theme ──────────────────────────────────────────────────────────
   {
-    const rl = readline.createInterface({ input: stdin, output: stdout });
-    const theme = await new Promise<string>(resolve => {
-      rl.question('Theme (dark/light) [dark]: ', answer => {
-        const trimmed = answer.trim().toLowerCase();
-        resolve(trimmed === 'light' ? 'light' : 'dark');
-      });
-    });
+    const themeIdx = await radioSelect(
+      ['dark', 'light'],
+      0,
+      'Choose theme:',
+      stdin,
+      stdout,
+    );
+    const theme = themeIdx === 1 ? 'light' : 'dark';
     settings.theme = theme;
     // Apply immediately for the current TUI session
     process.env.CODER_TUI_THEME = theme;
     console.log(`  Theme: ${theme}\n`);
-    rl.close();
   }
 
   // ── Step 2: max_tokens ─────────────────────────────────────────────────────

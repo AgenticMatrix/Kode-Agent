@@ -16,7 +16,7 @@
 
 import type { Message } from '@coder/shared';
 import type { ToolDefinition } from '@coder/shared';
-import { ProxyAgent } from 'undici';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 import type {
   Provider,
@@ -278,7 +278,12 @@ export class OpenAICompatProvider implements Provider {
       if (this.proxyAgent) {
         fetchInit.dispatcher = this.proxyAgent;
       }
-      const response = await fetch(url, fetchInit as RequestInit);
+      // Use undici's own fetch to ensure compatibility between ProxyAgent
+      // and the underlying fetch implementation. Node.js's global fetch is
+      // backed by the built-in undici (v6.x), while ProxyAgent comes from
+      // the installed undici (v8.x). Version mismatches cause
+      // "invalid onRequestStart method" errors.
+      const response = await undiciFetch(url, fetchInit as any);
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');

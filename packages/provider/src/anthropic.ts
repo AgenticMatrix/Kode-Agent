@@ -7,7 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { MessageParam, ContentBlockParam, TextBlockParam, Tool } from '@anthropic-ai/sdk/resources/messages.mjs';
-import { ProxyAgent } from 'undici';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 
 import type { Message } from '@coder/shared';
 import type { ToolDefinition } from '@coder/shared';
@@ -46,6 +46,13 @@ export class AnthropicProvider implements Provider {
       baseURL: config.baseUrl,
       timeout: config.timeout ?? 300_000,
       maxRetries: 0, // We handle retries ourselves in withRetry()
+      // Use undici's own fetch to ensure compatibility between ProxyAgent
+      // and the underlying fetch implementation. Node.js's global fetch is
+      // backed by the built-in undici (v6.x), while ProxyAgent comes from
+      // the installed undici (v8.x). Version mismatches cause
+      // "invalid onRequestStart method" errors.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fetch: undiciFetch as any,
       ...(config.proxy ? { fetchOptions } : {}),
     });
   }

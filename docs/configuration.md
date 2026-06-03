@@ -304,5 +304,5 @@ compactThreshold: 0.7      # Start compacting at 126K tokens
 ### Multiple Projects
 
 Configuration is global (`~/.coder/settings.json`), but project-specific
-instructions go in `CLAUDE.md` at the project root. The agent reads this
+instructions go in `CODER.md` at the project root (also supports `CLAUDE.md` and `CODEBUDDY.md` for compatibility). The agent reads this
 file at the start of every session.

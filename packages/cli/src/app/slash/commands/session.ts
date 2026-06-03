@@ -1,3 +1,9 @@
+import { readFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
+import { withInkSuspended } from '@coder/tui'
+
 import { attachedImageNotice, introMsg, toTranscriptMessages } from '../../../domain/messages.js'
 import { TUI_SESSION_MODEL_FLAG } from '../../../domain/slash.js'
 import type {
@@ -10,6 +16,7 @@ import type {
   SessionUsageResponse,
   VoiceToggleResponse
 } from '../../../gateway/types.js'
+import { launchCoderCommand } from '../../../lib/externalCli.js'
 import { formatVoiceRecordKey, parseVoiceRecordKey } from '../../../lib/platform.js'
 import { fmtK } from '../../../lib/text.js'
 import type { PanelSection } from '../../../types.js'
@@ -69,7 +76,44 @@ export const sessionCommands: SlashCommand[] = [
       }
 
       if (!arg.trim()) {
-        return patchOverlayState({ modelPicker: true })
+        // Launch coder --model as external process (same radio-button selector as CLI)
+        ctx.transcript.sys('launching model selector…')
+        patchUiState({ status: 'model setup…' })
+
+        void withInkSuspended(async () => {
+          const result = await launchCoderCommand(['--model'])
+
+          if (result.error) {
+            ctx.transcript.sys(`error launching coder: ${result.error}`)
+            patchUiState({ status: 'ready' })
+            return
+          }
+
+          if (result.code !== 0) {
+            ctx.transcript.sys(`coder --model exited with code ${result.code}`)
+            patchUiState({ status: 'ready' })
+            return
+          }
+
+          // Read updated settings.json to get the new model
+          try {
+            const settingsPath = join(homedir(), '.coder', 'settings.json')
+            const raw = await readFile(settingsPath, 'utf-8')
+            const settings = JSON.parse(raw)
+            const model = settings.default_model ?? 'unknown'
+            ctx.transcript.sys(`model → ${model}`)
+            patchUiState(state => ({
+              ...state,
+              status: 'ready',
+              info: state.info ? { ...state.info, model } : { model, skills: {}, tools: {} }
+            }))
+          } catch {
+            ctx.transcript.sys('model updated')
+            patchUiState({ status: 'ready' })
+          }
+        })
+
+        return
       }
 
       ctx.gateway

@@ -24,14 +24,14 @@
 # Prerequisites: Node.js >= 18.0.0 (>= 22.0.0 recommended)
 
 # Clone the repo
-git clone https://github.com/AgenticMatrix/Coder-Agent.git
-cd Coder-Agent
+git clone https://github.com/AgenticMatrix/CoderAgent.git
+cd CoderAgent
 
 # One-click install (builds, links `coder` command globally, sets up config)
-./install.sh --local
+./install.sh
 
-# Set your API key (DeepSeek by default)
-export DEEPSEEK_API_KEY="sk-your-key-here"
+# Set your model  and API key (DeepSeek by default)
+coder --model 
 
 # Start coding
 coder
@@ -226,30 +226,29 @@ skills:
 
 ## Configuration
 
-### Configuration
-
-Coder Agent uses `~/.coder/settings.json` for persistent config, with environment variable overrides.
+Coder Agent uses `~/.coder/settings.json` for persistent config. Settings are auto-populated at runtime — no manual environment variable exports needed.
 
 **Priority order:**
-1. CLI flags (`--model`, `--provider`)
-2. Environment variables (`CODER_BASE_URL`, `CODER_MODEL`, `CODER_AUTH_TOKEN`)
-3. `~/.coder/settings.json` → `model_list[]` + `env.*`
+1. CLI flags (`--model provider/model-name`)
+2. `~/.coder/settings.json` → `default_model` + `model_list[]` + `env.*`
+
+**Quick setup:**
 
 ```bash
-# Set auth token (required)
-export CODER_AUTH_TOKEN="sk-your-key-here"
+# Interactive model selection (provider → model → auth token)
+coder --model
 
-# Optional: override model and endpoint
-export CODER_MODEL="deepseek-chat"
-export CODER_BASE_URL="https://api.deepseek.com/anthropic"
+# Direct model set
+coder --model deepseek/deepseek-v4-pro
 ```
+
+Environment variables are auto-populated from settings.json at runtime. No need to manually export `CODER_AUTH_TOKEN`, `CODER_MODEL`, or `CODER_BASE_URL`.
 
 ### Model Switching
 
 Switch models interactively:
 ```bash
 coder --model          # Interactive selection from model_list
-coder --model gpt-4o   # Switch to a specific model by name
 ```
 
 ### ~/.coder/settings.json
@@ -257,27 +256,49 @@ coder --model gpt-4o   # Switch to a specific model by name
 ```json
 {
   "theme": "dark",
+  "default_model": "deepseek/deepseek-v4-pro",
   "model_list": [
     {
-      "name": "deepseek-v4",
-      "model": "deepseek-chat",
+      "model": ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat", "deepseek-reasoner"],
       "base_url": "https://api.deepseek.com/anthropic",
-      "auth_token_env": "CODER_AUTH_TOKEN",
-      "provider": "deepseek"
+      "auth_token_env": "YOUR_DEEPSEEK_API_KEY",
+      "provider": "deepseek",
+      "price": {
+        "input": 0.14,
+        "output": 0.28,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
     },
     {
-      "name": "claude-sonnet-4-6",
-      "model": "claude-sonnet-4-6",
-      "base_url": "https://api.anthropic.com/v1",
-      "auth_token_env": "CODER_AUTH_TOKEN",
-      "provider": "anthropic"
+      "model": ["claude-sonnet-2025", "opus-4.8"],
+      "base_url": "https://api.deepseek.com/anthropic",
+      "auth_token_env": "YOUR_ANTHROPIC_API_KEY",
+      "provider": "anthropic",
+      "price": {
+        "input": 3.0,
+        "output": 15.0,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
+    },
+    {
+      "model": ["gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo"],
+      "base_url": "https://api.openai.com/v1",
+      "auth_token_env": "YOUR_OPENAI_API_KEY",
+      "provider": "openai",
+      "price": {
+        "input": 10.0,
+        "output": 30.0,
+        "currency": "USD",
+        "unit": "1M tokens"
+      }
     }
   ],
-  "default_model": "deepseek-v4",
   "env": {
-    "CODER_MODEL": "deepseek-chat",
+    "CODER_MODEL": "deepseek-v4-pro",
     "CODER_BASE_URL": "https://api.deepseek.com/anthropic",
-    "CODER_AUTH_TOKEN": ""
+    "CODER_AUTH_TOKEN": "YOUR_DEEPSEEK_API_KEY"
   }
 }
 ```
@@ -299,28 +320,28 @@ Place hook definitions in `~/.coder/hooks/*.json`:
 
 Supported events: `SessionStart`, `UserPromptSubmit`, `PreMessage`, `PostMessage`, `PreToolUse`, `PostToolUse`, `PostToolBatch`, `Stop`, `StopFailure`, `PreCompact`, `PostCompact`, `PermissionRequest`, `PermissionDenied`, `Notification`, `SubagentStart`, `SubagentStop`, and more.
 
-### Project Configuration (CLAUDE.md)
+### Project Configuration (CODER.md)
 
-Place a `CLAUDE.md` file in your project root for project-specific instructions. Coder Agent automatically loads this as context at the start of every session:
+Place a `CODER.md` file in your project root for project-specific instructions. Coder Agent automatically loads this as context at the start of every session:
 
 ```markdown
 # Project Overview
 
-This is a Next.js e-commerce application with Prisma ORM and PostgreSQL.
+This is a Node.js microservice with PostgreSQL and Redis.
 
 ## Architecture
-- `src/app/` — Next.js App Router pages
-- `src/components/` — Shared React components
+- `src/app/` — Application entry points
+- `src/components/` — Shared components
 - `src/lib/` — Utilities and business logic
-- `prisma/` — Database schema and migrations
+- `db/` — Database schema and migrations
 
 ## Conventions
 - Use TypeScript strict mode
-- Tests use Vitest with React Testing Library
+- Tests use Vitest
 - API routes follow RESTful conventions
 ```
 
-Use `/init` in an interactive session to have Coder Agent auto-generate a `CLAUDE.md` for your project.
+Use `/init` in an interactive session to have Coder Agent auto-generate a `CODER.md` for your project.
 
 ---
 

@@ -44,6 +44,8 @@ interface CliArgs {
   provider?: string
   /** Append to system prompt (added after base instructions) */
   systemPrompt?: string
+  /** Launch interactive first-time setup wizard */
+  setup?: boolean
 }
 
 function parseCliArgs(argv: string[]): CliArgs {
@@ -118,6 +120,10 @@ function parseCliArgs(argv: string[]): CliArgs {
         args.systemPrompt = argv[i + 1]
         i++
         break
+      case 'setup':
+      case '--setup':
+        args.setup = true
+        break
       default:
         break
     }
@@ -174,6 +180,7 @@ Options:
   --thinking            Enable extended thinking mode
   --thinking-budget <n> Extended thinking budget in tokens (default: 1024)
   --system-prompt <text> Append additional system prompt text
+  --setup               Launch interactive first-time setup wizard
 `);
   process.exit(0);
 }
@@ -600,8 +607,155 @@ if (cliArgs.model || process.argv.includes('--model')) {
   process.exit(0);
 }
 
+// --setup: interactive first-time setup wizard
+if (cliArgs.setup || process.argv.includes('setup')) {
+  const { readFileSync, writeFileSync } = await import('node:fs');
+  const { homedir } = await import('node:os');
+  const { join } = await import('node:path');
+  const readline = await import('node:readline');
+  const stdin = process.stdin;
+  const stdout = process.stdout;
+
+  const settingsPath = join(homedir(), '.coder', 'settings.json');
+  let settings: any = {};
+  try {
+    settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+  } catch {}
+  settings.model_list = settings.model_list ?? [];
+
+  console.log('\n🔧 Coder Agent — First Time Setup\n');
+
+  // ── Step 1: Theme ──────────────────────────────────────────────────────────
+  {
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const theme = await new Promise<string>(resolve => {
+      rl.question('Theme (dark/light) [dark]: ', answer => {
+        const trimmed = answer.trim().toLowerCase();
+        resolve(trimmed === 'light' ? 'light' : 'dark');
+      });
+    });
+    settings.theme = theme;
+    console.log(`  Theme: ${theme}\n`);
+    rl.close();
+  }
+
+  // ── Step 2: max_tokens ─────────────────────────────────────────────────────
+  {
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const maxTokens = await new Promise<number>(resolve => {
+      rl.question('Max output tokens [32768]: ', answer => {
+        const trimmed = answer.trim();
+        resolve(trimmed ? parseInt(trimmed, 10) || 32768 : 32768);
+      });
+    });
+    settings.max_tokens = maxTokens;
+    console.log(`  Max tokens: ${maxTokens}\n`);
+    rl.close();
+  }
+
+  // ── Step 3: Provider + Model ───────────────────────────────────────────────
+  const modelList: Array<any> = settings.model_list;
+
+  if (modelList.length === 0) {
+    console.log('No providers configured. Let us create one.\n');
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+
+    const name = await new Promise<string>(resolve => {
+      rl.question('Provider name (e.g. deepseek): ', resolve);
+    });
+    const url = await new Promise<string>(resolve => {
+      rl.question('Base URL (e.g. https://api.deepseek.com/anthropic): ', resolve);
+    });
+    const key = await new Promise<string>(resolve => {
+      rl.question('API key: ', resolve);
+    });
+    const proxy = await new Promise<string>(resolve => {
+      rl.question('Proxy URL (or Enter to skip): ', resolve);
+    });
+    rl.close();
+
+    const providerName = name.trim();
+    const providerUrl = url.trim() || undefined;
+    const providerKey = key.trim() || `YOUR_${providerName.toUpperCase()}_API_KEY`;
+    const providerProxy = proxy.trim() || null;
+
+    const newProvider = {
+      provider: providerName,
+      model: [],
+      base_url: providerUrl,
+      auth_token_env: providerKey,
+      proxy: providerProxy,
+      price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' },
+    };
+    modelList.push(newProvider);
+    console.log(`  Provider created: ${providerName}\n`);
+  } else {
+    console.log(`Found ${modelList.length} existing provider(s).`);
+    const rl = readline.createInterface({ input: stdin, output: stdout });
+    const skipModels = await new Promise<string>(resolve => {
+      rl.question('Skip provider configuration? (y/N): ', resolve);
+    });
+    rl.close();
+    if (skipModels.trim().toLowerCase() === 'y') {
+      console.log('  Skipping provider setup.\n');
+    } else {
+      // Show existing providers
+      for (let i = 0; i < modelList.length; i++) {
+        console.log(`  [${i + 1}] ${modelList[i].provider} — ${modelList[i].model?.join(', ') || 'no models'}`);
+      }
+      console.log(`  [${modelList.length + 1}] Add new provider`);
+      const rl2 = readline.createInterface({ input: stdin, output: stdout });
+      const choice = await new Promise<string>(resolve => {
+        rl2.question('\nSelect provider to configure: ', resolve);
+      });
+      rl2.close();
+
+      const idx = parseInt(choice.trim(), 10) - 1;
+      if (idx >= 0 && idx < modelList.length) {
+        const selected = modelList[idx];
+        console.log(`  Configuring: ${selected.provider}\n`);
+        const rl3 = readline.createInterface({ input: stdin, output: stdout });
+        const newModels = await new Promise<string>(resolve => {
+          rl3.question('Model IDs (comma-separated): ', resolve);
+        });
+        rl3.close();
+        selected.model = newModels.split(',').map(m => m.trim()).filter(Boolean);
+        settings.default_model = `${selected.provider}/${selected.model[0]}`;
+        console.log(`  Updated models for ${selected.provider}\n`);
+      } else if (idx === modelList.length) {
+        console.log('  Adding new provider...\n');
+        // Quick add (same flow as above)
+        const rl3 = readline.createInterface({ input: stdin, output: stdout });
+        const pName = await new Promise<string>(resolve => rl3.question('Provider name: ', resolve));
+        const pUrl = await new Promise<string>(resolve => rl3.question('Base URL: ', resolve));
+        const pKey = await new Promise<string>(resolve => rl3.question('API key: ', resolve));
+        const pProxy = await new Promise<string>(resolve => rl3.question('Proxy URL (or Enter to skip): ', resolve));
+        rl3.close();
+        modelList.push({
+          provider: pName.trim(),
+          model: [],
+          base_url: pUrl.trim() || undefined,
+          auth_token_env: pKey.trim() || `YOUR_${pName.trim().toUpperCase()}_API_KEY`,
+          proxy: pProxy.trim() || null,
+          price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' },
+        });
+        console.log(`  Provider added: ${pName}\n`);
+      }
+    }
+  }
+
+  // ── Save and exit ──────────────────────────────────────────────────────────
+  settings.model_list = modelList;
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+
+  console.log('✅ Setup complete! Settings saved to ~/.coder/settings.json\n');
+  console.log('Starting Coder Agent...\n');
+
+  // Fall through to TUI init
+}
+
 // TTY check — skip for non-interactive flags handled above
-const isNonInteractive = cliArgs.help || cliArgs.version || cliArgs.print || cliArgs.model || process.argv.includes('--model') || process.argv.includes('-m')
+const isNonInteractive = cliArgs.help || cliArgs.version || cliArgs.print || cliArgs.model || cliArgs.setup || process.argv.includes('--model') || process.argv.includes('-m') || process.argv.includes('setup')
 if (isNonInteractive) {
   // Exit gracefully — the --model handler above uses readline callback to exit
   if (!cliArgs.model && !process.argv.includes('--model') && !process.argv.includes('-m')) {

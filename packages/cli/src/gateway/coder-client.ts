@@ -1071,7 +1071,11 @@ export class CoderGatewayClient extends EventEmitter implements IGatewayClient {
         entry = settings.model_list.find(m => m.provider === providerName)
       }
       if (!entry) entry = settings.model_list[0]
-      if (entry?.auth_token_env) return true
+      // Check if auth_token_env looks like a real value (not placeholder)
+      const tokenValue = entry?.auth_token_env ?? '';
+      if (tokenValue && !tokenValue.startsWith('YOUR_') && !tokenValue.includes('API_KEY') && !tokenValue.includes('NO_KEY')) {
+        return true
+      }
     }
 
     // Legacy env check

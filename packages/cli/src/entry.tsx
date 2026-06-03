@@ -394,6 +394,8 @@ if (cliArgs.model || process.argv.includes('--model')) {
       auth_token_env: key.trim() || `YOUR_${name.trim().toUpperCase()}_API_KEY`,
       price: { input: 0, output: 0, currency: 'USD', unit: '1M tokens' }
     };
+    modelList.push(selectedProvider);
+    providerDone = true;
   } else if (selectedProviderIdx === modelList.length + 1) {
     // Let user pick which provider to remove
     const removeProviderOptions = modelList.map(m => m.provider);

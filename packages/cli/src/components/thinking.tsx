@@ -205,11 +205,20 @@ function TruncatedResult({
   t
 }: DetailRow & { branch?: TreeBranch; rails?: TreeRails; t: Theme }) {
   const [expanded, setExpanded] = useState(false)
-  const text = typeof content === 'string' ? content : String(content ?? '')
+  const text = typeof content === 'string' ? content : ''
+  const isReactNode = !text && content
   const lines = useMemo(() => text.split('\n'), [text])
-  const truncated = lines.length > RESULT_PREVIEW_LINES
+  const truncated = !isReactNode && lines.length > RESULT_PREVIEW_LINES
   const visible = expanded ? lines : lines.slice(0, RESULT_PREVIEW_LINES)
   const hidden = lines.length - RESULT_PREVIEW_LINES
+
+  if (isReactNode) {
+    return (
+      <TreeRow branch={branch} rails={rails} t={t}>
+        {content as ReactNode}
+      </TreeRow>
+    )
+  }
 
   return (
     <Box flexDirection="column">
@@ -227,7 +236,7 @@ function TruncatedResult({
       {truncated && !expanded ? (
         <TreeRow branch={branch} rails={rails} t={t}>
           <Box onClick={() => setExpanded(true)}>
-            <Text color={t.color.accent}>... +{hidden} lines (click to expand)</Text>
+            <Text color={t.color.muted} dim>... +{hidden} lines (click to expand)</Text>
           </Box>
         </TreeRow>
       ) : null}
@@ -297,12 +306,11 @@ function Chevron({
   title: string
   tone?: 'dim' | 'error' | 'warn'
 }) {
-  const color = tone === 'error' ? t.color.error : tone === 'warn' ? t.color.warn : t.color.muted
+  const color = tone === 'error' ? t.color.error : tone === 'warn' ? t.color.warn : t.color.text
 
   return (
     <Box onClick={(e: any) => onClick(!!e?.shiftKey || !!e?.ctrlKey)}>
-      <Text color={color} dim={tone === 'dim'}>
-        <Text color={t.color.accent}>{open ? '▾ ' : '▸ '}</Text>
+      <Text color={color}>
         {title}
         {typeof count === 'number' ? ` (${count})` : ''}
         {suffix ? (
@@ -792,7 +800,7 @@ export const ToolTrail = memo(function ToolTrail({
   // sections (regression caught after #14968).
   const [openThinking, setOpenThinking] = useState(visible.thinking === 'expanded')
   const thinkingUserToggledRef = useRef(false)
-  const [openTools, setOpenTools] = useState(visible.tools === 'expanded')
+  const [openTools, setOpenTools] = useState(true)
   const toolsUserToggledRef = useRef(false)
   const [openSubagents, setOpenSubagents] = useState(visible.subagents === 'expanded')
   const [deepSubagents, setDeepSubagents] = useState(visible.subagents === 'expanded')
@@ -864,7 +872,7 @@ export const ToolTrail = memo(function ToolTrail({
 
       if (parsed.detail) {
         pushDetail({
-          color: parsed.mark === '✗' ? t.color.error : t.color.muted,
+          color: parsed.mark === '✗' ? t.color.error : t.color.text,
           content: parsed.detail,
           dimColor: parsed.mark !== '✗',
           key: `tr-${i}-d`
@@ -911,21 +919,32 @@ export const ToolTrail = memo(function ToolTrail({
   for (const tool of tools) {
     const args = parseToolArgs(tool.verboseArgs ?? '')
     const label = args?.description ?? formatToolCall(tool.name, tool.verboseArgs || tool.context || '')
+    const hasDescription = Boolean(args?.description)
     const details: DetailRow[] = []
     if (args?.command) {
-      details.push({
-        color: t.color.muted,
-        content: formatToolCall(tool.name, args.command),
-        dimColor: true,
-        key: `${tool.id}-cmd`
-      })
+      if (hasDescription) {
+        // Header shows the description — detail shows the tool call.
+        const toolLine = formatToolCall(tool.name, args.command)
+        details.push({
+          color: t.color.muted,
+          content: toolLine,
+          dimColor: true,
+          key: `${tool.id}-cmd`
+        })
+      }
+      // Without a description the header already shows the tool call —
+      // no need to duplicate it in the detail.
     } else if (tool.verboseArgs) {
-      details.push({
-        color: t.color.muted,
-        content: `Args:\n${boundedLiveRenderText(tool.verboseArgs)}`,
-        dimColor: true,
-        key: `${tool.id}-args`
-      })
+      if (hasDescription) {
+        const toolLine = formatToolCall(tool.name, tool.verboseArgs || tool.context || '')
+        details.push({
+          color: t.color.muted,
+          content: `${toolLine}\n${boundedLiveRenderText(tool.verboseArgs)}`,
+          dimColor: true,
+          key: `${tool.id}-args`
+        })
+      }
+      // Without a description, header = tool call, skip the detail.
     }
 
     groups.push({
@@ -955,22 +974,42 @@ export const ToolTrail = memo(function ToolTrail({
   const hasMeta = meta.length > 0
   const hasThinking = !!cot || reasoningActive || reasoningStreaming
   const thinkingLive = reasoningActive || reasoningStreaming
+  const terminalCols = process.stdout.columns || 80
   const thoughtPreviewLines = useMemo(() => {
-    if (thinkingLive) return []
     const raw = cleanThinkingText(reasoning)
-    return raw.split('\n').filter(Boolean).slice(0, THOUGHT_PREVIEW_LINES)
-  }, [thinkingLive, reasoning])
+    const sourceLines = raw.split('\n').filter(Boolean)
+    // Collect source lines until they fill THOUGHT_PREVIEW_LINES visual lines
+    const result: string[] = []
+    let visualLines = 0
+    for (const line of sourceLines) {
+      result.push(line)
+      visualLines += Math.max(1, Math.ceil(line.length / terminalCols))
+      if (visualLines >= THOUGHT_PREVIEW_LINES) break
+    }
+    return result
+  }, [reasoning, terminalCols])
+  const totalThoughtLines = useMemo(() => {
+    const raw = cleanThinkingText(reasoning)
+    const sourceLines = raw.split('\n').filter(Boolean)
+    return sourceLines.reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / terminalCols)), 0)
+  }, [reasoning, terminalCols])
 
   // Auto-expand Thinking during streaming, revert to user preference when done.
   // User clicks take precedence for the remainder of the turn.
+  // Collapse to preview once reasoning exceeds THOUGHT_PREVIEW_LINES to avoid
+  // flooding the screen during long streaming output.
   useEffect(() => {
     if (thinkingLive) {
       thinkingUserToggledRef.current = false
-      setOpenThinking(true)
+      if (totalThoughtLines > THOUGHT_PREVIEW_LINES) {
+        setOpenThinking(false)
+      } else {
+        setOpenThinking(true)
+      }
     } else if (!thinkingUserToggledRef.current) {
       setOpenThinking(visible.thinking === 'expanded')
     }
-  }, [thinkingLive, visible.thinking])
+  }, [thinkingLive, visible.thinking, totalThoughtLines])
 
   // Auto-expand Tool calls while tools are running, revert to user preference when done.
   // Same logic as Thinking: user clicks take precedence for the remainder of the turn.
@@ -981,7 +1020,7 @@ export const ToolTrail = memo(function ToolTrail({
       toolsUserToggledRef.current = false
       setOpenTools(true)
     } else if (!toolsUserToggledRef.current && hasTools) {
-      setOpenTools(visible.tools === 'expanded')
+      setOpenTools(true)
     }
   }, [toolsActive, hasTools, visible.tools])
 
@@ -1086,7 +1125,7 @@ export const ToolTrail = memo(function ToolTrail({
   }[] = []
 
   if (hasThinking && visible.thinking !== 'hidden') {
-    const showPreview = !openThinking && !thinkingLive && thoughtPreviewLines.length > 0
+    const showPreview = !openThinking && thoughtPreviewLines.length > 0
     panels.push({
       header: (
         <Box
@@ -1101,14 +1140,13 @@ export const ToolTrail = memo(function ToolTrail({
           }}
         >
           <Box>
-            <Text color={t.color.muted} dim={!thinkingLive}>
-              <Text color={t.color.accent}>{openThinking ? '▾ ' : '▸ '}</Text>
+            <Text color={t.color.text}>
               {thinkingLive ? (
                 <Text bold color={t.color.text}>
                   Thinking
                 </Text>
               ) : (
-                <Text color={t.color.muted} dim>
+                <Text bold color={t.color.text}>
                   Thought
                 </Text>
               )}
@@ -1121,26 +1159,44 @@ export const ToolTrail = memo(function ToolTrail({
             </Text>
           </Box>
           {showPreview
-            ? thoughtPreviewLines.map((line, i) => (
-                <Text color={t.color.muted} dim key={i} wrap="truncate-end">
-                  {line || ' '}
-                </Text>
-              ))
+            ? (
+              <>
+                {thoughtPreviewLines.map((line, i) => (
+                  <Text color={t.color.muted} key={i} wrap="wrap-trim">
+                    {line || ' '}
+                  </Text>
+                ))}
+                {totalThoughtLines > THOUGHT_PREVIEW_LINES ? (
+                  <Text color={t.color.muted} dim>
+                    ... +{totalThoughtLines - THOUGHT_PREVIEW_LINES} lines (click to expand)
+                  </Text>
+                ) : null}
+              </>
+            )
             : null}
         </Box>
       ),
       key: 'thinking',
       open: openThinking,
       render: rails => (
-        <Thinking
-          active={reasoningActive}
-          branch="last"
-          mode="full"
-          rails={rails}
-          reasoning={busy ? reasoning : cot}
-          streaming={busy && reasoningStreaming}
-          t={t}
-        />
+        <Box flexDirection="column">
+          <Thinking
+            active={reasoningActive}
+            branch={totalThoughtLines > THOUGHT_PREVIEW_LINES ? 'mid' : 'last'}
+            mode="full"
+            rails={rails}
+            reasoning={busy ? reasoning : cot}
+            streaming={busy && reasoningStreaming}
+            t={t}
+          />
+          {!thinkingLive && totalThoughtLines > THOUGHT_PREVIEW_LINES ? (
+            <TreeRow branch="last" rails={rails} t={t}>
+              <Box onClick={() => setOpenThinking(false)}>
+                <Text color={t.color.muted} dim>... collapse</Text>
+              </Box>
+            </TreeRow>
+          ) : null}
+        </Box>
       )
     })
   }
@@ -1150,7 +1206,8 @@ export const ToolTrail = memo(function ToolTrail({
       const { duration, label: toolHeaderLabel } = splitToolDuration(group.label)
       const tone: 'dim' | 'error' | 'warn' = group.color === t.color.error ? 'error' : 'dim'
       const isLastGroup = groupIndex === groups.length - 1
-      const suffix = [duration, isLastGroup ? toolTokensLabel : undefined].filter(Boolean).join('  ') || undefined
+      const suffix = [duration, isLastGroup ? toolTokensLabel : undefined]
+        .filter(Boolean).join('  ') || undefined
 
       panels.push({
         header: (
@@ -1181,6 +1238,64 @@ export const ToolTrail = memo(function ToolTrail({
               {group.details.map((detail, detailIndex) => {
                 const detailBranch: TreeBranch =
                   detailIndex === group.details.length - 1 && !hasInlineSubagents ? 'last' : 'mid'
+                const text = typeof detail.content === 'string' ? detail.content : ''
+                const nl = text.indexOf('\n')
+                // Bold the tool name in "Bash(command)" first line
+                const toolCallMatch = nl > 0 ? text.slice(0, nl).match(/^(\w+)\((.+)\)$/) : null
+
+                if (toolCallMatch) {
+                  const toolName = toolCallMatch[1]!
+                  const toolArg = toolCallMatch[2]!
+                  const rest = text.slice(nl + 1)
+                  const restNl = rest.indexOf('\n')
+                  const resultLabel = restNl > 0 && rest.startsWith('Result:') ? 'Result:' : ''
+                  const resultBody = resultLabel ? rest.slice(restNl + 1) : rest
+                  return (
+                    <Box flexDirection="column" key={detail.key}>
+                      <TreeTextRow
+                        branch={resultLabel || resultBody !== rest ? 'mid' : detailBranch}
+                        color={detail.color}
+                        content={
+                          <Text>
+                            <Text bold color={detail.color}>{toolName}</Text>
+                            <Text color={detail.color}>({toolArg})</Text>
+                          </Text>
+                        }
+                        rails={rails}
+                        t={t}
+                      />
+                      {resultLabel ? (
+                        <>
+                          <TreeTextRow
+                            branch="mid"
+                            color={detail.color}
+                            content="Result:"
+                            rails={rails}
+                            t={t}
+                          />
+                          <TruncatedResult
+                            {...detail}
+                            branch={detailBranch}
+                            color={t.color.muted}
+                            content={resultBody}
+                            dimColor
+                            rails={rails}
+                            t={t}
+                          />
+                        </>
+                      ) : (
+                        <TruncatedResult
+                          {...detail}
+                          branch={detailBranch}
+                          content={rest}
+                          rails={rails}
+                          t={t}
+                        />
+                      )}
+                    </Box>
+                  )
+                }
+
                 return (
                   <TruncatedResult
                     {...detail}

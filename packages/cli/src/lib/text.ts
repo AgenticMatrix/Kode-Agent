@@ -299,20 +299,16 @@ export const buildVerboseToolTrailLine = (
   const effectiveHeader = headerLabel ?? formatToolCall(name, context)
   const took = duration !== undefined ? ` (${duration.toFixed(1)}s)` : ''
 
-  // When we have a parsed description+command, show:
-  //   header: description
-  //   detail: Bash(command)\nResult:\n...
-  // Otherwise keep the legacy Args:/Result: format.
+  // Always include the tool-call line so the TUI renders a bold tool name.
+  // Skip the legacy "Args:" block — the result (or error) is the signal.
+  // When there is no headerLabel (description), the header already shows the
+  // tool call — omit it from the detail to avoid showing it twice.
   let detail: string
-  if (args?.command && args?.description) {
-    const toolLine = formatToolCall(name, args.command)
-    const resultBlock = verboseToolBlock(error ? 'Error' : 'Result', resultText)
-    detail = [toolLine, resultBlock].filter(Boolean).join('\n')
-  } else {
-    detail = [verboseToolBlock('Args', argsText), verboseToolBlock(error ? 'Error' : 'Result', resultText)]
-      .filter(Boolean)
-      .join('\n')
-  }
+  const toolLine = formatToolCall(name, args?.command ?? context)
+  const resultBlock = verboseToolBlock(error ? 'Error' : 'Result', resultText)
+  detail = headerLabel
+    ? [toolLine, resultBlock].filter(Boolean).join('\n')
+    : resultBlock
 
   return `${effectiveHeader}${took}${detail ? ` :: ${detail}` : ''} ${error ? '✗' : '✓'}`
 }

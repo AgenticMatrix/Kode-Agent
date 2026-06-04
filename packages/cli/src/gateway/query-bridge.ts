@@ -35,6 +35,8 @@ export interface ActiveToolState {
   name: string;
   startTime: number;
   status: 'started' | 'running' | 'completed';
+  /** Accumulated tool input JSON from input_json_delta events */
+  inputJson: string;
 }
 
 export interface BridgeUsage {
@@ -79,6 +81,8 @@ export interface BridgeState {
   thinkingBlockIndex: number | null;
   /** Whether a text generation block has been seen in this turn */
   hasTextStarted: boolean;
+  /** Maps content block index → tool_use id for routing input_json_delta */
+  toolBlockIndexToId: Map<number, string>;
 }
 
 export function createBridgeState(sessionId: string): BridgeState {
@@ -102,6 +106,7 @@ export function createBridgeState(sessionId: string): BridgeState {
     inThinkingBlock: false,
     thinkingBlockIndex: null,
     hasTextStarted: false,
+    toolBlockIndexToId: new Map(),
   };
 }
 
@@ -125,6 +130,7 @@ export function resetTurnState(state: BridgeState): void {
   state.inThinkingBlock = false;
   state.thinkingBlockIndex = null;
   state.hasTextStarted = false;
+  state.toolBlockIndexToId.clear();
   state.usage = {
     inputTokens: 0,
     outputTokens: 0,
@@ -243,10 +249,17 @@ function handleStreamEvent(
           ev('message.delta', { text: delta.text }, sid),
         );
       } else if (delta.type === 'input_json_delta') {
-        // Tool input JSON → thinking.delta
-        events.push(
-          ev('thinking.delta', { text: delta.partial_json }, sid),
-        );
+        // Tool input JSON — route to tool state, not thinking
+        const toolId = state.toolBlockIndexToId.get(event.index);
+        if (toolId) {
+          const tool = state.activeTools.get(toolId);
+          if (tool) {
+            tool.inputJson += delta.partial_json;
+          }
+          events.push(
+            ev('tool.input_delta', { tool_id: toolId, partial_json: delta.partial_json }, sid),
+          );
+        }
       } else if (delta.type === 'thinking_delta') {
         // Extended thinking delta — forward as thinking.delta
         events.push(
@@ -262,11 +275,13 @@ function handleStreamEvent(
 
       if (block.type === 'tool_use' && block.id && block.name) {
         state.currentTurnToolCount++;
+        state.toolBlockIndexToId.set(event.index, block.id);
         state.activeTools.set(block.id, {
           id: block.id,
           name: block.name,
           startTime: Date.now(),
           status: 'started',
+          inputJson: block.input ? JSON.stringify(block.input) : '',
         });
 
         events.push(
@@ -413,6 +428,7 @@ function handleToolProgress(
           name: progress.toolName,
           startTime: Date.now(),
           status: 'started',
+          inputJson: '',
         });
       }
       events.push(

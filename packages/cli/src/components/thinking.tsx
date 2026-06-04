@@ -18,10 +18,12 @@ import {
 } from '../lib/subagentTree.js'
 import {
   boundedLiveRenderText,
+  cleanThinkingText,
   compactPreview,
   estimateTokensRough,
   fmtK,
   formatToolCall,
+  parseToolArgs,
   parseToolTrailResultLine,
   pick,
   splitToolDuration,
@@ -190,6 +192,54 @@ function Detail({
   t
 }: DetailRow & { branch?: TreeBranch; rails?: TreeRails; t: Theme }) {
   return <TreeTextRow branch={branch} color={color} content={content} dimColor={dimColor} rails={rails} t={t} />
+}
+
+const RESULT_PREVIEW_LINES = 4
+
+function TruncatedResult({
+  branch = 'last',
+  color,
+  content,
+  dimColor,
+  rails = [],
+  t
+}: DetailRow & { branch?: TreeBranch; rails?: TreeRails; t: Theme }) {
+  const [expanded, setExpanded] = useState(false)
+  const text = typeof content === 'string' ? content : String(content ?? '')
+  const lines = useMemo(() => text.split('\n'), [text])
+  const truncated = lines.length > RESULT_PREVIEW_LINES
+  const visible = expanded ? lines : lines.slice(0, RESULT_PREVIEW_LINES)
+  const hidden = lines.length - RESULT_PREVIEW_LINES
+
+  return (
+    <Box flexDirection="column">
+      {visible.map((line, i) => (
+        <TreeTextRow
+          branch={i === visible.length - 1 && !truncated ? branch : 'mid'}
+          color={color}
+          content={line || ' '}
+          dimColor={dimColor}
+          key={i}
+          rails={rails}
+          t={t}
+        />
+      ))}
+      {truncated && !expanded ? (
+        <TreeRow branch={branch} rails={rails} t={t}>
+          <Box onClick={() => setExpanded(true)}>
+            <Text color={t.color.accent}>... +{hidden} lines (click to expand)</Text>
+          </Box>
+        </TreeRow>
+      ) : null}
+      {expanded ? (
+        <TreeRow branch={branch} rails={rails} t={t}>
+          <Box onClick={() => setExpanded(false)}>
+            <Text color={t.color.muted} dim>... collapse</Text>
+          </Box>
+        </TreeRow>
+      ) : null}
+    </Box>
+  )
 }
 
 function StreamCursor({
@@ -422,7 +472,7 @@ function SubagentAccordion({
           }}
           open={openThinking}
           t={t}
-          title="Thinking"
+          title="Thought"
         />
       ),
       key: 'thinking',
@@ -618,6 +668,8 @@ function SubagentAccordion({
 }
 
 // ── Thinking ─────────────────────────────────────────────────────────
+
+export const THOUGHT_PREVIEW_LINES = 2
 
 export const Thinking = memo(function Thinking({
   active = false,
@@ -857,22 +909,30 @@ export const ToolTrail = memo(function ToolTrail({
   }
 
   for (const tool of tools) {
-    const label = formatToolCall(tool.name, tool.context || '')
+    const args = parseToolArgs(tool.verboseArgs ?? '')
+    const label = args?.description ?? formatToolCall(tool.name, tool.verboseArgs || tool.context || '')
+    const details: DetailRow[] = []
+    if (args?.command) {
+      details.push({
+        color: t.color.muted,
+        content: formatToolCall(tool.name, args.command),
+        dimColor: true,
+        key: `${tool.id}-cmd`
+      })
+    } else if (tool.verboseArgs) {
+      details.push({
+        color: t.color.muted,
+        content: `Args:\n${boundedLiveRenderText(tool.verboseArgs)}`,
+        dimColor: true,
+        key: `${tool.id}-args`
+      })
+    }
 
     groups.push({
       color: t.color.text,
       key: tool.id,
       label,
-      details: tool.verboseArgs
-        ? [
-            {
-              color: t.color.muted,
-              content: `Args:\n${boundedLiveRenderText(tool.verboseArgs)}`,
-              dimColor: true,
-              key: `${tool.id}-args`
-            }
-          ]
-        : [],
+      details,
       content: (
         <>
           <Spinner color={t.color.accent} variant="tool" /> {label}
@@ -895,6 +955,11 @@ export const ToolTrail = memo(function ToolTrail({
   const hasMeta = meta.length > 0
   const hasThinking = !!cot || reasoningActive || reasoningStreaming
   const thinkingLive = reasoningActive || reasoningStreaming
+  const thoughtPreviewLines = useMemo(() => {
+    if (thinkingLive) return []
+    const raw = cleanThinkingText(reasoning)
+    return raw.split('\n').filter(Boolean).slice(0, THOUGHT_PREVIEW_LINES)
+  }, [thinkingLive, reasoning])
 
   // Auto-expand Thinking during streaming, revert to user preference when done.
   // User clicks take precedence for the remainder of the turn.
@@ -932,21 +997,6 @@ export const ToolTrail = memo(function ToolTrail({
   const totalTokensLabel = tokenCount > 0 && toolTokenCount > 0 ? `~${fmtK(totalTokenCount)} total` : null
   const delegateGroups = groups.filter(g => g.label.startsWith('Delegate Task'))
   const inlineDelegateKey = hasSubagents && delegateGroups.length === 1 ? delegateGroups[0]!.key : null
-
-  const toolLabel = (group: Group) => {
-    const { duration, label } = splitToolDuration(String(group.content))
-
-    return duration ? (
-      <>
-        {label}
-        <Text color={t.color.statusFg} dim>
-          {duration}
-        </Text>
-      </>
-    ) : (
-      group.content
-    )
-  }
 
   // ── Backstop: floating alerts when every panel is hidden ─────────
   //
@@ -1036,9 +1086,11 @@ export const ToolTrail = memo(function ToolTrail({
   }[] = []
 
   if (hasThinking && visible.thinking !== 'hidden') {
+    const showPreview = !openThinking && !thinkingLive && thoughtPreviewLines.length > 0
     panels.push({
       header: (
         <Box
+          flexDirection="column"
           onClick={(e: any) => {
             thinkingUserToggledRef.current = true
             if (e?.shiftKey || e?.ctrlKey) {
@@ -1048,24 +1100,33 @@ export const ToolTrail = memo(function ToolTrail({
             }
           }}
         >
-          <Text color={t.color.muted} dim={!thinkingLive}>
-            <Text color={t.color.accent}>{openThinking ? '▾ ' : '▸ '}</Text>
-            {thinkingLive ? (
-              <Text bold color={t.color.text}>
-                Thinking
-              </Text>
-            ) : (
-              <Text color={t.color.muted} dim>
-                Thinking
-              </Text>
-            )}
-            {thinkingTokensLabel ? (
-              <Text color={t.color.statusFg} dim>
-                {'  '}
-                {thinkingTokensLabel}
-              </Text>
-            ) : null}
-          </Text>
+          <Box>
+            <Text color={t.color.muted} dim={!thinkingLive}>
+              <Text color={t.color.accent}>{openThinking ? '▾ ' : '▸ '}</Text>
+              {thinkingLive ? (
+                <Text bold color={t.color.text}>
+                  Thinking
+                </Text>
+              ) : (
+                <Text color={t.color.muted} dim>
+                  Thought
+                </Text>
+              )}
+              {thinkingTokensLabel ? (
+                <Text color={t.color.statusFg} dim>
+                  {'  '}
+                  {thinkingTokensLabel}
+                </Text>
+              ) : null}
+            </Text>
+          </Box>
+          {showPreview
+            ? thoughtPreviewLines.map((line, i) => (
+                <Text color={t.color.muted} dim key={i} wrap="truncate-end">
+                  {line || ' '}
+                </Text>
+              ))
+            : null}
         </Box>
       ),
       key: 'thinking',
@@ -1085,62 +1146,56 @@ export const ToolTrail = memo(function ToolTrail({
   }
 
   if (hasTools && visible.tools !== 'hidden') {
-    panels.push({
-      header: (
-        <Chevron
-          count={groups.length}
-          onClick={shift => {
-            toolsUserToggledRef.current = true
-            if (shift) {
-              expandAll()
-            } else {
-              setOpenTools(v => !v)
-            }
-          }}
-          open={openTools}
-          suffix={toolTokensLabel}
-          t={t}
-          title="Tool calls"
-        />
-      ),
-      key: 'tools',
-      open: openTools,
-      render: rails => (
-        <Box flexDirection="column">
-          {groups.map((group, index) => {
-            const branch: TreeBranch = index === groups.length - 1 ? 'last' : 'mid'
-            const childRails = nextTreeRails(rails, branch)
-            const hasInlineSubagents = inlineDelegateKey === group.key
+    groups.forEach((group, groupIndex) => {
+      const { duration, label: toolHeaderLabel } = splitToolDuration(group.label)
+      const tone: 'dim' | 'error' | 'warn' = group.color === t.color.error ? 'error' : 'dim'
+      const isLastGroup = groupIndex === groups.length - 1
+      const suffix = [duration, isLastGroup ? toolTokensLabel : undefined].filter(Boolean).join('  ') || undefined
 
-            return (
-              <Box flexDirection="column" key={group.key}>
-                <TreeTextRow
-                  branch={branch}
-                  color={group.color}
-                  content={
-                    <>
-                      <Text color={t.color.accent}>● </Text>
-                      {toolLabel(group)}
-                    </>
-                  }
-                  rails={rails}
-                  t={t}
-                />
-                {group.details.map((detail, detailIndex) => (
-                  <Detail
+      panels.push({
+        header: (
+          <Chevron
+            onClick={shift => {
+              toolsUserToggledRef.current = true
+              if (shift) {
+                expandAll()
+              } else {
+                setOpenTools(v => !v)
+              }
+            }}
+            open={openTools}
+            suffix={suffix}
+            t={t}
+            title={toolHeaderLabel}
+            tone={tone}
+          />
+        ),
+        key: `tool-${group.key}`,
+        open: openTools,
+        render: rails => {
+          const hasInlineSubagents = inlineDelegateKey === group.key
+          const childRails = nextTreeRails(rails, 'mid')
+
+          return (
+            <Box flexDirection="column">
+              {group.details.map((detail, detailIndex) => {
+                const detailBranch: TreeBranch =
+                  detailIndex === group.details.length - 1 && !hasInlineSubagents ? 'last' : 'mid'
+                return (
+                  <TruncatedResult
                     {...detail}
-                    branch={detailIndex === group.details.length - 1 && !hasInlineSubagents ? 'last' : 'mid'}
+                    branch={detailBranch}
                     key={detail.key}
-                    rails={childRails}
+                    rails={rails}
                     t={t}
                   />
-                ))}
-                {hasInlineSubagents ? renderSubagentList(childRails) : null}
-              </Box>
-            )
-          })}
-        </Box>
-      )
+                )
+              })}
+              {hasInlineSubagents ? renderSubagentList(childRails) : null}
+            </Box>
+          )
+        }
+      })
     })
   }
 

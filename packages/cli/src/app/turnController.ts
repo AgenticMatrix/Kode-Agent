@@ -14,6 +14,7 @@ import {
   buildVerboseToolTrailLine,
   estimateTokensRough,
   isTransientTrailLine,
+  parseToolArgs,
   sameToolTrailGroup,
   toolTrailLabel
 } from '../lib/text.js'
@@ -166,7 +167,6 @@ class TurnController {
 
   idle() {
     this.endReasoningPhase()
-    this.activeTools = []
     this.streamTimer = clear(this.streamTimer)
     this.bufRef = ''
     this.pendingSegmentTools = []
@@ -650,7 +650,8 @@ class TurnController {
             Boolean(error),
             duration ?? fallbackDuration,
             done?.verboseArgs,
-            error || resultText || summary || ''
+            error || resultText || summary || '',
+            parseToolArgs(done?.verboseArgs ?? '')?.description,
           )
         : buildToolTrailLine(name, done?.context || '', Boolean(error), error || summary || '', duration ?? fallbackDuration)
 
@@ -728,6 +729,33 @@ class TurnController {
     this.activeTools = [...this.activeTools, { context, id: toolId, name, startedAt: Date.now(), verboseArgs }]
 
     patchTurnState({ toolTokens: this.toolTokenAcc, tools: this.activeTools })
+  }
+
+  recordToolInputDelta(toolId: string, partialJson: string) {
+    if (this.interrupted) {
+      return
+    }
+
+    this.activeTools = this.activeTools.map(tool => {
+      if (tool.id !== toolId) return tool
+      // The initial verboseArgs from tool.start is "{}" (empty input).
+      // Reset it so the accumulated deltas form valid JSON.
+      const base = tool.verboseArgs === '{}' ? '' : (tool.verboseArgs ?? '')
+      const verboseArgs = base + partialJson
+      return { ...tool, verboseArgs, context: verboseArgs }
+    })
+
+    patchTurnState({ tools: this.activeTools })
+  }
+
+  updateToolContext(toolId: string, command: string) {
+    this.activeTools = this.activeTools.map(tool =>
+      tool.id === toolId
+        ? { ...tool, context: command }
+        : tool
+    )
+
+    patchTurnState({ tools: this.activeTools })
   }
 
   reset() {

@@ -555,6 +555,13 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         )
 
         return
+      case 'tool.input_delta':
+        turnController.recordToolInputDelta(
+          ev.payload.tool_id,
+          ev.payload.partial_json ? String(ev.payload.partial_json) : ''
+        )
+
+        return
       case 'tool.complete': {
         const inlineDiffText =
           ev.payload.inline_diff && getUiState().inlineDiffs ? stripAnsi(String(ev.payload.inline_diff)).trim() : ''
@@ -607,13 +614,21 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       case 'approval.request': {
         const description = String(ev.payload.description ?? 'dangerous command')
         const requestId = ev.payload.request_id ? String(ev.payload.request_id) : undefined
+        const toolUseId = ev.payload.tool_use_id ? String(ev.payload.tool_use_id) : undefined
+        const command = String(ev.payload.command ?? '')
+
+        // Update tool context with the actual command so the TUI header
+        // shows e.g. "Bash(python script.py)" instead of just "Bash".
+        if (command && toolUseId) {
+          turnController.updateToolContext(toolUseId, command)
+        }
 
         patchOverlayState({
           approval: {
-            command: String(ev.payload.command ?? ''),
+            command,
             description,
             request_id: requestId,
-            tool_use_id: ev.payload.tool_use_id ? String(ev.payload.tool_use_id) : undefined,
+            tool_use_id: toolUseId,
           },
         })
         setStatus('approval needed')

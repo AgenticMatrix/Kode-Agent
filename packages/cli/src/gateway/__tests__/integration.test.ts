@@ -143,8 +143,17 @@ describe('query-bridge: stream_event → GatewayEvent', () => {
     expect(state.accumulatedText).toContain('Hello');
   });
 
-  it('content_block_delta (input_json) → thinking.delta', () => {
+  it('content_block_delta (input_json) → tool.input_delta', () => {
     const state = createBridgeState('sid-1');
+    // Set up the tool block index mapping first
+    bridgeQueryToGateway(
+      makeStreamEvent({
+        type: 'content_block_start',
+        index: 0,
+        content_block: { type: 'tool_use', id: 'tool_001', name: 'Bash', input: {} },
+      }),
+      state,
+    );
     const msg = makeStreamEvent({
       type: 'content_block_delta',
       index: 0,
@@ -152,7 +161,8 @@ describe('query-bridge: stream_event → GatewayEvent', () => {
     });
 
     const events = bridgeQueryToGateway(msg, state);
-    expect(events.some((e) => e.type === 'thinking.delta')).toBe(true);
+    expect(events.some((e) => e.type === 'tool.input_delta')).toBe(true);
+    expect(events.some((e) => e.type === 'thinking.delta')).toBe(false);
   });
 
   it('content_block_start (tool_use) → tool.start', () => {

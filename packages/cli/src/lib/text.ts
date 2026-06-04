@@ -230,12 +230,41 @@ export const toolTrailLabel = (name: string) =>
     .map(p => p[0]!.toUpperCase() + p.slice(1))
     .join(' ') || name
 
-export const formatToolCall = (name: string, context = '') => {
-  const icon = TOOL_ICONS[name] ?? '🔨'
-  const label = TOOL_LABELS[name] ?? toolTrailLabel(name)
-  const preview = compactPreview(context, 48)
+export const extractToolArg = (name: string, context: string): string => {
+  if (!context) return ''
+  try {
+    const obj = JSON.parse(context) as Record<string, unknown>
+    if (name === 'Bash' && typeof obj.command === 'string') return obj.command
+    if (typeof obj.file_path === 'string') return obj.file_path
+    if (typeof obj.command === 'string') return obj.command
+    for (const val of Object.values(obj)) {
+      if (typeof val === 'string' && val.trim()) return val
+    }
+    return ''
+  } catch {
+    return context.trim()
+  }
+}
 
-  return preview ? `${icon} ${label}: ${preview}` : `${icon} ${label}`
+export const parseToolArgs = (argsText: string): { command?: string; description?: string; filePath?: string } | null => {
+  if (!argsText) return null
+  try {
+    const obj = JSON.parse(argsText) as Record<string, unknown>
+    return {
+      command: typeof obj.command === 'string' ? obj.command : undefined,
+      description: typeof obj.description === 'string' ? obj.description : undefined,
+      filePath: typeof obj.file_path === 'string' ? obj.file_path : undefined,
+    }
+  } catch {
+    return null
+  }
+}
+
+export const formatToolCall = (name: string, context = '') => {
+  const label = toolTrailLabel(name)
+  const arg = extractToolArg(name, context)
+  const display = arg ? `${label}(${compactPreview(arg, 72)})` : label
+  return display
 }
 
 export const buildToolTrailLine = (
@@ -263,14 +292,29 @@ export const buildVerboseToolTrailLine = (
   error?: boolean,
   duration?: number,
   argsText?: string,
-  resultText?: string
+  resultText?: string,
+  headerLabel?: string,
 ) => {
-  const detail = [verboseToolBlock('Args', argsText), verboseToolBlock(error ? 'Error' : 'Result', resultText)]
-    .filter(Boolean)
-    .join('\n')
+  const args = parseToolArgs(argsText ?? '')
+  const effectiveHeader = headerLabel ?? formatToolCall(name, context)
   const took = duration !== undefined ? ` (${duration.toFixed(1)}s)` : ''
 
-  return `${formatToolCall(name, context)}${took}${detail ? ` :: ${detail}` : ''} ${error ? '✗' : '✓'}`
+  // When we have a parsed description+command, show:
+  //   header: description
+  //   detail: Bash(command)\nResult:\n...
+  // Otherwise keep the legacy Args:/Result: format.
+  let detail: string
+  if (args?.command && args?.description) {
+    const toolLine = formatToolCall(name, args.command)
+    const resultBlock = verboseToolBlock(error ? 'Error' : 'Result', resultText)
+    detail = [toolLine, resultBlock].filter(Boolean).join('\n')
+  } else {
+    detail = [verboseToolBlock('Args', argsText), verboseToolBlock(error ? 'Error' : 'Result', resultText)]
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  return `${effectiveHeader}${took}${detail ? ` :: ${detail}` : ''} ${error ? '✗' : '✓'}`
 }
 
 export const isToolTrailResultLine = (line: string) => line.endsWith(' ✓') || line.endsWith(' ✗')

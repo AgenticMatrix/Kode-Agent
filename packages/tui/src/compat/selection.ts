@@ -386,6 +386,7 @@ export function useSelection(): SelectionHandle {
   }
 
   function setSelectionBgColor(_color: string): void {
+    if (state.bgColor === _color) return;
     state.bgColor = _color;
     notify();
   }

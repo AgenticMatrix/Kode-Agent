@@ -253,6 +253,8 @@ export function useSelection(): SelectionHandle {
   // -----------------------------------------------------------------------
 
   function clearSelection(): void {
+    // Guard: if already cleared, skip to avoid unnecessary re-renders
+    if (!state.isActive) return;
     state.isActive = false;
     state.anchorRow = undefined;
     state.anchorCol = undefined;
@@ -282,13 +284,17 @@ export function useSelection(): SelectionHandle {
 
   function shiftAnchor(rows: number): void {
     if (state.anchorRow === undefined) return;
-    state.anchorRow = Math.max(0, state.anchorRow + rows);
+    const newRow = Math.max(0, state.anchorRow + rows);
+    if (newRow === state.anchorRow) return;
+    state.anchorRow = newRow;
     notify();
   }
 
   function shiftSelection(rows: number): void {
     if (state.focusRow === undefined) return;
-    state.focusRow = Math.max(0, state.focusRow + rows);
+    const newRow = Math.max(0, state.focusRow + rows);
+    if (newRow === state.focusRow) return;
+    state.focusRow = newRow;
     notify();
   }
 
@@ -296,6 +302,9 @@ export function useSelection(): SelectionHandle {
     direction: 'left' | 'right' | 'up' | 'down' | 'lineStart' | 'lineEnd',
   ): void {
     if (state.focusRow === undefined || state.focusCol === undefined) return;
+
+    const oldRow = state.focusRow;
+    const oldCol = state.focusCol;
 
     switch (direction) {
       case 'left':
@@ -322,6 +331,9 @@ export function useSelection(): SelectionHandle {
         break;
       }
     }
+
+    // Guard: if focus didn't actually move, skip notify to avoid re-render loop
+    if (state.focusRow === oldRow && state.focusCol === oldCol) return;
     notify();
   }
 
@@ -346,6 +358,9 @@ export function useSelection(): SelectionHandle {
     side: 'above' | 'below',
   ): void {
     const scrollCount = lastRow - firstRow + 1;
+
+    // Guard: degenerate range — nothing to capture
+    if (scrollCount <= 0) return;
 
     if (side === 'above') {
       // Rows scrolled off the top — shift everything up

@@ -1,12 +1,14 @@
 /**
- * AlternateScreen compat stub — Phase 0
+ * AlternateScreen compat stub — Phase 2
  *
- * Manages the terminal alternate screen buffer (DEC 1049).
- * Phase 0 renders children in a simple Box; full alt-screen
- * management will be implemented later.
+ * Manages the terminal alternate screen buffer (DEC 1049) and provides
+ * the MouseProvider context for SGR mouse event dispatching.
+ * Phase 2: wraps children in MouseProvider; full alt-screen buffer
+ * management (DEC 1049 enter/exit) deferred.
  */
 import React from 'react';
 import { Box } from 'ink';
+import { MouseProvider } from './mouse-tracker.js';
 
 export type MouseTrackingMode = 'off' | 'wheel' | 'buttons' | 'all';
 
@@ -18,18 +20,29 @@ export interface AlternateScreenProps {
   [key: string]: unknown;
 }
 
+/**
+ * AlternateScreen component — renders children in a full-height Box
+ * wrapped in a MouseProvider.  This ensures all descendant Box,
+ * ScrollBox, and NoSelect components can receive SGR mouse events
+ * without any changes to CLI code.
+ *
+ * The `mouseTracking` prop is accepted but has no effect in Phase 2
+ * (SGR tracking is managed reactively by the MouseProvider based on
+ * registered handlers).
+ */
 export function AlternateScreen({
   children,
   mouseTracking = 'off',
   ...rest
 }: AlternateScreenProps): React.ReactElement {
-  // Phase 0 stub: render children in a full-height Box.
-  // Full alternate-screen buffer management (DEC 1049 enter/exit,
-  // mouse tracking control) will be implemented in a later phase.
+  void mouseTracking; // accepted, SGR managed by MouseProvider
+
   return (
-    <Box flexDirection="column" height="100%" {...rest}>
-      {children}
-    </Box>
+    <MouseProvider>
+      <Box flexDirection="column" height="100%" {...rest}>
+        {children}
+      </Box>
+    </MouseProvider>
   );
 }
 

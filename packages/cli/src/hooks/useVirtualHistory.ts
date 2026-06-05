@@ -477,7 +477,7 @@ export function useVirtualHistory(
 
       s.setClampBounds(clampMin, clampMax)
     } else {
-      s?.setClampBounds(undefined, undefined)
+      s!.setClampBounds(undefined as unknown as number, undefined as unknown as number)
     }
 
     if (skipMeasurement.current) {

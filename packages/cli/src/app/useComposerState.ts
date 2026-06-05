@@ -107,7 +107,7 @@ export function useComposerState({
   const [inputBuf, setInputBuf] = useState<string[]>([])
   const [pasteSnips, setPasteSnips] = useState<PasteSnippet[]>([])
   const isBlocked = useStore($isBlocked)
-  const { querier } = useStdin() as { querier: Parameters<typeof readOsc52Clipboard>[0] }
+  const { querier } = useStdin() as unknown as { querier: Parameters<typeof readOsc52Clipboard>[0] }
 
   const {
     queueRef,

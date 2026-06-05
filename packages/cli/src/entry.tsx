@@ -827,7 +827,7 @@ try {
     onHyperlinkClick: url => {
       openExternalUrl(url)
     }
-  })
+  } as any)
 } catch (err) {
   resetTerminalModes()
   const message = err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? ''}` : String(err)

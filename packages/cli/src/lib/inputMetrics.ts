@@ -38,7 +38,7 @@ function visualLines(value: string, cols: number): VisualLine[] {
   }
 
   const width = Math.max(1, cols)
-  const wrapped = wrapAnsi(value, width, { hard: true, trim: false })
+  const wrapped = wrapAnsi(value, width)
   const lines: VisualLine[] = []
 
   let originalIdx = 0

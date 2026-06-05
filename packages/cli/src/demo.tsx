@@ -55,4 +55,4 @@ ink.render(<App gw={gw} />, {
   onHyperlinkClick: (url: string) => {
     openExternalUrl(url)
   },
-})
+} as any)

@@ -97,9 +97,24 @@ export function useDeclaredCursor(
 
   const { setCursorPosition } = useCursor();
 
+  // Track whether we have emitted the blink-enable sequence.
+  // \x1b[?12h is a DEC private mode that persists across cursor hide/show
+  // cycles, so we only need to emit it once per mount.
+  const blinkEmittedRef = useRef(false);
+
   useEffect(() => {
     const opts = optsRef.current;
     if (!process.stdout.isTTY) return;
+
+    // Enable cursor blinking on the first successful render frame.
+    // Ink v7's buildCursorSuffix only emits \x1b[?25h (DECTCEM show cursor),
+    // never a blink sequence.  ?12h is the DEC "Start Blinking Cursor" mode
+    // and is widely supported (xterm, iTerm2, Windows Terminal).  Terminals
+    // that ignore ?12h (kitty, Alacritty) control blinking via user config.
+    if (!blinkEmittedRef.current) {
+      process.stdout.write('\x1b[?12h');
+      blinkEmittedRef.current = true;
+    }
 
     const el = elRef.current;
     if (!el?.yogaNode) return;

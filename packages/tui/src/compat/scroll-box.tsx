@@ -62,7 +62,7 @@ export interface ScrollBoxHandle {
   getLastManualScrollAt(): number;
   isSticky(): boolean;
   subscribe(listener: () => void): () => void;
-  setClampBounds(min: number, max: number): void;
+  setClampBounds(min: number | undefined, max: number | undefined): void;
 }
 
 export interface ScrollBoxProps {
@@ -160,8 +160,12 @@ function clampScrollTop(
   clampMax: number,
   maxScroll: number,
 ): number {
-  const lower = Math.max(clampMin, 0);
-  const upper = Math.min(clampMax, maxScroll);
+  // Defend against undefined / NaN clamp bounds injected by external
+  // setClampBounds(undefined, undefined) — see GH-issue.
+  const safeMin = typeof clampMin === 'number' && !Number.isNaN(clampMin) ? clampMin : 0;
+  const safeMax = typeof clampMax === 'number' && !Number.isNaN(clampMax) ? clampMax : Number.MAX_SAFE_INTEGER;
+  const lower = Math.max(safeMin, 0);
+  const upper = Math.min(safeMax, maxScroll);
   if (desired < lower) return lower;
   if (desired > upper) return upper;
   return desired;
@@ -178,6 +182,7 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const listenersRef = useRef<Set<() => void>>(new Set());
     const callbacksRef = useRef<MouseCallbacks>({});
     const boxRef = useRef<any>(null);
+    const lastContentCountRef = useRef(0);
 
     // Keep mouse callbacks ref in sync (direct assignment in render body —
     // avoids a useEffect and ensures the latest callback is always seen)
@@ -218,7 +223,6 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     function applyScroll(dy: number, manual: boolean): void {
       const s = stateRef.current;
       const maxScroll = Math.max(0, s.contentHeight - s.viewportHeight);
-      s.pendingDelta += dy;
       const newTop = clampScrollTop(
         s.scrollTop + dy,
         s.clampMin,
@@ -226,6 +230,8 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
         maxScroll,
       );
       if (newTop === s.scrollTop) return; // no change
+
+      s.pendingDelta += dy;
 
       // DECSTBM fast-path integration point (Phase 2+):
       // When hardware scrolling is enabled, attempt DECSTBM before
@@ -438,8 +444,14 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
         const prevHeight = s.contentHeight;
         s.contentHeight = newHeight;
 
-        // If sticky, auto-scroll to bottom when new content arrives
-        if (isSticky() && newHeight > prevHeight && prevHeight > 0) {
+        // If sticky, auto-scroll to bottom when new content arrives.
+        // Use childrenArray.length (stable item count) rather than Yoga
+        // height (which fluctuates on viewport resize — e.g. IME composition)
+        // to decide whether content actually grew.
+        const contentGrew = childrenArray.length > lastContentCountRef.current;
+        lastContentCountRef.current = childrenArray.length;
+
+        if (isSticky() && contentGrew && prevHeight > 0) {
           const maxScroll = Math.max(0, newHeight - s.viewportHeight);
           s.scrollTop = maxScroll;
           s.atBottom = true;
@@ -505,13 +517,15 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
           listenersRef.current.delete(listener);
         };
       },
-      setClampBounds(min: number, max: number): void {
+      setClampBounds(min: number | undefined, max: number | undefined): void {
         const s = stateRef.current;
-        s.clampMin = min;
-        s.clampMax = max;
+        // Allow undefined to reset to defaults (used by useVirtualHistory
+        // to clear virtual-scroll clamping when sticky is active).
+        s.clampMin = typeof min === 'number' && !Number.isNaN(min) ? min : 0;
+        s.clampMax = typeof max === 'number' && !Number.isNaN(max) ? max : Number.MAX_SAFE_INTEGER;
         // Re-clamp current scrollTop
         const maxScroll = Math.max(0, s.contentHeight - s.viewportHeight);
-        const clamped = clampScrollTop(s.scrollTop, min, max, maxScroll);
+        const clamped = clampScrollTop(s.scrollTop, s.clampMin, s.clampMax, maxScroll);
         if (clamped !== s.scrollTop) {
           s.scrollTop = clamped;
           notify();

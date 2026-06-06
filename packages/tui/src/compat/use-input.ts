@@ -26,8 +26,8 @@ import { InputEvent, type Key } from './types.js';
 
 type InputHandler = (input: string, key: Key, event: InputEvent) => void;
 
-/** SGR extended mouse escape sequence: CSI < btn ; x ; y M/m */
-const SGR_MOUSE_RE = /\x1b\[<(\d+);(\d+);(\d+)([Mm])/;
+/** SGR extended mouse escape sequence: [< btn ; x ; y M/m  (ESC prefix stripped by ink v7) */
+const SGR_MOUSE_RE = /^\[<(\d+);(\d+);(\d+)([Mm])$/;
 
 /**
  * Wraps ink v7's 2-arg useInput to provide CA's 3-arg handler signature.

@@ -100,7 +100,12 @@ const MouseTrackerContext = createContext<MouseTrackerContextValue | null>(null)
 // SGR parsing
 // ---------------------------------------------------------------------------
 
-const SGR_MOUSE_RE = /\x1b\[<(\d+);(\d+);(\d+)([Mm])/;
+// SGR extended mouse escape sequence.
+// Format: [< btn ; x ; y M/m
+// NOTE: ink v7 strips the \x1b (ESC) prefix from unrecognised sequences
+// in useInput's handleData before passing to handlers.  The regex must
+// match the stripped form, not the raw terminal bytes.
+const SGR_MOUSE_RE = /^\[<(\d+);(\d+);(\d+)([Mm])$/;
 
 function parseSgr(input: string): SgrMouseEvent | null {
   const m = SGR_MOUSE_RE.exec(input);

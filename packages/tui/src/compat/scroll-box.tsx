@@ -182,6 +182,7 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const listenersRef = useRef<Set<() => void>>(new Set());
     const callbacksRef = useRef<MouseCallbacks>({});
     const boxRef = useRef<any>(null);
+    const contentRef = useRef<any>(null);
     const lastContentCountRef = useRef(0);
 
     // Keep mouse callbacks ref in sync (direct assignment in render body —
@@ -376,30 +377,31 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
       const s = stateRef.current;
       let newHeight = s.viewportHeight;
 
-      // 1) Yoga measurement — most accurate
+      // Yoga measurement — the viewport Box's height is determined by
+      // flexGrow (constrained by ancestors), not by its content. The
+      // content Box is position:absolute so it doesn't influence the
+      // viewport's Yoga height.
       if (boxRef.current) {
         try {
           const dims = measureElement(boxRef.current);
-          // The Box height includes hidden children via spacers if virtual
-          // scrolling is active, which equals contentHeight, not viewportHeight.
-          // We use the height prop or terminal rows for viewport, NOT Yoga.
-          // Yoga is used for contentHeight below.
+          if (dims.height > 0) {
+            newHeight = dims.height;
+          }
         } catch {
-          // Yoga node not yet available — fall through to terminal estimate
+          // Yoga node not yet available
         }
       }
 
-      // 2) Terminal-based estimate
-      if (process.stdout.isTTY && process.stdout.rows) {
+      // Terminal-based fallback for first render (Yoga not yet laid out)
+      if (newHeight <= 0 && process.stdout.isTTY && process.stdout.rows) {
         const rows = process.stdout.rows;
-        const estimated = boxProps.height
+        newHeight = boxProps.height
           ? typeof boxProps.height === 'number'
             ? boxProps.height
             : parseInt(String(boxProps.height), 10) || rows
           : Math.max(1, Math.floor(rows * 0.6));
-        newHeight = estimated;
-      } else {
-        newHeight = 24; // fallback for non-TTY
+      } else if (newHeight <= 0) {
+        newHeight = 24;
       }
 
       if (newHeight !== s.viewportHeight && newHeight > 0) {
@@ -429,9 +431,9 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
       const s = stateRef.current;
       let newHeight = childrenArray.length; // fallback
 
-      if (boxRef.current) {
+      if (contentRef.current) {
         try {
-          const dims = measureElement(boxRef.current);
+          const dims = measureElement(contentRef.current);
           if (dims.height > 0) {
             newHeight = dims.height;
           }
@@ -458,7 +460,7 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
         }
         notify();
       }
-    }, [childrenArray.length, version]);
+    }, [childrenArray, version]);
 
     // ---- DECSTBM lifecycle ----
 
@@ -497,9 +499,9 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
        * Falls back to the cached contentHeight when Yoga isn't available.
        */
       getFreshScrollHeight: (): number => {
-        if (boxRef.current) {
+        if (contentRef.current) {
           try {
-            const dims = measureElement(boxRef.current);
+            const dims = measureElement(contentRef.current);
             if (dims.height > 0) return dims.height;
           } catch {
             // Yoga not available
@@ -545,17 +547,17 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
 
     const s = stateRef.current;
     const totalChildren = childrenArray.length;
-    const maxScroll = Math.max(0, totalChildren - s.viewportHeight);
+    const childCountMaxScroll = Math.max(0, totalChildren - s.viewportHeight);
 
-    // Clamp current scroll position
+    // Clamp current scroll position for child-index-based visible range
     const safeScrollTop = clampScrollTop(
       s.scrollTop,
       s.clampMin,
       s.clampMax,
-      maxScroll,
+      childCountMaxScroll,
     );
 
-    // Visible range
+    // Visible range (child-index based, for multi-child mode)
     const visibleStart = Math.max(0, Math.min(safeScrollTop, totalChildren));
     const visibleEnd = Math.min(
       totalChildren,
@@ -565,6 +567,16 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const visibleKids = childrenArray.slice(visibleStart, visibleEnd);
     const topHiddenCount = visibleStart;
     const bottomHiddenCount = totalChildren - visibleEnd;
+
+    // Pixel-based max scroll for margin translation.
+    // This is the actual scroll range: contentHeight - viewportHeight.
+    const pixelMaxScroll = Math.max(0, s.contentHeight - s.viewportHeight);
+    const renderScrollTop = clampScrollTop(
+      s.scrollTop,
+      s.clampMin,
+      s.clampMax,
+      pixelMaxScroll,
+    );
 
     // ---- commit scroll stats (Phase 3.1) ----
 
@@ -593,8 +605,18 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
           <Box height={topHiddenCount} flexShrink={0} />
         )}
 
-        {/* Visible children only */}
-        {visibleKids}
+        {/* Content wrapper positioned absolutely to shift content up by
+            scrollTop.  position:absolute takes the wrapper out of flow
+            so Yoga layout inside the viewport is unaffected — the
+            renderer still sees the shifted getComputedTop() and clips
+            via overflow:hidden on the viewport Box. */}
+        <Box
+          ref={contentRef}
+          position="absolute"
+          top={-Math.floor(renderScrollTop)}
+        >
+          {visibleKids}
+        </Box>
 
         {/* Bottom spacer: reserves space for hidden rows below */}
         {bottomHiddenCount > 0 && (

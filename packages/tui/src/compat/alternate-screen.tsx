@@ -132,9 +132,20 @@ export function AlternateScreen({
   }, [mouseTracking]);
 
   // ── Render ─────────────────────────────────────────────────────
+  // Use a numeric height (terminal rows) instead of "100%" because
+  // Ink v7's calculateLayout only sets the root Yoga node's WIDTH,
+  // never the HEIGHT.  With an auto-height root, `height="100%"` on
+  // a child resolves to content-height (auto), causing `flexGrow`
+  // children to collapse and the first render to be non-fullscreen.
+  // Non-fullscreen output gets a trailing newline in
+  // renderInteractiveFrame, which shifts log-update's cursor suffix
+  // one row too low (see cursor-hooks.ts for the coordinate fix).
+  // Setting an explicit height ensures outputHeight >= viewportRows
+  // from the very first frame, keeping the cursor correctly positioned.
+  const rows = process.stdout?.rows ?? 24;
   return (
     <MouseProvider>
-      <Box flexDirection="column" height="100%" {...rest}>
+      <Box flexDirection="column" height={rows} {...rest}>
         {children}
       </Box>
     </MouseProvider>

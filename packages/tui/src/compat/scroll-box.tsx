@@ -183,7 +183,6 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const callbacksRef = useRef<MouseCallbacks>({});
     const boxRef = useRef<any>(null);
     const contentRef = useRef<any>(null);
-    const lastContentCountRef = useRef(0);
 
     // Keep mouse callbacks ref in sync (direct assignment in render body —
     // avoids a useEffect and ensures the latest callback is always seen)
@@ -221,9 +220,33 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
 
     // ---- core scroll logic ----
 
+    /**
+     * Read the current content height directly from the Yoga node.
+     * More current than stateRef.current.contentHeight (updated post-commit).
+     */
+    function getFreshContentHeight(): number {
+      if (contentRef.current) {
+        try {
+          const h = contentRef.current.yogaNode?.getComputedHeight() as number;
+          if (h > 0) return h;
+        } catch { /* Yoga not available */ }
+      }
+      return stateRef.current.contentHeight;
+    }
+
     function applyScroll(dy: number, manual: boolean): void {
       const s = stateRef.current;
-      const maxScroll = Math.max(0, s.contentHeight - s.viewportHeight);
+
+      // When transitioning from sticky (bottom:0) to manual scroll, compute
+      // the current scrollTop from the fresh Yoga height so the transition
+      // is seamless.
+      if (manual && isSticky()) {
+        const freshHeight = getFreshContentHeight();
+        s.scrollTop = Math.max(0, freshHeight - s.viewportHeight);
+        s.atBottom = false;
+      }
+
+      const maxScroll = Math.max(0, getFreshContentHeight() - s.viewportHeight);
       const newTop = clampScrollTop(
         s.scrollTop + dy,
         s.clampMin,
@@ -443,23 +466,11 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
       }
 
       if (newHeight !== s.contentHeight) {
-        const prevHeight = s.contentHeight;
         s.contentHeight = newHeight;
-
-        // If sticky, auto-scroll to bottom when new content arrives.
-        // The ScrollBox typically wraps a single child (the history
-        // container), so childrenArray.length is stable at 1. Content
-        // growth is detected via Yoga height increase instead.
-        const contentGrew =
-          childrenArray.length > lastContentCountRef.current ||
-          newHeight > prevHeight;
-        lastContentCountRef.current = childrenArray.length;
-
-        if (isSticky() && contentGrew && prevHeight > 0) {
-          const maxScroll = Math.max(0, newHeight - s.viewportHeight);
-          s.scrollTop = maxScroll;
-          s.atBottom = true;
-        }
+        // Sticky bottom-alignment is handled natively by Yoga via
+        // bottom:0 — no explicit scrollTop update needed.  Content
+        // height is still tracked for manual scroll maxScroll and
+        // imperative handle getters.
         notify();
       }
     }, [childrenArray, version]);
@@ -570,7 +581,7 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
     const topHiddenCount = visibleStart;
     const bottomHiddenCount = totalChildren - visibleEnd;
 
-    // Pixel-based max scroll for margin translation.
+    // Pixel-based max scroll for top-based positioning (manual mode).
     // This is the actual scroll range: contentHeight - viewportHeight.
     const pixelMaxScroll = Math.max(0, s.contentHeight - s.viewportHeight);
     const renderScrollTop = clampScrollTop(
@@ -579,6 +590,14 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
       s.clampMax,
       pixelMaxScroll,
     );
+
+    // Sticky mode: bottom-align the content wrapper so new content
+    // at the bottom is immediately visible — Yoga handles the shift
+    // without any measurement or second render.
+    // Manual mode: top-align with -scrollTop offset.
+    const alignProps: Record<string, number> = isSticky()
+      ? { bottom: 0 }
+      : { top: -Math.floor(renderScrollTop) };
 
     // ---- commit scroll stats (Phase 3.1) ----
 
@@ -607,15 +626,15 @@ const ScrollBox = forwardRef<ScrollBoxHandle, ScrollBoxProps>(
           <Box height={topHiddenCount} flexShrink={0} />
         )}
 
-        {/* Content wrapper positioned absolutely to shift content up by
-            scrollTop.  position:absolute takes the wrapper out of flow
-            so Yoga layout inside the viewport is unaffected — the
-            renderer still sees the shifted getComputedTop() and clips
-            via overflow:hidden on the viewport Box. */}
+        {/* Content wrapper: position:absolute takes it out of flow.
+            Sticky mode uses bottom:0 so Yoga keeps the bottom edge
+            aligned — new content is immediately visible without any
+            measurement or re-render.  Manual mode uses top:-scrollTop
+            for precise scroll positioning. */}
         <Box
           ref={contentRef}
           position="absolute"
-          top={-Math.floor(renderScrollTop)}
+          {...alignProps}
         >
           {visibleKids}
         </Box>

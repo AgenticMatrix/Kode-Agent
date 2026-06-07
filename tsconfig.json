@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/core" },
+    { "path": "./packages/tools" },
+    { "path": "./packages/provider" },
+    { "path": "./packages/cli" },
+    { "path": "./packages/tui" },
+    { "path": "./packages/skills" },
+    { "path": "./packages/mcp" }
+  ]
+}

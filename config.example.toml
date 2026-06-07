@@ -1,0 +1,14 @@
+# Coder Agent Configuration (DEPRECATED FORMAT)
+# This file is kept for reference only. Modern config uses ~/.coder/settings.json.
+# Copy this file to ~/.coder/config.toml to use the legacy TOML format.
+
+[env]
+# Coder API Configuration
+# Priority: environment variables > this file > defaults
+# For API key: CODER_API_KEY > CODER_AUTH_TOKEN
+CODER_BASE_URL = "https://api.deepseek.com/v1"
+CODER_AUTH_TOKEN = "sk-ant-xxxxx"
+CODER_MODEL = "deepseek-v4-pro"
+
+# Appearance
+theme = "dark"

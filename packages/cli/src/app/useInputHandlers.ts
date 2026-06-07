@@ -1,0 +1,592 @@
+import { forceRedraw, useInput } from '@coder/tui'
+import { useStore } from '@nanostores/react'
+import { useEffect, useRef } from 'react'
+
+import { SLASH_COMMANDS } from './slash/registry.js'
+import type { SlashCommand } from './slash/types.js'
+import type {
+  ApprovalRespondResponse,
+  ConfigSetResponse,
+  SecretRespondResponse,
+  SudoRespondResponse,
+  VoiceRecordResponse
+} from '../gateway/types.js'
+import { isAction, isCopyShortcut, isMac, isVoiceToggleKey } from '../lib/platform.js'
+import { setTextInputSlashPopupActive } from '../components/textInput.js'
+
+import { getInputSelection } from './inputSelectionStore.js'
+import type { InputHandlerContext, InputHandlerResult } from './interfaces.js'
+import { $isBlocked, $overlayState, patchOverlayState } from './overlayStore.js'
+import { turnController } from './turnController.js'
+import { patchTurnState } from './turnStore.js'
+import { getUiState, patchUiState } from './uiStore.js'
+
+const isCtrl = (key: { ctrl: boolean }, ch: string, target: string) => key.ctrl && ch.toLowerCase() === target
+
+/**
+ * Approval / clarify / confirm overlays mount their own `useInput` handlers
+ * for the in-prompt keys (arrows, numbers, Enter, sometimes Esc).  The global
+ * input handler used to early-return for any other key while one of those
+ * overlays was up, which silently disabled transcript scrolling — the user
+ * couldn't read context above the prompt that the prompt itself was asking
+ * about.  Returns true when the key is a transcript-scroll input that should
+ * fall through to the global scroll handlers even while a prompt is active.
+ *
+ * Modifier-held wheel (precision mode) is included — a user who wants to
+ * scroll a single line at a time during a prompt expects it to work.
+ */
+export function shouldFallThroughForScroll(key: {
+  downArrow: boolean
+  pageDown: boolean
+  pageUp: boolean
+  shift: boolean
+  upArrow: boolean
+  wheelDown: boolean
+  wheelUp: boolean
+}): boolean {
+  if (key.wheelUp || key.wheelDown) {
+    return true
+  }
+
+  if (key.pageUp || key.pageDown) {
+    return true
+  }
+
+  if (key.shift && (key.upArrow || key.downArrow)) {
+    return true
+  }
+
+  return false
+}
+
+export function applyVoiceRecordResponse(
+  response: null | VoiceRecordResponse,
+  starting: boolean,
+  voice: Pick<InputHandlerContext['voice'], 'setProcessing' | 'setRecording'>,
+  sys: (text: string) => void
+) {
+  if (!starting || response?.status === 'recording') {
+    return
+  }
+
+  voice.setRecording(false)
+
+  if (response?.status === 'busy') {
+    voice.setProcessing(true)
+    sys('voice: still transcribing; try again shortly')
+  } else {
+    voice.setProcessing(false)
+  }
+}
+
+export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
+  const { actions, composer, gateway, terminal, voice } = ctx
+  const { actions: cActions, refs: cRefs, state: cState } = composer
+
+  const overlay = useStore($overlayState)
+  const isBlocked = useStore($isBlocked)
+  const pagerPageSize = Math.max(5, (terminal.stdout?.rows ?? 24) - 6)
+
+  // Debounce timer for history navigation triggered by arrow keys.
+  // Touchpad scroll events translated by the terminal into ↑/↓ arrive
+  // every 16–50 ms; real keyboard strokes are ≥100 ms apart.  Without
+  // this guard, two-finger scrolling on the trackpad races through the
+  // input history instead of scrolling the transcript.
+  const lastHistoryNavTime = useRef(0)
+  const HISTORY_NAV_DEBOUNCE_MS = 70
+
+  // ── Slash-command popup: open when input starts with "/" ──────────
+  useEffect(() => {
+    const input = cState.input
+    if (input.startsWith('/') && input.length > 0) {
+      const filter = input.slice(1)
+      patchUiState({
+        slashCommandOpen: true,
+        slashCommandFilter: filter,
+        slashCommandSelectedIndex: 0,
+      })
+      setTextInputSlashPopupActive(true)
+    } else {
+      patchUiState({ slashCommandOpen: false, slashCommandFilter: '', slashCommandSelectedIndex: 0 })
+      setTextInputSlashPopupActive(false)
+    }
+  }, [cState.input])
+
+  const copySelection = () => {
+    // ink's copySelection() already calls setClipboard() which handles
+    // pbcopy (macOS), wl-copy/xclip (Linux), tmux, and OSC 52 fallback.
+    terminal.selection.copySelection()
+  }
+
+  const clearSelection = () => {
+    terminal.selection.clearSelection()
+  }
+
+  const cancelOverlayFromCtrlC = () => {
+    if (overlay.clarify) {
+      return actions.answerClarify('')
+    }
+
+    if (overlay.approval) {
+      return gateway
+        .rpc<ApprovalRespondResponse>('approval.respond', { choice: 'deny', session_id: getUiState().sid })
+        .then(r => r && (patchOverlayState({ approval: null }), patchTurnState({ outcome: 'denied' })))
+    }
+
+    if (overlay.sudo) {
+      return gateway
+        .rpc<SudoRespondResponse>('sudo.respond', { password: '', request_id: overlay.sudo.requestId })
+        .then(r => r && (patchOverlayState({ sudo: null }), actions.sys('sudo cancelled')))
+    }
+
+    if (overlay.secret) {
+      return gateway
+        .rpc<SecretRespondResponse>('secret.respond', { request_id: overlay.secret.requestId, value: '' })
+        .then(r => r && (patchOverlayState({ secret: null }), actions.sys('secret entry cancelled')))
+    }
+
+    if (overlay.modelPicker) {
+      return patchOverlayState({ modelPicker: false })
+    }
+
+    if (overlay.skillsHub) {
+      return patchOverlayState({ skillsHub: false })
+    }
+
+    if (overlay.picker) {
+      return patchOverlayState({ picker: false })
+    }
+
+    if (overlay.agents) {
+      return patchOverlayState({ agents: false })
+    }
+  }
+
+  const cycleQueue = (dir: 1 | -1) => {
+    const len = cRefs.queueRef.current.length
+
+    if (!len) {
+      return false
+    }
+
+    const index = cState.queueEditIdx === null ? (dir > 0 ? 0 : len - 1) : (cState.queueEditIdx + dir + len) % len
+
+    cActions.setQueueEdit(index)
+    cActions.setHistoryIdx(null)
+    cActions.setInput(cRefs.queueRef.current[index] ?? '')
+
+    return true
+  }
+
+  const cycleHistory = (dir: 1 | -1) => {
+    const h = cRefs.historyRef.current
+    const cur = cState.historyIdx
+
+    if (dir < 0) {
+      if (!h.length) {
+        return
+      }
+
+      if (cur === null) {
+        cRefs.historyDraftRef.current = cState.input
+      }
+
+      const index = cur === null ? h.length - 1 : Math.max(0, cur - 1)
+
+      cActions.setHistoryIdx(index)
+      cActions.setQueueEdit(null)
+      cActions.setInput(h[index] ?? '')
+
+      return
+    }
+
+    if (cur === null) {
+      return
+    }
+
+    const next = cur + 1
+
+    if (next >= h.length) {
+      cActions.setHistoryIdx(null)
+      cActions.setInput(cRefs.historyDraftRef.current)
+    } else {
+      cActions.setHistoryIdx(next)
+      cActions.setInput(h[next] ?? '')
+    }
+  }
+
+  // CLI parity: Ctrl+B toggles a VAD-bounded push-to-talk capture
+  // (NOT the voice-mode umbrella bit). The mode is enabled via /voice on;
+  // Ctrl+B while the mode is off sys-nudges the user. While the mode is
+  // on, the first press starts a single VAD-bounded capture
+  // (gateway -> start_continuous(auto_restart=false), VAD auto-stop ->
+  // transcribe -> idle), a subsequent press stops and transcribes it.
+  // The gateway publishes voice.status + voice.transcript events that
+  // createGatewayEventHandler turns into UI badges and composer injection.
+  const voiceRecordToggle = () => {
+    if (!voice.enabled) {
+      return actions.sys('voice: mode is off — enable with /voice on')
+    }
+
+    const starting = !voice.recording
+    const action = starting ? 'start' : 'stop'
+
+    // Optimistic UI — flip the REC badge immediately so the user gets
+    // feedback while the RPC round-trips; the voice.status event is the
+    // authoritative source and may correct us.
+    if (starting) {
+      voice.setRecording(true)
+    } else {
+      voice.setRecording(false)
+      voice.setProcessing(false)
+    }
+
+    gateway
+      .rpc<VoiceRecordResponse>('voice.record', { action, session_id: getUiState().sid })
+      .then(r => applyVoiceRecordResponse(r, starting, voice, actions.sys))
+      .catch((e: Error) => {
+        // Revert optimistic UI on failure.
+        if (starting) {
+          voice.setRecording(false)
+        }
+
+        actions.sys(`voice error: ${e.message}`)
+      })
+  }
+
+  useInput((ch, key) => {
+    const live = getUiState()
+
+    if (isBlocked) {
+      // When approval/clarify/confirm overlays are active, their own useInput
+      // handlers must receive keystrokes (arrow keys, numbers, Enter).  Only
+      // intercept Ctrl+C here so the user can deny/dismiss — all other keys
+      // fall through to the component-level handlers.
+      //
+      // With main-screen native scrolling, wheel / PageUp / PageDown are
+      // handled by the terminal emulator and don't need TUI-level handlers.
+      const promptOverlay = overlay.approval || overlay.clarify || overlay.confirm
+
+      if (promptOverlay) {
+        if (isCtrl(key, ch, 'c')) {
+          cancelOverlayFromCtrlC()
+        }
+
+        return
+      }
+
+      if (overlay.pager) {
+        if (key.escape || isCtrl(key, ch, 'c') || ch === 'q') {
+          return patchOverlayState({ pager: null })
+        }
+
+        const move = (delta: number | 'top' | 'bottom') =>
+          patchOverlayState(prev => {
+            if (!prev.pager) {
+              return prev
+            }
+
+            const { lines, offset } = prev.pager
+            const max = Math.max(0, lines.length - pagerPageSize)
+            const step = delta === 'top' ? -lines.length : delta === 'bottom' ? lines.length : delta
+            const next = Math.max(0, Math.min(offset + step, max))
+
+            return next === offset ? prev : { ...prev, pager: { ...prev.pager, offset: next } }
+          })
+
+        if (key.upArrow || ch === 'k') {
+          return move(-1)
+        }
+
+        if (key.downArrow || ch === 'j') {
+          return move(1)
+        }
+
+        if (key.pageUp || ch === 'b') {
+          return move(-pagerPageSize)
+        }
+
+        if (ch === 'g') {
+          return move('top')
+        }
+
+        if (ch === 'G') {
+          return move('bottom')
+        }
+
+        if (key.return || ch === ' ' || key.pageDown) {
+          patchOverlayState(prev => {
+            if (!prev.pager) {
+              return prev
+            }
+
+            const { lines, offset } = prev.pager
+            const max = Math.max(0, lines.length - pagerPageSize)
+
+            // Auto-close only when already at the last page — otherwise clamp
+            // to `max` so the offset matches what the line/page-back handlers
+            // can reach (prevents a snap-back jump on the next ↑/↓/PgUp).
+            return offset >= max
+              ? { ...prev, pager: null }
+              : { ...prev, pager: { ...prev.pager, offset: Math.min(offset + pagerPageSize, max) } }
+          })
+        }
+
+        return
+      }
+
+      if (isCtrl(key, ch, 'c')) {
+        cancelOverlayFromCtrlC()
+      } else if (key.escape && overlay.picker) {
+        patchOverlayState({ picker: false })
+      }
+
+      return
+    }
+
+    // ── Slash command popup navigation ───────────────────────────────
+    // When the popup is open, ↑↓ navigate the filtered command list,
+    // Enter executes the selected command, Escape dismisses the popup.
+    if (live.slashCommandOpen) {
+      const prefix = live.slashCommandFilter.toLowerCase()
+      // Filter SLASH_COMMANDS by name/alias prefix match
+      const filtered: SlashCommand[] = []
+      const seen = new Set<string>()
+      for (const cmd of SLASH_COMMANDS) {
+        if (seen.has(cmd.name)) continue
+        if (cmd.name.startsWith(prefix) || (cmd.aliases ?? []).some((a) => a.toLowerCase().startsWith(prefix))) {
+          seen.add(cmd.name)
+          filtered.push(cmd)
+        }
+      }
+      const maxIdx = Math.max(0, filtered.length - 1)
+
+      if (key.upArrow) {
+        const next = live.slashCommandSelectedIndex <= 0 ? maxIdx : live.slashCommandSelectedIndex - 1
+        patchUiState({ slashCommandSelectedIndex: next })
+        return
+      }
+
+      if (key.downArrow) {
+        const next = live.slashCommandSelectedIndex >= maxIdx ? 0 : live.slashCommandSelectedIndex + 1
+        patchUiState({ slashCommandSelectedIndex: next })
+        return
+      }
+
+      if (key.return) {
+        // Execute the selected command directly via dispatchSubmission
+        // (bypasses submit() to avoid inputBuf merging issues).
+        if (filtered.length > 0) {
+          const idx = Math.min(live.slashCommandSelectedIndex, maxIdx)
+          const cmd = filtered[idx]!
+          patchUiState({ slashCommandOpen: false, slashCommandFilter: '', slashCommandSelectedIndex: 0 })
+          setTextInputSlashPopupActive(false)
+          actions.dispatchSubmission('/' + cmd.name)
+        }
+        return
+      }
+
+      if (key.escape) {
+        // Dismiss popup, keep input content for the user to edit
+        patchUiState({ slashCommandOpen: false, slashCommandFilter: '', slashCommandSelectedIndex: 0 })
+        setTextInputSlashPopupActive(false)
+        return
+      }
+
+      // Any other key — let it fall through to TextInput for typing
+    }
+
+    if (cState.completions.length && cState.input && cState.historyIdx === null && (key.upArrow || key.downArrow)) {
+      const len = cState.completions.length
+
+      cActions.setCompIdx(i => (key.upArrow ? (i - 1 + len) % len : (i + 1) % len))
+
+      return
+    }
+
+    // Wheel / scroll inputs are handled by the terminal natively via
+    // scrollback in main-screen mode — no custom scroll handlers needed.
+
+    // Escape-based voice bindings (ctrl/alt/super+escape) must win before the
+    // generic Esc handlers below; otherwise queue-edit cancel / selection-clear
+    // would swallow the chord and /voice would advertise a shortcut that never
+    // actually toggles recording in those UI states.
+    if (key.escape && isVoiceToggleKey(key, ch, voice.recordKey)) {
+      return voiceRecordToggle()
+    }
+
+    // Queue-edit cancel beats selection-clear for plain Esc: the queue header
+    // explicitly promises "Esc cancel", so honoring it takes priority over the
+    // implicit selection-dismissal convention. Without an active edit, fall through.
+    if (key.escape && cState.queueEditIdx !== null) {
+      return cActions.clearIn()
+    }
+
+    if (key.escape && terminal.hasSelection) {
+      return clearSelection()
+    }
+
+    if (key.upArrow && !cState.inputBuf.length) {
+      // Debounce: ignore rapid arrow-key bursts that look like
+      // terminal-translated touchpad scroll (16–50 ms between events).
+      // Real keyboard strokes are ≥100 ms apart and pass through.
+      const navNow = Date.now()
+      if (navNow - lastHistoryNavTime.current < HISTORY_NAV_DEBOUNCE_MS) {
+        return
+      }
+      lastHistoryNavTime.current = navNow
+
+      const inputSel = getInputSelection()
+      const cursor = inputSel && inputSel.start === inputSel.end ? inputSel.start : null
+
+      const noLineAbove =
+        !cState.input || (cursor !== null && cState.input.lastIndexOf('\n', Math.max(0, cursor - 1)) < 0)
+
+      if (noLineAbove) {
+        cycleQueue(1) || cycleHistory(-1)
+
+        return
+      }
+    }
+
+    if (key.downArrow && !cState.inputBuf.length) {
+      // Same debounce as up-arrow: prevent terminal-translated
+      // touchpad scroll from racing through input history.
+      const navNow = Date.now()
+      if (navNow - lastHistoryNavTime.current < HISTORY_NAV_DEBOUNCE_MS) {
+        return
+      }
+      lastHistoryNavTime.current = navNow
+
+      const inputSel = getInputSelection()
+      const cursor = inputSel && inputSel.start === inputSel.end ? inputSel.start : null
+      const noLineBelow = !cState.input || (cursor !== null && cState.input.indexOf('\n', cursor) < 0)
+
+      if (noLineBelow || cState.historyIdx !== null) {
+        cycleQueue(-1) || cycleHistory(1)
+
+        return
+      }
+    }
+
+    if (isCopyShortcut(key, ch)) {
+      if (terminal.hasSelection) {
+        return copySelection()
+      }
+
+      const inputSel = getInputSelection()
+
+      if (inputSel && inputSel.end > inputSel.start) {
+        inputSel.clear()
+
+        return
+      }
+
+      // On macOS, Cmd+C with no selection is a no-op (Ctrl+C below handles interrupt).
+      // On non-macOS, isAction uses Ctrl, so fall through to interrupt/clear/exit.
+      if (isMac) {
+        return
+      }
+    }
+
+    if (isCtrl(key, ch, 'x') && cState.queueEditIdx !== null) {
+      cActions.removeQueue(cState.queueEditIdx)
+
+      return cActions.clearIn()
+    }
+
+    if (isCtrl(key, ch, 'x')) {
+      return patchOverlayState({ sessions: true })
+    }
+
+    if (key.ctrl && ch.toLowerCase() === 'c') {
+      if (live.busy && live.sid) {
+        return turnController.interruptTurn({
+          appendMessage: actions.appendMessage,
+          gw: gateway.gw,
+          sid: live.sid,
+          sys: actions.sys
+        })
+      }
+
+      if (cState.input || cState.inputBuf.length) {
+        return cActions.clearIn()
+      }
+
+      return actions.die()
+    }
+
+    if (isAction(key, ch, 'd')) {
+      return actions.die()
+    }
+
+    if (isAction(key, ch, 'l')) {
+      clearSelection()
+      forceRedraw(terminal.stdout ?? process.stdout)
+
+      return
+    }
+
+    if (isVoiceToggleKey(key, ch, voice.recordKey)) {
+      return voiceRecordToggle()
+    }
+
+    // Cmd/Ctrl+G, plus Alt+G fallback for VSCode/Cursor (they bind the
+    // primary keystroke to "Find Next" before the TUI sees it; Alt+G
+    // arrives as meta+g across platforms).
+    if (ch.toLowerCase() === 'g' && (isAction(key, ch, 'g') || key.meta)) {
+      return void cActions.openEditor().catch((err: unknown) => {
+        actions.sys(err instanceof Error ? `failed to open editor: ${err.message}` : 'failed to open editor')
+      })
+    }
+
+    // shift-tab flips yolo without spending a turn (claude-code parity)
+    if (key.shift && key.tab && !cState.completions.length) {
+      if (!live.sid) {
+        return void actions.sys('yolo needs an active session')
+      }
+
+      // gateway.rpc swallows errors with its own sys() message and resolves to null,
+      // so we only speak when it came back with a real shape. null = rpc already spoke.
+      return void gateway.rpc<ConfigSetResponse>('config.set', { key: 'yolo', session_id: live.sid }).then(r => {
+        if (r?.value === '1') {
+          return actions.sys('yolo on')
+        }
+
+        if (r?.value === '0') {
+          return actions.sys('yolo off')
+        }
+
+        if (r) {
+          actions.sys('failed to toggle yolo')
+        }
+      })
+    }
+
+    if (key.tab && cState.completions.length) {
+      const row = cState.completions[cState.compIdx]
+
+      if (row?.text) {
+        const text =
+          cState.input.startsWith('/') && row.text.startsWith('/') && cState.compReplace > 0
+            ? row.text.slice(1)
+            : row.text
+
+        cActions.setInput(cState.input.slice(0, cState.compReplace) + text)
+      }
+
+      return
+    }
+
+    if (isAction(key, ch, 'k') && cRefs.queueRef.current.length && live.sid) {
+      const next = cActions.dequeue()
+
+      if (next) {
+        cActions.setQueueEdit(null)
+        actions.dispatchSubmission(next)
+      }
+    }
+  })
+
+  return { pagerPageSize }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "coder-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Coder Agent — An open-source, enterprise-grade CLI coding agent with multi-provider support, Agent Teams, and a powerful hook system",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --recursive run dev",
+    "build": "pnpm --recursive run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --dir packages",
+    "test:integration": "vitest run --dir packages --config vitest.integration.config.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc -b",
+    "clean": "pnpm --recursive run clean",
+    "ci": "pnpm lint && pnpm type-check && pnpm test:coverage && pnpm build"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AgenticMatrix/Coder-Agent"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "cli",
+    "coding-agent",
+    "ai-agent",
+    "llm",
+    "anthropic",
+    "openai",
+    "deepseek",
+    "multi-provider",
+    "agent-teams",
+    "terminal",
+    "tui",
+    "developer-tools",
+    "code-generation",
+    "mcp",
+    "hooks"
+  ],
+  "author": "Coder Agent Contributors",
+  "bugs": {
+    "url": "https://github.com/AgenticMatrix/Coder-Agent/issues"
+  },
+  "homepage": "https://github.com/AgenticMatrix/Coder-Agent#readme",
+  "pnpm": {
+    "patchedDependencies": {
+      "ink@7.0.5": "patches/ink@7.0.5.patch"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "@coder/cli",
+  "version": "0.1.0",
+  "description": "Coder Agent terminal CLI — React Ink TUI, streaming, diff view",
+  "type": "module",
+  "main": "./dist/entry.js",
+  "types": "./dist/entry.d.ts",
+  "bin": {
+    "coder": "./dist/entry.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "postbuild": "chmod +x dist/entry.js dist/demo.js",
+    "dev": "tsc -b --watch",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coder/core": "workspace:*",
+    "@coder/provider": "workspace:*",
+    "@coder/shared": "workspace:*",
+    "@coder/tools": "workspace:*",
+    "@coder/tui": "workspace:*",
+    "@nanostores/react": "^1.1.0",
+    "ink-text-input": "^6.0.0",
+    "nanostores": "^1.2.0",
+    "react": "^19.2.4",
+    "unicode-animations": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

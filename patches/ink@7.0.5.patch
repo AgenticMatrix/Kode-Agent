@@ -1,0 +1,21 @@
+diff --git a/package.json b/package.json
+index 68b04260423a67edd175d0980ab6f7a876dbf464..8a669decda70dbcb8bc883348450cf164b75b0ed 100644
+--- a/package.json
++++ b/package.json
+@@ -11,8 +11,14 @@
+ 	},
+ 	"type": "module",
+ 	"exports": {
+-		"types": "./build/index.d.ts",
+-		"default": "./build/index.js"
++		".": {
++			"types": "./build/index.d.ts",
++			"default": "./build/index.js"
++		},
++		"./internal": {
++			"types": "./build/hooks/use-stdin.d.ts",
++			"default": "./build/hooks/use-stdin.js"
++		}
+ 	},
+ 	"engines": {
+ 		"node": ">=22"

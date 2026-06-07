@@ -1,0 +1,44 @@
+{
+  "name": "@coder/tui",
+  "version": "0.1.0",
+  "description": "Coder Agent TUI framework — Clean Room rewrite based on official ink npm package",
+  "type": "module",
+  "main": "./dist/entry-exports.js",
+  "types": "./dist/entry-exports.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/entry-exports.d.ts",
+      "default": "./dist/entry-exports.js"
+    },
+    "./text-input": {
+      "types": "./dist/text-input.d.ts",
+      "default": "./dist/text-input.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.0"
+  },
+  "dependencies": {
+    "@alcalzone/ansi-tokenize": "^0.3.0",
+    "chalk": "^5.6.2",
+    "cli-boxes": "^3.0.0",
+    "ink": "^7.0.5",
+    "ink-link": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "semver": "^7.6.0",
+    "string-width": "^8.2.1",
+    "wrap-ansi": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+
+# Temp
+.tmp/
+tmp/
+
+# Claude Code local settings (should not be committed)
+.claude/
+
+# Kode Agent local config (should not be committed)
+.kode/
+
+# Kode Agent — user config and sessions (should not be committed)
+~/.kode/
+
+# Profiling artifacts
+*.heapsnapshot
+*.cpuprofile

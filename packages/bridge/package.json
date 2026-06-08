@@ -1,0 +1,20 @@
+{
+  "name": "@coder/bridge",
+  "version": "0.1.0",
+  "description": "Shared bridge layer between Agent Loop and UI frontends",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@coder/shared": "workspace:*"
+  }
+}

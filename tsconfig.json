@@ -8,6 +8,7 @@
     { "path": "./packages/cli" },
     { "path": "./packages/tui" },
     { "path": "./packages/skills" },
-    { "path": "./packages/mcp" }
+    { "path": "./packages/mcp" },
+    { "path": "./packages/bridge" }
   ]
 }

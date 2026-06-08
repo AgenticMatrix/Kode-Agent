@@ -520,6 +520,7 @@ export type GatewayEvent =
   | { payload?: { text?: string; verbose?: boolean }; session_id?: string; type: 'reasoning.delta' | 'reasoning.available' }
   | { payload: { name?: string; preview?: string }; session_id?: string; type: 'tool.progress' }
   | { payload: { name?: string }; session_id?: string; type: 'tool.generating' }
+  | { payload: { tool_id: string; partial_json?: string }; session_id?: string; type: 'tool.input_delta' }
   | {
       payload: { args_text?: string; context?: string; name?: string; tool_id: string; todos?: unknown[] }
       session_id?: string

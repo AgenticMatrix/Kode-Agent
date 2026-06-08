@@ -1,0 +1,91 @@
+{
+  "name": "@coder/vscode",
+  "displayName": "Coder Agent",
+  "version": "0.1.0",
+  "description": "Coder Agent VS Code Extension — AI coding assistant in your editor",
+  "publisher": "coder",
+  "private": true,
+  "license": "Apache-2.0",
+  "main": "./dist/extension/extension.js",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Chat",
+    "AI",
+    "Development"
+  ],
+  "activationEvents": [
+    "onCommand:coder.chat.start"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "coder.chat.start",
+        "title": "Coder: Start Chat"
+      },
+      {
+        "command": "coder.chat.newSession",
+        "title": "Coder: New Session"
+      }
+    ],
+    "configuration": {
+      "title": "Coder Agent",
+      "properties": {
+        "coder.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model to use for the agent"
+        },
+        "coder.provider": {
+          "type": "string",
+          "enum": [
+            "anthropic",
+            "openai",
+            "deepseek",
+            "auto"
+          ],
+          "default": "auto",
+          "description": "LLM provider"
+        },
+        "coder.permissionMode": {
+          "type": "string",
+          "enum": [
+            "plan",
+            "ask",
+            "auto"
+          ],
+          "default": "ask",
+          "description": "Permission mode for tool execution"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "webpack --mode production --config webpack.config.mjs",
+    "dev": "webpack --mode development --watch --config webpack.config.mjs",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "package": "vsce package",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@coder/bridge": "workspace:*",
+    "@coder/core": "workspace:*",
+    "@coder/provider": "workspace:*",
+    "@coder/shared": "workspace:*",
+    "@coder/tools": "workspace:*",
+    "marked": "^18.0.4",
+    "preact": "^10.26.0",
+    "tiktoken": "^1.0.22"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.95.0",
+    "css-loader": "^7.1.0",
+    "html-webpack-plugin": "^5.6.0",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.0",
+    "typescript": "^5.8.0",
+    "webpack": "^5.97.0",
+    "webpack-cli": "^6.0.0"
+  }
+}

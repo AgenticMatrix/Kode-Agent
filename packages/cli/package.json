@@ -16,6 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@coder/bridge": "workspace:*",
     "@coder/core": "workspace:*",
     "@coder/provider": "workspace:*",
     "@coder/shared": "workspace:*",

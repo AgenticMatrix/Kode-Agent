@@ -13,6 +13,12 @@ export interface InputHandlerDeps {
   blocked?: boolean;
   /** Optional slash command handler. Returns true if the command was handled. */
   onSlashCommand?: (input: string) => boolean;
+  /** Input history lines (newest last). */
+  history: string[];
+  /** Current position in history (-1 = not browsing). */
+  historyIndex: number;
+  /** Saved input before entering history browse mode. */
+  historyScratch: string;
 }
 
 /**
@@ -35,6 +41,9 @@ export function useInputHandler({
   onSend,
   onSlashCommand,
   blocked,
+  history,
+  historyIndex,
+  historyScratch,
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
@@ -44,6 +53,7 @@ export function useInputHandler({
 
       if (key.escape) {
         dispatch({ type: 'SET_INPUT', text: '' });
+        dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
         return;
       }
 
@@ -60,6 +70,8 @@ export function useInputHandler({
 
       if (key.return) {
         if (inputText.trim().length > 0) {
+          dispatch({ type: 'ADD_HISTORY', line: inputText.trim() });
+          dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
           // Check for slash commands first
           if (inputText.startsWith('/') && onSlashCommand?.(inputText)) {
             dispatch({ type: 'SET_INPUT', text: '' });
@@ -68,6 +80,47 @@ export function useInputHandler({
           }
         }
         return;
+      }
+
+      // ── History navigation (up / down arrows) ──────────────────
+      if (key.upArrow) {
+        if (history.length === 0) return;
+        if (historyIndex === -1) {
+          // Enter history browse mode — save current input as scratch
+          const newIdx = history.length - 1;
+          dispatch({ type: 'SET_HISTORY_INDEX', index: newIdx, scratch: inputText });
+          dispatch({ type: 'SET_INPUT', text: history[newIdx]! });
+          dispatch({ type: 'SET_CURSOR', position: history[newIdx]!.length });
+          return;
+        }
+        if (historyIndex > 0) {
+          const newIdx = historyIndex - 1;
+          dispatch({ type: 'SET_HISTORY_INDEX', index: newIdx });
+          dispatch({ type: 'SET_INPUT', text: history[newIdx]! });
+          dispatch({ type: 'SET_CURSOR', position: history[newIdx]!.length });
+        }
+        return;
+      }
+
+      if (key.downArrow) {
+        if (historyIndex === -1) return;
+        if (historyIndex < history.length - 1) {
+          const newIdx = historyIndex + 1;
+          dispatch({ type: 'SET_HISTORY_INDEX', index: newIdx });
+          dispatch({ type: 'SET_INPUT', text: history[newIdx]! });
+          dispatch({ type: 'SET_CURSOR', position: history[newIdx]!.length });
+        } else {
+          // At the last entry — exit history, restore scratch
+          dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
+          dispatch({ type: 'SET_INPUT', text: historyScratch });
+          dispatch({ type: 'SET_CURSOR', position: historyScratch.length });
+        }
+        return;
+      }
+
+      // Any other key press exits history browse mode
+      if (historyIndex >= 0) {
+        dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
       }
 
       // ── Cursor movement ────────────────────────────────────────

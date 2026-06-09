@@ -342,9 +342,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
         continue;
       }
 
-      const progress: ToolProgress = { toolName: toolBlock.name, toolUseId: toolBlock.id, status: 'started' };
-      yield { type: 'system', subtype: 'progress', data: progress };
-
       // Permission check
       const toolDef = toolRegistry.get(toolBlock.name)?.definition;
       let permissionResult = await permissionEngine.check(
@@ -395,6 +392,18 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
           permissionResult.prompt ??
           toolDef?.description ??
           `Execute ${toolBlock.name}`;
+
+        // Show waiting state — timer should not start yet
+        yield {
+          type: 'system',
+          subtype: 'progress',
+          data: {
+            toolName: toolBlock.name,
+            toolUseId: toolBlock.id,
+            status: 'started' as const,
+            message: 'Waiting for approval...',
+          },
+        };
 
         let resolve!: (allowed: boolean) => void;
         const promise = new Promise<boolean>((res) => { resolve = res; });

@@ -183,6 +183,12 @@ export interface ChatState {
   currentTurnId: number;
   /** Pending approval request — shown as a floating prompt overlay. */
   approvalReq: ApprovalRequest | null;
+  /** Input history lines (newest last). */
+  history: string[];
+  /** Current position in history (-1 = not browsing). */
+  historyIndex: number;
+  /** Saved input text before browsing history (to restore on exit). */
+  historyScratch: string;
 }
 
 // ── Chat actions ────────────────────────────────────────────────────
@@ -216,7 +222,11 @@ export type ChatAction =
   | { type: 'CLEAR_CHAT' }
   // Permission / approval
   | { type: 'SHOW_APPROVAL'; req: ApprovalRequest }
-  | { type: 'HIDE_APPROVAL' };
+  | { type: 'HIDE_APPROVAL' }
+  // History
+  | { type: 'LOAD_HISTORY'; history: string[] }
+  | { type: 'ADD_HISTORY'; line: string }
+  | { type: 'SET_HISTORY_INDEX'; index: number; scratch?: string };
 
 // ── Streaming callbacks (API client → App) ──────────────────────────
 

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, Text, Static } from 'ink';
 
 import type { QueryEngine } from '../../core/query-engine.js';
@@ -15,6 +15,7 @@ import { useInputHandler } from '../hooks/useInputHandler.js';
 import { useTokenStats } from '../hooks/useTokenStats.js';
 import { createSlashHandler } from '../../commands/index.js';
 import { getPendingApproval } from '../hooks/approval-store.js';
+import { loadHistory, addToHistory } from '../../cli/history.js';
 
 interface AppProps {
   config: AppConfig;
@@ -55,6 +56,21 @@ export function App({ config, engine }: AppProps) {
 
   const { runAgentTurn } = useAgentBridge({ engine, dispatch });
 
+  // Load history on mount
+  useEffect(() => {
+    dispatch({ type: 'LOAD_HISTORY', history: loadHistory() });
+  }, [dispatch]);
+
+  // Persist new history entries to disk
+  const prevHistoryLen = useRef(state.history.length);
+  useEffect(() => {
+    if (state.history.length > prevHistoryLen.current) {
+      const last = state.history[state.history.length - 1];
+      if (last) addToHistory(last, state.history.slice(0, -1));
+    }
+    prevHistoryLen.current = state.history.length;
+  }, [state.history.length]);
+
   useInputHandler({
     inputText: state.inputText,
     cursorPosition: state.cursorPosition,
@@ -63,6 +79,9 @@ export function App({ config, engine }: AppProps) {
     dispatch,
     onSend: runAgentTurn,
     blocked: state.approvalReq !== null,
+    history: state.history,
+    historyIndex: state.historyIndex,
+    historyScratch: state.historyScratch,
     onSlashCommand: createSlashHandler({
       dispatch,
       send: runAgentTurn,
@@ -120,7 +139,7 @@ export function App({ config, engine }: AppProps) {
         {messages.length === 0 && !state.isStreaming && (
           <Box marginY={1}>
             <Text dimColor>
-              Welcome to Ink Chat TUI! Type a message and press Enter to start.
+              Welcome to Coder Chat TUI! Type a message and press Enter to start.
             </Text>
           </Box>
         )}

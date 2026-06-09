@@ -42,7 +42,7 @@ function mapCoreBlockToTui(
         toolName: block.name ?? 'unknown',
         toolId: block.id ?? '',
         input: block.input ?? {},
-        state: 'executing' as const,
+        state: 'pending' as const,
       };
 
     case 'tool_result': {
@@ -254,6 +254,25 @@ export function useAgentBridge({ engine, dispatch }: AgentBridgeDeps) {
                     type: 'ADD_USER_MESSAGE',
                     message: { ...toolResultMsg, blocks: tuiBlocks },
                   });
+                }
+              }
+
+              // ── Progress: update tool_use block state ──────────
+              if (msg.type === 'system' && msg.subtype === 'progress') {
+                const progress = (msg as Record<string, unknown>).data as {
+                  toolName?: string; toolUseId?: string;
+                  status?: string; message?: string;
+                } | undefined;
+                if (progress?.toolUseId) {
+                  if (progress.status === 'running') {
+                    dispatch({
+                      type: 'UPDATE_BLOCK_STATE',
+                      toolId: progress.toolUseId,
+                      state: 'executing',
+                    });
+                  } else if (progress.status === 'started') {
+                    // Keep in 'pending' state; the message describes what's happening
+                  }
                 }
               }
               break;

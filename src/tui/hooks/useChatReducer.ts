@@ -300,6 +300,24 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'HIDE_APPROVAL':
       return { ...state, approvalReq: null };
 
+    case 'LOAD_HISTORY':
+      return { ...state, history: action.history };
+
+    case 'ADD_HISTORY': {
+      const trimmed = action.line.trim();
+      if (trimmed.length === 0) return state;
+      const prev = state.history;
+      if (prev.length > 0 && prev[prev.length - 1] === trimmed) return state;
+      return { ...state, history: [...prev, trimmed] };
+    }
+
+    case 'SET_HISTORY_INDEX':
+      return {
+        ...state,
+        historyIndex: action.index,
+        historyScratch: action.scratch !== undefined ? action.scratch : state.historyScratch,
+      };
+
     default:
       return state;
   }
@@ -317,6 +335,9 @@ export function createInitialState(model: string): ChatState {
     turns: [],
     currentTurnId: 0,
     approvalReq: null,
+    history: [],
+    historyIndex: -1,
+    historyScratch: '',
   };
 }
 

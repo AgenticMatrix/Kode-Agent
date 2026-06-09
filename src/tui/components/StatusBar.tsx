@@ -74,7 +74,8 @@ function ContextBar({ used, max }: { used: number; max: number }) {
  * Timers update every second in real-time.
  */
 export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, outputTokens }: StatusBarProps) {
-  // Session timer — ticks every second
+  const sessionStartRef = useRef(Date.now());
+  // Session seconds — derived from start ref on each render (no dedicated timer).
   const [sessionSeconds, setSessionSeconds] = useState(0);
   // Response timer — ticks only while streaming
   const [responseSeconds, setResponseSeconds] = useState(0);
@@ -91,11 +92,15 @@ export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, 
     }
   }, [isStreaming]);
 
-  // Tick both timers every second
+  // Tick timer ONLY during streaming to avoid re-renders that disrupt
+  // terminal text selection during idle time.
   useEffect(() => {
-    const id = setInterval(() => {
-      setSessionSeconds((s) => s + 1);
+    if (!isStreaming) return;
 
+    const id = setInterval(() => {
+      setSessionSeconds(
+        Math.floor((Date.now() - sessionStartRef.current) / 1000),
+      );
       if (streamStartRef.current !== null) {
         setResponseSeconds(
           Math.floor((Date.now() - streamStartRef.current) / 1000),
@@ -103,7 +108,7 @@ export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, 
       }
     }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [isStreaming]);
 
   const usedTokens = estimateTokens(totalChars);
   // Max context: deepseek-v4-pro is ~128K; default to 128K

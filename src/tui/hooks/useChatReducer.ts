@@ -242,6 +242,16 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ),
       };
 
+    case 'TOGGLE_TOOLS':
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.id === action.id
+            ? { ...m, toolsExpanded: !m.toolsExpanded }
+            : m,
+        ),
+      };
+
     case 'SET_MODE':
       return { ...state, mode: action.mode };
 

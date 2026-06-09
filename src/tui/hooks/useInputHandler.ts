@@ -61,13 +61,19 @@ export function useInputHandler({
         return;
       }
 
-      // Ctrl+E toggles thinking expansion of the last assistant message
+      // Ctrl+E toggles thinking / tool expansion of the last assistant message
       if (key.ctrl && input === 'e') {
         const lastAssistant = [...messages]
           .reverse()
-          .find((m) => m.role === 'assistant' && (m.thinking || m.blocks.some(b => b.type === 'thinking')));
+          .find((m) => m.role === 'assistant');
         if (lastAssistant) {
-          dispatch({ type: 'TOGGLE_THINKING', id: lastAssistant.id });
+          const hasThinking = lastAssistant.thinking || lastAssistant.blocks.some(b => b.type === 'thinking');
+          const hasTools = lastAssistant.blocks.filter(b => b.type === 'tool_use').length > 3;
+          if (hasTools) {
+            dispatch({ type: 'TOGGLE_TOOLS', id: lastAssistant.id });
+          } else if (hasThinking) {
+            dispatch({ type: 'TOGGLE_THINKING', id: lastAssistant.id });
+          }
         }
         return;
       }

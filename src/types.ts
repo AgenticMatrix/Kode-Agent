@@ -138,6 +138,7 @@ export interface Message {
   /** Legacy thinking field — will be migrated to ThinkingBlock. */
   thinking?: string;
   thinkingExpanded?: boolean;
+  toolsExpanded?: boolean;
   timestamp: number;
 }
 
@@ -218,6 +219,7 @@ export type ChatAction =
   | { type: 'UPDATE_BLOCK_STATE'; toolId: string; state: ToolUseState }
   | { type: 'SET_TOOL_USE_RESULT'; toolId: string; duration?: number; result: ToolUseBlock['result'] }
   | { type: 'TOGGLE_THINKING'; id: number }
+  | { type: 'TOGGLE_TOOLS'; id: number }
   | { type: 'SET_MODE'; mode: AgentMode }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }

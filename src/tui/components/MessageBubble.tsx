@@ -253,6 +253,27 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   }
 
   // ── Assistant ─────────────────────────────────────────────
+
+  // Tool collapsing: when an assistant message has many tool_use blocks,
+  // show at most MAX_VISIBLE in full and collapse the rest into a summary.
+  const TOOL_COLLAPSE_THRESHOLD = 3;
+  const MAX_VISIBLE_TOOLS = 2;
+  const toolBlocks = hasBlocks
+    ? message.blocks.filter((b) => b.type === 'tool_use')
+    : [];
+  const totalTools = toolBlocks.length;
+  const shouldCollapseTools =
+    totalTools > TOOL_COLLAPSE_THRESHOLD && !message.toolsExpanded;
+
+  const executingCount = toolBlocks.filter(
+    (b) => (b as ToolUseBlock).state === 'executing',
+  ).length;
+  const pendingCount = toolBlocks.filter(
+    (b) => (b as ToolUseBlock).state === 'pending',
+  ).length;
+  const doneCount = totalTools - executingCount - pendingCount;
+  const hiddenCount = totalTools - MAX_VISIBLE_TOOLS;
+
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box marginBottom={0}>
@@ -263,38 +284,67 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       <Box paddingLeft={3} flexDirection="column">
         {/* Render blocks in their natural order */}
         {hasBlocks
-          ? message.blocks.map((block, idx) => {
-              if (block.type === 'thinking') {
-                const thinkingLines = block.content.split('\n');
-                const tooLong = thinkingLines.length > 2;
-                const collapsed = tooLong && !message.thinkingExpanded;
-                const displayText = collapsed
-                  ? thinkingLines.slice(0, 2).join('\n')
-                  : block.content;
+          ? (() => {
+              let toolIndex = 0;
+              return message.blocks.map((block, idx) => {
+                if (block.type === 'thinking') {
+                  const thinkingLines = block.content.split('\n');
+                  const tooLong = thinkingLines.length > 2;
+                  const collapsed = tooLong && !message.thinkingExpanded;
+                  const displayText = collapsed
+                    ? thinkingLines.slice(0, 2).join('\n')
+                    : block.content;
 
-                return (
-                  <Box key={idx} flexDirection="column" marginBottom={1}>
-                    <Text dimColor color="grey">{'💭 Thinking:'}</Text>
-                    <Box paddingLeft={2} flexDirection="column">
-                      <Text dimColor color="grey">{displayText}</Text>
-                      {collapsed ? (
-                        <Text dimColor color="grey">{'... (Ctrl+E to expand)'}</Text>
-                      ) : null}
-                      {tooLong && message.thinkingExpanded ? (
-                        <Text dimColor color="grey">{'(Ctrl+E to collapse)'}</Text>
-                      ) : null}
+                  return (
+                    <Box key={idx} flexDirection="column" marginBottom={1}>
+                      <Text dimColor color="grey">{'💭 Thinking:'}</Text>
+                      <Box paddingLeft={2} flexDirection="column">
+                        <Text dimColor color="grey">{displayText}</Text>
+                        {collapsed ? (
+                          <Text dimColor color="grey">{'... (Ctrl+E to expand)'}</Text>
+                        ) : null}
+                        {tooLong && message.thinkingExpanded ? (
+                          <Text dimColor color="grey">{'(Ctrl+E to collapse)'}</Text>
+                        ) : null}
+                      </Box>
                     </Box>
-                  </Box>
-                );
-              }
+                  );
+                }
 
-              if (block.type === 'text') {
-                return <MarkdownRenderer key={idx} content={block.content} />;
-              }
+                if (block.type === 'text') {
+                  return <MarkdownRenderer key={idx} content={block.content} />;
+                }
 
-              return renderBlock(block, idx);
-            })
+                // Tool collapsing: skip tool_use blocks beyond MAX_VISIBLE_TOOLS
+                if (block.type === 'tool_use' && shouldCollapseTools) {
+                  if (toolIndex >= MAX_VISIBLE_TOOLS) {
+                    toolIndex++;
+                    return null;
+                  }
+                  toolIndex++;
+                }
+
+                return renderBlock(block, idx);
+              });
+            })()
           : null}
+
+        {/* Tool collapse summary line */}
+        {shouldCollapseTools ? (
+          <Box marginBottom={1}>
+            <Text dimColor>
+              ... {hiddenCount} more tools
+              {executingCount > 0 ? ` · ${executingCount} executing` : ''}
+              {pendingCount > 0 ? ` · ${pendingCount} queued` : ''}
+              {doneCount > 0 ? ` · ${doneCount} completed` : ''}
+              {' '}(Ctrl+E to expand)
+            </Text>
+          </Box>
+        ) : totalTools > TOOL_COLLAPSE_THRESHOLD && message.toolsExpanded ? (
+          <Box marginBottom={1}>
+            <Text dimColor>(Ctrl+E to collapse tools)</Text>
+          </Box>
+        ) : null}
 
         {/* Fallback: legacy string content when no blocks */}
         {!hasBlocks && displayContent ? (

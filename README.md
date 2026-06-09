@@ -90,7 +90,7 @@ coder -m "deepseek/deepseek-v4-pro"
 CoderAgent
 ├── src/
 │   ├── cli/              # CLI entry point, config, model picker
-│   ├── core/             # Agent loop, system prompt, permissions, session
+│   ├── core/             # Agent loop, tool queue, system prompt, permissions, session
 │   ├── api/              # Provider API client (Anthropic SDK bridge)
 │   ├── provider/         # Multi-provider: Anthropic, DeepSeek, OpenAI
 │   ├── tools/            # 15+ tools: read, write, edit, bash, grep, etc.
@@ -125,6 +125,7 @@ CoderAgent
 - **Beautiful TUI** — Built with [Ink](https://github.com/vadimdemedes/ink) + React 19, full terminal rendering
 - **Multi-Provider** — Anthropic (Claude), DeepSeek, OpenAI-compatible endpoints
 - **15+ Tools** — read, write, edit, bash, grep, glob, web-fetch, web-search, task management, todo
+- **Streaming Tool Queue** — Tools enqueue and execute as they are parsed from the LLM stream, with bounded concurrency (default 32)
 - **Streaming** — Real-time text, thinking, and tool-use streaming via ContentBlock events
 - **Agent Loop** — Autonomous multi-turn reasoning with tool call execution
 - **Permission System** — plan / ask / auto modes with risk-level classification
@@ -152,6 +153,7 @@ Edit `~/.coder/settings.json`:
     }
   ],
   "default_model": "deepseek/deepseek-v4-pro",
+  "max_tool_concurrency": 32,
   "theme": "dark"
 }
 ```

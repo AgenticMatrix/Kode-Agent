@@ -381,7 +381,7 @@ function InlineTokenElement({ token }: { token: InlineToken }) {
 
   if (type === 'code') {
     return (
-      <Text backgroundColor="#4a4a4a" color="#e6e6e6">
+      <Text color="cyan">
         {content}
       </Text>
     );

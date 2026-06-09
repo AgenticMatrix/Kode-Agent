@@ -189,6 +189,8 @@ export interface ChatState {
   historyIndex: number;
   /** Saved input text before browsing history (to restore on exit). */
   historyScratch: string;
+  /** Paste block contents keyed by ID (IDs embedded as markers in inputText). */
+  pasteBlocks: Record<number, string>;
 }
 
 // ── Chat actions ────────────────────────────────────────────────────
@@ -226,7 +228,9 @@ export type ChatAction =
   // History
   | { type: 'LOAD_HISTORY'; history: string[] }
   | { type: 'ADD_HISTORY'; line: string }
-  | { type: 'SET_HISTORY_INDEX'; index: number; scratch?: string };
+  | { type: 'SET_HISTORY_INDEX'; index: number; scratch?: string }
+  // Paste blocks
+  | { type: 'ADD_PASTE_BLOCK'; text: string };
 
 // ── Streaming callbacks (API client → App) ──────────────────────────
 

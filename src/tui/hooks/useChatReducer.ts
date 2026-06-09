@@ -39,6 +39,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         inputText: action.text,
         cursorPosition: action.text.length,
+        pasteBlocks: action.text === '' ? {} : state.pasteBlocks,
       };
 
     case 'ADD_USER_MESSAGE':
@@ -48,6 +49,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         inputText: '',
         cursorPosition: 0,
         error: null,
+        pasteBlocks: {},
       };
 
     case 'START_ASSISTANT_RESPONSE': {
@@ -318,6 +320,22 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         historyScratch: action.scratch !== undefined ? action.scratch : state.historyScratch,
       };
 
+    case 'ADD_PASTE_BLOCK': {
+      const lineCount = action.text.split(/\r?\n|\r/).length;
+      let pasteId = 1;
+      while (state.pasteBlocks[pasteId] !== undefined) pasteId++;
+      const marker = `[Pasted text #${pasteId} +${lineCount - 1} lines]`;
+      const pos = Math.max(0, Math.min(state.cursorPosition, state.inputText.length));
+      const newText =
+        state.inputText.slice(0, pos) + marker + state.inputText.slice(pos);
+      return {
+        ...state,
+        inputText: newText,
+        cursorPosition: pos + marker.length,
+        pasteBlocks: { ...state.pasteBlocks, [pasteId]: action.text },
+      };
+    }
+
     default:
       return state;
   }
@@ -338,7 +356,15 @@ export function createInitialState(model: string): ChatState {
     history: [],
     historyIndex: -1,
     historyScratch: '',
+    pasteBlocks: {},
   };
+}
+
+/** Replace paste markers with actual content. */
+export function expandPasteMarkers(text: string, blocks: Record<number, string>): string {
+  return text.replace(/\[Pasted text #(\d+) \+\d+ lines\]/g, (_m, id) => {
+    return blocks[Number(id)] ?? _m;
+  });
 }
 
 export function useChatReducer(model: string) {

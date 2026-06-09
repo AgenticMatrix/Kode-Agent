@@ -1,6 +1,7 @@
 import { useInput } from 'ink';
 
 import type { Message, ChatAction } from '../../types.js';
+import { expandPasteMarkers } from './useChatReducer.js';
 
 export interface InputHandlerDeps {
   inputText: string;
@@ -19,6 +20,8 @@ export interface InputHandlerDeps {
   historyIndex: number;
   /** Saved input before entering history browse mode. */
   historyScratch: string;
+  /** Paste block contents for expanding markers before send. */
+  pasteBlocks: Record<number, string>;
 }
 
 /**
@@ -44,6 +47,7 @@ export function useInputHandler({
   history,
   historyIndex,
   historyScratch,
+  pasteBlocks,
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
@@ -70,13 +74,15 @@ export function useInputHandler({
 
       if (key.return) {
         if (inputText.trim().length > 0) {
-          dispatch({ type: 'ADD_HISTORY', line: inputText.trim() });
+          // Expand paste markers to full text before sending / saving history
+          const expandedText = expandPasteMarkers(inputText.trim(), pasteBlocks);
+          dispatch({ type: 'ADD_HISTORY', line: expandedText });
           dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
           // Check for slash commands first
           if (inputText.startsWith('/') && onSlashCommand?.(inputText)) {
             dispatch({ type: 'SET_INPUT', text: '' });
           } else {
-            onSend(inputText);
+            onSend(expandedText);
           }
         }
         return;
@@ -162,6 +168,12 @@ export function useInputHandler({
 
       // Prevent typing while streaming
       if (isStreaming) return;
+
+      // Multi-line input → paste block (marker placeholder + stored content)
+      if (input.includes('\n') || input.includes('\r')) {
+        dispatch({ type: 'ADD_PASTE_BLOCK', text: input });
+        return;
+      }
 
       // Insert character at cursor position
       dispatch({ type: 'INSERT_CHAR', char: input });

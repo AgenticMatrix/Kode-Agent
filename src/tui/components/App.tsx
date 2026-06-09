@@ -82,6 +82,7 @@ export function App({ config, engine }: AppProps) {
     history: state.history,
     historyIndex: state.historyIndex,
     historyScratch: state.historyScratch,
+    pasteBlocks: state.pasteBlocks,
     onSlashCommand: createSlashHandler({
       dispatch,
       send: runAgentTurn,

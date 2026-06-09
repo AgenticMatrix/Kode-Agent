@@ -1,0 +1,28 @@
+{
+  "name": "coder-agent",
+  "version": "0.1.0",
+  "description": "CoderAgent — A fully open-source AI programming assistant for the terminal",
+  "type": "module",
+  "bin": {
+    "coder": "./bin/coder.js"
+  },
+  "scripts": {
+    "start": "tsx src/cli/main.tsx",
+    "dev": "tsx --watch src/cli/main.tsx",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.102.0",
+    "highlight.js": "^11.11.1",
+    "ink": "^7.0.5",
+    "react": "^19.2.4",
+    "undici": "^7.27.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

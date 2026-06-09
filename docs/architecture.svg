@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="Menlo, Monaco, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#888"/>
+    </marker>
+    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#536DFE"/>
+      <stop offset="100%" stop-color="#7C4DFF"/>
+    </linearGradient>
+    <linearGradient id="cli" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF6D00"/>
+      <stop offset="100%" stop-color="#FF9100"/>
+    </linearGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00C853"/>
+      <stop offset="100%" stop-color="#69F0AE"/>
+    </linearGradient>
+    <linearGradient id="provider" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2979FF"/>
+      <stop offset="100%" stop-color="#82B1FF"/>
+    </linearGradient>
+    <linearGradient id="tools" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#AA00FF"/>
+      <stop offset="100%" stop-color="#E040FB"/>
+    </linearGradient>
+    <linearGradient id="tui" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF1744"/>
+      <stop offset="100%" stop-color="#FF5252"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#1a1a2e" rx="12"/>
+  <rect x="0" y="0" width="900" height="50" fill="url(#header)" rx="12"/>
+  <rect x="0" y="35" width="900" height="15" fill="url(#header)"/>
+
+  <!-- Title -->
+  <text x="450" y="32" text-anchor="middle" fill="#fff" font-size="18" font-weight="bold">CoderAgent Architecture</text>
+
+  <!-- ── User ── -->
+  <rect x="375" y="68" width="150" height="34" rx="17" fill="#263238" stroke="#536DFE" stroke-width="2" filter="url(#shadow)"/>
+  <text x="450" y="90" text-anchor="middle" fill="#fff" font-size="14">👤 Terminal Input</text>
+
+  <!-- User → CLI arrow -->
+  <line x1="450" y1="102" x2="450" y2="128" stroke="#536DFE" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ── CLI Layer ── -->
+  <rect x="300" y="132" width="300" height="44" rx="8" fill="url(#cli)" filter="url(#shadow)"/>
+  <text x="450" y="150" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">CLI Entry Point</text>
+  <text x="450" y="166" text-anchor="middle" fill="#FFE0B2" font-size="10">main.tsx · config.ts · model-picker.ts</text>
+
+  <!-- CLI → Core arrow -->
+  <line x1="450" y1="176" x2="450" y2="202" stroke="#FF6D00" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ── Core Layer ── -->
+  <rect x="250" y="206" width="400" height="100" rx="8" fill="url(#core)" filter="url(#shadow)"/>
+  <text x="450" y="226" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Agent Core</text>
+
+  <!-- Core sub-boxes -->
+  <rect x="262" y="236" width="120" height="28" rx="4" fill="rgba(255,255,255,0.15)"/>
+  <text x="322" y="254" text-anchor="middle" fill="#fff" font-size="10">Query Engine</text>
+  <rect x="390" y="236" width="120" height="28" rx="4" fill="rgba(255,255,255,0.15)"/>
+  <text x="450" y="254" text-anchor="middle" fill="#fff" font-size="10">Session Mgr</text>
+  <rect x="518" y="236" width="120" height="28" rx="4" fill="rgba(255,255,255,0.15)"/>
+  <text x="578" y="254" text-anchor="middle" fill="#fff" font-size="10">Permission</text>
+
+  <text x="450" y="296" text-anchor="middle" fill="#A5D6A7" font-size="10">System Prompt · Hooks · Compaction · Token Budget · Error Recovery</text>
+
+  <!-- Core → Provider (left) -->
+  <path d="M250,256 L160,256 L160,340 L215,340" fill="none" stroke="#00C853" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Core → Tools (right) -->
+  <path d="M650,256 L740,256 L740,340 L685,340" fill="none" stroke="#00C853" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ── Provider Layer ── -->
+  <rect x="40" y="344" width="220" height="90" rx="8" fill="url(#provider)" filter="url(#shadow)"/>
+  <text x="150" y="366" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Provider Adapter</text>
+  <rect x="52" y="378" width="195" height="22" rx="4" fill="rgba(255,255,255,0.15)"/>
+  <text x="150" y="393" text-anchor="middle" fill="#fff" font-size="10">Anthropic SDK (Messages API)</text>
+  <text x="150" y="426" text-anchor="middle" fill="#BBDEFB" font-size="10">Base · Router · Retry · Lazy Deps</text>
+
+  <!-- Provider nodes -->
+  <rect x="52" y="454" width="56" height="24" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="80" y="470" text-anchor="middle" fill="#fff" font-size="9">Claude</text>
+  <rect x="114" y="454" width="66" height="24" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="147" y="470" text-anchor="middle" fill="#fff" font-size="9">DeepSeek</text>
+  <rect x="186" y="454" width="62" height="24" rx="4" fill="rgba(255,255,255,0.2)"/>
+  <text x="217" y="470" text-anchor="middle" fill="#fff" font-size="9">OpenAI</text>
+
+  <!-- API arrow -->
+  <line x1="150" y1="480" x2="150" y2="510" stroke="#82B1FF" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="150" y="525" text-anchor="middle" fill="#82B1FF" font-size="9">AI Model APIs (HTTPS)</text>
+
+  <!-- ── Tools Layer ── -->
+  <rect x="640" y="344" width="220" height="200" rx="8" fill="url(#tools)" filter="url(#shadow)"/>
+  <text x="750" y="366" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Tools (15+)</text>
+
+  <!-- Tool items grid -->
+  <rect x="652" y="378" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="393" text-anchor="middle" fill="#E1BEE7" font-size="9">read</text>
+  <rect x="753" y="378" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="393" text-anchor="middle" fill="#E1BEE7" font-size="9">write</text>
+
+  <rect x="652" y="404" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="419" text-anchor="middle" fill="#E1BEE7" font-size="9">edit</text>
+  <rect x="753" y="404" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="419" text-anchor="middle" fill="#E1BEE7" font-size="9">bash</text>
+
+  <rect x="652" y="430" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="445" text-anchor="middle" fill="#E1BEE7" font-size="9">grep</text>
+  <rect x="753" y="430" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="445" text-anchor="middle" fill="#E1BEE7" font-size="9">glob</text>
+
+  <rect x="652" y="456" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="471" text-anchor="middle" fill="#E1BEE7" font-size="9">web-fetch</text>
+  <rect x="753" y="456" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="471" text-anchor="middle" fill="#E1BEE7" font-size="9">web-search</text>
+
+  <rect x="652" y="482" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="497" text-anchor="middle" fill="#E1BEE7" font-size="9">task-create</text>
+  <rect x="753" y="482" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="497" text-anchor="middle" fill="#E1BEE7" font-size="9">task-list</text>
+
+  <rect x="652" y="508" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="700" y="523" text-anchor="middle" fill="#E1BEE7" font-size="9">task-update</text>
+  <rect x="753" y="508" width="95" height="22" rx="3" fill="rgba(255,255,255,0.12)"/>
+  <text x="801" y="523" text-anchor="middle" fill="#E1BEE7" font-size="9">todo-write</text>
+
+  <!-- ── TUI Layer (bottom) ── -->
+  <rect x="250" y="560" width="400" height="44" rx="8" fill="url(#tui)" filter="url(#shadow)"/>
+  <text x="450" y="580" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">TUI Renderer (Ink + React 19)</text>
+  <text x="450" y="596" text-anchor="middle" fill="#FFCDD2" font-size="10">App · ChatView · MessageBubble · Markdown · StatusBar</text>
+
+  <!-- Core → TUI arrow -->
+  <line x1="450" y1="306" x2="450" y2="555" stroke="#FF1744" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Skills side block -->
+  <rect x="40" y="560" width="160" height="44" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <text x="120" y="580" text-anchor="middle" fill="#BDBDBD" font-size="11" font-weight="bold">Skills</text>
+  <text x="120" y="596" text-anchor="middle" fill="#757575" font-size="9">Extensible Plugins</text>
+
+  <!-- Commands side block -->
+  <rect x="700" y="560" width="160" height="44" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <text x="780" y="580" text-anchor="middle" fill="#BDBDBD" font-size="11" font-weight="bold">Commands</text>
+  <text x="780" y="596" text-anchor="middle" fill="#757575" font-size="9">Slash Commands</text>
+
+  <!-- FS arrow from Tools -->
+  <line x1="640" y1="540" x2="600" y2="540" stroke="#AA00FF" stroke-width="1.5" stroke-dasharray="4" marker-end="url(#arrow)"/>
+  <text x="600" y="535" text-anchor="end" fill="#E040FB" font-size="8">↕ Filesystem</text>
+</svg>

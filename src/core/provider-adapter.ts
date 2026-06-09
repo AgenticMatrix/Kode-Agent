@@ -1,0 +1,339 @@
+/**
+ * provider-adapter.ts — Bridge from Anthropic SDK to callModel AsyncGenerator.
+ *
+ * Converts ink-chat-tui's core/types.ts Message format to the Anthropic
+ * Messages API format, streams the response, and yields StreamEvent and
+ * AssistantMessage objects compatible with query.ts's agent loop.
+ */
+
+import type Anthropic from '@anthropic-ai/sdk';
+import type {
+  StreamEvent,
+  AssistantMessage,
+  CompletionUsage,
+  ToolUseBlock,
+  ContentBlock,
+  StopReason,
+} from './types.js';
+import type { CallModelParams } from './query.js';
+
+// ---------------------------------------------------------------------------
+// Message conversion: core/types.ts → Anthropic API format
+// ---------------------------------------------------------------------------
+
+interface AnthropicRequest {
+  system: string;
+  messages: Anthropic.MessageParam[];
+}
+
+/**
+ * Convert our core Message[] (content: string | ContentBlock[]) to
+ * Anthropic API format. System messages are extracted and returned
+ * as the system parameter. User/assistant messages are converted
+ * to Anthropic content block arrays or strings.
+ */
+function toAnthropicMessages(
+  messages: Array<{ role: string; content: string | ContentBlock[] }>,
+): AnthropicRequest {
+  const systemParts: string[] = [];
+  const apiMessages: Anthropic.MessageParam[] = [];
+
+  for (const m of messages) {
+    if (m.role === 'system') {
+      const text = typeof m.content === 'string' ? m.content : '';
+      if (text.trim()) systemParts.push(text);
+      continue;
+    }
+
+    const role = m.role as 'user' | 'assistant';
+
+    if (typeof m.content === 'string') {
+      if (m.content.trim()) {
+        apiMessages.push({ role, content: m.content });
+      }
+      continue;
+    }
+
+    // ContentBlock[] — convert to Anthropic content block array
+    const content: Anthropic.ContentBlockParam[] = [];
+    for (const block of m.content) {
+      switch (block.type) {
+        case 'text':
+          if (block.text) {
+            content.push({ type: 'text', text: block.text });
+          }
+          break;
+        case 'tool_use':
+          if (block.id && block.name) {
+            content.push({
+              type: 'tool_use',
+              id: block.id,
+              name: block.name,
+              input: block.input ?? {},
+            } as Anthropic.ToolUseBlockParam);
+          }
+          break;
+        case 'tool_result':
+          if (block.tool_use_id) {
+            content.push({
+              type: 'tool_result',
+              tool_use_id: block.tool_use_id,
+              content: typeof block.content === 'string'
+                ? block.content
+                : JSON.stringify(block.content),
+              is_error: block.is_error,
+            } as Anthropic.ToolResultBlockParam);
+          }
+          break;
+        case 'image':
+          if (block.source) {
+            content.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: block.source.media_type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+                data: block.source.data,
+              },
+            });
+          }
+          break;
+        // thinking, etc. — not sent to API
+      }
+    }
+
+    if (content.length > 0) {
+      apiMessages.push({ role, content });
+    }
+  }
+
+  return { system: systemParts.join('\n\n'), messages: apiMessages };
+}
+
+// ---------------------------------------------------------------------------
+// Streaming adapter
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert Anthropic tool definitions from our generic format to
+ * the format expected by the Anthropic SDK.
+ */
+function toAnthropicTools(tools: unknown[]): Anthropic.Tool[] {
+  return tools.map((t) => {
+    const def = t as Record<string, unknown>;
+    return {
+      name: def.name as string,
+      description: def.description as string,
+      input_schema: def.input_schema as Anthropic.Tool.InputSchema,
+    };
+  });
+}
+
+/**
+ * Create a callModel function from an Anthropic client.
+ *
+ * The returned function has the signature expected by query.ts:
+ *   AsyncGenerator<StreamEvent | AssistantMessage>
+ *
+ * It converts core types to Anthropic API format, streams the response,
+ * and yields properly typed events back.
+ */
+export function createCallModelFromClient(
+  client: Anthropic,
+  model: string,
+): (params: CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage> {
+  return async function* (params: CallModelParams) {
+    const { system, messages, tools, signal } = params;
+
+    // Convert messages to Anthropic format
+    const { system: extraSystem, messages: apiMessages } =
+      toAnthropicMessages(messages);
+
+    // Combine caller-provided system with extracted system messages
+    const combinedSystem = [system, extraSystem]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const anthropicTools = tools.length > 0 ? toAnthropicTools(tools) : undefined;
+
+    // Track accumulated state during streaming
+    const toolUses: ToolUseBlock[] = [];
+    let streamedText = '';
+    let usage: CompletionUsage = { input_tokens: 0, output_tokens: 0 };
+    let stopReason: StopReason | null = null;
+
+    let lastContentBlockIndex = -1;
+
+    try {
+      const stream = await client.messages.create({
+        model,
+        max_tokens: 32768,
+        system: combinedSystem || undefined,
+        messages: apiMessages,
+        ...(anthropicTools?.length ? { tools: anthropicTools } : {}),
+        stream: true,
+      });
+
+      for await (const event of stream) {
+        if (signal?.aborted) break;
+
+        switch (event.type) {
+          case 'message_start':
+            if (event.message) {
+              usage = {
+                input_tokens: event.message.usage?.input_tokens ?? 0,
+                output_tokens: 0,
+              };
+            }
+            yield {
+              type: 'message_start',
+              message: {
+                model,
+                usage: { input_tokens: usage.input_tokens ?? 0, output_tokens: 0 },
+              },
+            };
+            break;
+
+          case 'content_block_start': {
+            const block = event.content_block;
+            const index = event.index;
+            lastContentBlockIndex = index;
+
+            if (block.type === 'text') {
+              yield {
+                type: 'content_block_start',
+                index,
+                content_block: { type: 'text', text: '' },
+              };
+            } else if (block.type === 'tool_use') {
+              // Spread pre-populated input when available (DeepSeek sends full
+              // input in content_block_start). Standard Anthropic has empty {}.
+              const initialInput = (block as { input?: object }).input as Record<string, unknown> | undefined;
+              const hasInput = initialInput && Object.keys(initialInput).length > 0;
+              const tu: ToolUseBlock = {
+                type: 'tool_use',
+                id: block.id,
+                name: block.name,
+                input: hasInput ? { ...initialInput } : {},
+              };
+              toolUses.push(tu);
+              yield {
+                type: 'content_block_start',
+                index,
+                content_block: { type: 'tool_use', id: block.id, name: block.name, input: hasInput ? { ...initialInput } : {} },
+              };
+            } else if (block.type === 'thinking') {
+              yield {
+                type: 'content_block_start',
+                index,
+                content_block: { type: 'thinking', thinking: '' },
+              };
+            }
+            break;
+          }
+
+          case 'content_block_delta': {
+            const delta = event.delta;
+            const index = event.index;
+
+            if (delta.type === 'text_delta') {
+              streamedText += delta.text;
+              yield {
+                type: 'content_block_delta',
+                index,
+                delta: { type: 'text_delta', text: delta.text },
+              };
+            } else if (delta.type === 'input_json_delta') {
+              // Accumulate JSON for the last tool_use block
+              const last = toolUses[toolUses.length - 1];
+              if (last) {
+                const prev = (last.input as Record<string, unknown>)._partial as string ?? '';
+                last.input = { ...last.input, _partial: prev + delta.partial_json };
+              }
+              yield {
+                type: 'content_block_delta',
+                index,
+                delta: { type: 'input_json_delta', partial_json: delta.partial_json },
+              };
+            } else if (delta.type === 'thinking_delta') {
+              yield {
+                type: 'content_block_delta',
+                index,
+                delta: { type: 'thinking_delta', thinking: delta.thinking },
+              };
+            }
+            break;
+          }
+
+          case 'content_block_stop': {
+            // Parse accumulated JSON for the most recent tool_use block
+            // (blocks stream start→delta→stop sequentially, so the last toolUses
+            // entry corresponds to the block that just finished streaming)
+            const last = toolUses[toolUses.length - 1];
+            if (last) {
+              const partial = (last.input as Record<string, unknown>)._partial as string | undefined;
+              if (partial) {
+                try {
+                  last.input = JSON.parse(partial);
+                } catch {
+                  last.input = { _raw: partial };
+                }
+              }
+            }
+            yield { type: 'content_block_stop', index: event.index };
+            break;
+          }
+
+          case 'message_delta':
+            stopReason = event.delta.stop_reason as StopReason | null ?? stopReason;
+            if (event.usage) {
+              usage = {
+                ...usage,
+                output_tokens: event.usage.output_tokens ?? usage.output_tokens,
+              };
+            }
+            yield {
+              type: 'message_delta',
+              delta: { stop_reason: stopReason as StopReason, usage },
+            };
+            break;
+
+          case 'message_stop': {
+            const raw = event as unknown as Record<string, unknown>;
+            const msgUsage = raw.message as Record<string, unknown> | undefined;
+            const finalUsage: CompletionUsage = {
+              input_tokens: (msgUsage?.usage as Record<string, number>)?.input_tokens ?? usage.input_tokens,
+              output_tokens: (msgUsage?.usage as Record<string, number>)?.output_tokens ?? usage.output_tokens,
+            };
+
+            // Build the content blocks for the assistant message
+            const content: ContentBlock[] = [];
+            if (streamedText) {
+              content.push({ type: 'text', text: streamedText });
+            }
+            for (const tu of toolUses) {
+              content.push(tu);
+            }
+
+            const assistantMsg: AssistantMessage = {
+              role: 'assistant',
+              content,
+              stopReason: (stopReason || 'end_turn') as StopReason,
+              usage: finalUsage,
+              model,
+              toolUseBlocks: toolUses,
+            };
+
+            yield {
+              type: 'message_stop',
+              message: assistantMsg,
+            };
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      if (signal?.aborted) return;
+      throw err;
+    }
+  };
+}

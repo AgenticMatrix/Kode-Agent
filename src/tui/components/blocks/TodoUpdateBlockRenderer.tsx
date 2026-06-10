@@ -37,6 +37,7 @@ export function TodoUpdateBlockRenderer({ todos, oldTodos }: TodoUpdateBlockRend
       borderColor="cyan"
       paddingX={1}
       marginBottom={1}
+      width="90%"
     >
       <Box marginBottom={0}>
         <Text bold color="cyan">

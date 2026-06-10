@@ -28,6 +28,7 @@ export const AgentSpawnRenderer: ToolUseRenderer = (props) => {
       borderStyle: 'round',
       borderColor: props.state === 'executing' ? 'yellow' : props.state === 'error' ? 'red' : 'blue',
       paddingX: 1,
+      width: '90%',
     },
     React.createElement(Text, { bold: true, color: 'cyan' }, `${icon} ${label}`),
     React.createElement(Text, { dimColor: true }, summary),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Text, useStdout } from 'ink';
 
 import { renderLatex } from './latex-to-unicode.js';
@@ -684,21 +684,6 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
     }
   }, [stdout?.columns]);
 
-  // Debounced re-render after content stops changing (streaming settles).
-  // This ensures terminal dimensions are stable and Ink has finished layout.
-  const [renderEpoch, setRenderEpoch] = useState(0);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    settleTimer.current = setTimeout(() => {
-      setRenderEpoch((e) => e + 1);
-    }, 100);
-    return () => {
-      if (settleTimer.current) clearTimeout(settleTimer.current);
-    };
-  }, [content]);
-
   const blocks = parseBlocks(content);
 
   if (blocks.length === 0) {
@@ -710,7 +695,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const maxOutputWidth = Math.max(20, termWidth - 8);
 
   return (
-    <Box flexDirection="column" key={`md-${renderEpoch}`}>
+    <Box flexDirection="column">
       {blocks.map((block, i) => (
         <BlockElement key={i} block={block} termWidth={maxOutputWidth} />
       ))}

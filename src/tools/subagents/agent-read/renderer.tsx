@@ -10,6 +10,7 @@ export const AgentReadRenderer: ToolUseRenderer = (props) => {
       borderStyle: 'round',
       borderColor: 'blue',
       paddingX: 1,
+      width: '90%',
     },
     React.createElement(Text, { bold: true, color: 'cyan' }, 'agent-read'),
     props.input.list_all

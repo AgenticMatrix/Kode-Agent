@@ -48,6 +48,7 @@ export function ToolResultCard({
       borderColor={borderColor}
       borderDimColor
       paddingX={1}
+      width="90%"
     >
       {/* Header row: icon + name | duration */}
       {(label || duration !== undefined) ? (

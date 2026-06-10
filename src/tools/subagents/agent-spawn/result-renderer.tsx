@@ -33,6 +33,7 @@ export function AgentSpawnResultRenderer(props: ToolResultRendererProps): React.
       borderColor={isError ? 'red' : 'grey'}
       borderDimColor
       paddingX={1}
+      width="90%"
     >
       {/* Header: icon + agent type | duration */}
       <Box flexDirection="row" justifyContent="space-between">

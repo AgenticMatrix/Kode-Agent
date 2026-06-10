@@ -39,11 +39,15 @@ export interface ExecutorOptions {
   allowMutation?: boolean;
   maxOutput?: number;
   bashTimeout?: number;
+  agentSpawn?: import('../core/types.js').AgentSpawnContext | undefined;
 }
+
+/** Executor options with all core fields resolved (non-optional) but agentSpawn kept optional. */
+export type ResolvedExecutorOptions = Required<Omit<ExecutorOptions, 'agentSpawn'>> & Pick<ExecutorOptions, 'agentSpawn'>;
 
 export type ToolExecutor = (
   input: Record<string, unknown>,
-  options: Required<ExecutorOptions>,
+  options: ResolvedExecutorOptions,
 ) => Promise<ToolResult>;
 
 // ── Renderer ──────────────────────────────────────────────────────

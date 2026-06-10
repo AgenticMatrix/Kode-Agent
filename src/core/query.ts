@@ -29,7 +29,9 @@ import { PermissionEngine } from './permission.js';
 import { SessionManager } from './session.js';
 import { CheckpointManager } from './checkpoint.js';
 import type { SystemPrompt } from './system-prompt.js';
+import type { SystemPromptAssembler } from './system-prompt.js';
 import type { HookManager } from './hooks.js';
+import type { SubAgentRegistry } from './subagent-registry.js';
 import { estimateTokens } from './token-budget.js';
 import { ToolExecutionQueue } from './tool-queue.js';
 
@@ -56,6 +58,10 @@ export interface QueryConfig {
   callModel: (params: CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage>;
   /** Optional HookManager for lifecycle hook execution */
   hookManager?: HookManager;
+  /** SubAgentRegistry for tracking spawned sub-agents */
+  subAgentRegistry?: SubAgentRegistry;
+  /** SystemPromptAssembler for assembling sub-agent prompts */
+  systemPromptAssembler?: SystemPromptAssembler;
 }
 
 export interface CallModelParams {
@@ -94,13 +100,16 @@ interface ExecuteSingleToolOpts {
   sessionManager: SessionManager;
   hookManager?: HookManager;
   abortController: AbortController;
+  callModel: (params: CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage>;
+  subAgentRegistry?: SubAgentRegistry;
+  systemPromptAssembler?: SystemPromptAssembler;
 }
 
 async function executeSingleTool(
   toolBlock: ToolUseBlock,
   opts: ExecuteSingleToolOpts,
 ): Promise<ToolResultBlock> {
-  const { sessionId, cwd, toolRegistry, checkpointManager, sessionManager, hookManager, abortController } = opts;
+  const { sessionId, cwd, toolRegistry, checkpointManager, sessionManager, hookManager, abortController, callModel, subAgentRegistry, systemPromptAssembler } = opts;
   const toolDef = toolRegistry.get(toolBlock.name)?.definition;
 
   // PreToolUse hook
@@ -122,7 +131,19 @@ async function executeSingleTool(
     await checkpointManager.create({ sessionId, cwd, description: `Pre-${toolBlock.name}` });
   }
 
-  const toolCtx: ToolContext = { sessionId, cwd, signal: abortController.signal };
+  const toolCtx: ToolContext = {
+    sessionId,
+    cwd,
+    signal: abortController.signal,
+    agentSpawn: subAgentRegistry && systemPromptAssembler ? {
+      callModel,
+      toolRegistry,
+      sessionManager,
+      subAgentRegistry,
+      hookManager,
+      systemPromptAssembler,
+    } : undefined,
+  };
   const toolStartTime = Date.now();
 
   try {
@@ -276,6 +297,9 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
       sessionManager,
       hookManager,
       abortController,
+      callModel,
+      subAgentRegistry: config.subAgentRegistry,
+      systemPromptAssembler: config.systemPromptAssembler,
     };
 
     try {
@@ -718,9 +742,24 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
         },
       ).catch(() => {});
 
-      // Simple truncation: keep last N messages
+      // Simple truncation: keep last N messages.
+      // Never split tool_use/tool_result pairs — if the first kept message
+      // has tool_results, walk backwards to include its assistant pair.
       if (messages.length > 30) {
-        messages = messages.slice(-30);
+        let cutoff = messages.length - 30;
+        while (cutoff > 0) {
+          const msg = messages[cutoff];
+          if (
+            msg?.role === 'user' &&
+            Array.isArray(msg.content) &&
+            msg.content.some((b) => b.type === 'tool_result')
+          ) {
+            cutoff--;
+          } else {
+            break;
+          }
+        }
+        messages = messages.slice(cutoff);
       }
     }
   }

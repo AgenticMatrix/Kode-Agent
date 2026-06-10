@@ -24,6 +24,7 @@ import { SystemPromptAssembler, type SystemPrompt } from './system-prompt.js';
 import { SessionManager } from './session.js';
 import { CheckpointManager } from './checkpoint.js';
 import type { HookManager } from './hooks.js';
+import type { SubAgentRegistry } from './subagent-registry.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,6 +46,10 @@ export interface QueryEngineConfig {
   callModel: (params: CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage>;
   /** Optional HookManager for lifecycle hook execution */
   hookManager?: HookManager;
+  /** SubAgentRegistry for tracking spawned sub-agents */
+  subAgentRegistry?: SubAgentRegistry;
+  /** SystemPromptAssembler for assembling worker/coordinator prompts */
+  systemPromptAssembler?: SystemPromptAssembler;
 }
 
 export interface QueryEngineEvent {
@@ -204,6 +209,8 @@ export class QueryEngine {
       maxToolConcurrency: this.config.maxToolConcurrency,
       callModel: this.config.callModel,
       hookManager: this.config.hookManager,
+      subAgentRegistry: this.config.subAgentRegistry,
+      systemPromptAssembler: this.config.systemPromptAssembler,
     };
 
     try {

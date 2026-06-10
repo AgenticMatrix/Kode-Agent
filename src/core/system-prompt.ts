@@ -55,6 +55,17 @@ export class SystemPromptAssembler {
   }
 
   private getBasePrompt(ctx: AssemblyContext): string {
+    switch (ctx.agentRole) {
+      case 'worker':
+        return this.getWorkerPrompt(ctx);
+      case 'coordinator':
+        return this.getCoordinatorPrompt(ctx);
+      default:
+        return this.getDefaultPrompt(ctx);
+    }
+  }
+
+  private getDefaultPrompt(ctx: AssemblyContext): string {
     const mode = ctx.permissionMode;
     return [
       `You are CoderAgent, a fully open-source coding agent. You help users write, edit, and understand code.`,
@@ -62,6 +73,31 @@ export class SystemPromptAssembler {
       `Permission mode: ${mode}`,
       mode === 'plan' ? 'Plan mode is active — you should plan before executing.' : '',
       `You have access to tools for reading, writing, editing files, running shell commands, searching code, and more.`,
+      `Use tools when needed. Think step by step.`,
+    ].filter(Boolean).join('\n');
+  }
+
+  private getWorkerPrompt(ctx: AssemblyContext): string {
+    return [
+      `You are a sub-agent worker spawned by CoderAgent to complete a specific task.`,
+      `Working directory: ${ctx.cwd}`,
+      `You have a focused task. Complete it efficiently using the tools available to you.`,
+      `When finished, return a concise summary of your findings and results.`,
+      `You CANNOT spawn additional sub-agents.`,
+      `Do not ask the user questions — you are operating autonomously.`,
+    ].join('\n');
+  }
+
+  private getCoordinatorPrompt(ctx: AssemblyContext): string {
+    const mode = ctx.permissionMode;
+    return [
+      `You are CoderAgent, a fully open-source coding agent. You help users write, edit, and understand code.`,
+      `Working directory: ${ctx.cwd}`,
+      `Permission mode: ${mode}`,
+      mode === 'plan' ? 'Plan mode is active — you should plan before executing.' : '',
+      `You have access to agent-spawn for delegating subtasks to sub-agents.`,
+      `Sub-agents can run in parallel. Use agent-spawn for independent research tasks.`,
+      `Use agent-read to check sub-agent progress and agent-stop to cancel them.`,
       `Use tools when needed. Think step by step.`,
     ].filter(Boolean).join('\n');
   }

@@ -24,6 +24,8 @@ import { createCallModelFromClient } from '../core/provider-adapter.js';
 import { ToolRegistry } from '../core/tool-registry.js';
 import { SessionManager } from '../core/session.js';
 import { QueryEngine } from '../core/query-engine.js';
+import { SubAgentRegistry } from '../core/subagent-registry.js';
+import { SystemPromptAssembler } from '../core/system-prompt.js';
 import { plugins } from '../tools/registry.js';
 import { RiskLevel, PermissionMode } from '../core/types.js';
 import type { ToolDefinition, ToolContext, ToolExecutionResult, QueryMessage, StreamEvent } from '../core/types.js';
@@ -118,6 +120,7 @@ function buildToolRegistry(): ToolRegistry {
           allowMutation: true,
           maxOutput: 50_000,
           bashTimeout: context.timeoutMs ?? 30_000,
+          agentSpawn: context.agentSpawn,
         });
         return { content: result.content, isError: result.isError, duration: result.duration, metadata: result.metadata };
       } catch (err) {
@@ -151,6 +154,8 @@ async function runPrintMode(queryText: string): Promise<void> {
   sessionManager.create({ cwd: process.cwd(), model: config.model });
 
   const settings = loadSettings();
+  const subAgentRegistry = new SubAgentRegistry();
+  const systemPromptAssembler = new SystemPromptAssembler();
 
   const engine = new QueryEngine({
     cwd: process.cwd(),
@@ -159,6 +164,8 @@ async function runPrintMode(queryText: string): Promise<void> {
     callModel,
     model: config.model,
     maxToolConcurrency: getMaxToolConcurrency(settings),
+    subAgentRegistry,
+    systemPromptAssembler,
   });
 
   await engine.init();
@@ -304,6 +311,8 @@ Examples:
   sessionManager.create({ cwd: process.cwd(), model: config.model });
 
   const settings = loadSettings();
+  const subAgentRegistryTui = new SubAgentRegistry();
+  const systemPromptAssemblerTui = new SystemPromptAssembler();
 
   const engine = new QueryEngine({
     cwd: process.cwd(),
@@ -312,6 +321,8 @@ Examples:
     callModel,
     model: config.model,
     maxToolConcurrency: getMaxToolConcurrency(settings),
+    subAgentRegistry: subAgentRegistryTui,
+    systemPromptAssembler: systemPromptAssemblerTui,
   });
 
   await engine.init();

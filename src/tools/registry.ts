@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 
-import type { ToolPlugin, ToolMeta, ToolExecutor, ToolUseRenderer, ToolResultRenderer, ToolResult, ExecutorOptions } from './types.js';
+import type { ToolPlugin, ToolMeta, ToolExecutor, ToolUseRenderer, ToolResultRenderer, ToolResult, ExecutorOptions, ResolvedExecutorOptions } from './types.js';
 import { GenericToolRenderer, GenericToolResultRenderer } from './base/GenericRenderer.js';
 
 // ── Plugin imports (add new tools here) ────────────────────────────────
@@ -17,11 +17,14 @@ import taskCreatePlugin from './task-create/index.js';
 import taskUpdatePlugin from './task-update/index.js';
 import taskListPlugin from './task-list/index.js';
 import taskGetPlugin from './task-get/index.js';
+import agentSpawnPlugin from './agent-spawn/index.js';
+import agentReadPlugin from './agent-read/index.js';
+import agentStopPlugin from './agent-stop/index.js';
+import agentMessagePlugin from './agent-message/index.js';
 
 // ── Known tool names (for tools without executors yet) ─────────────────
 const KNOWN_TOOL_NAMES: string[] = [
   'notebook-edit', 'git', 'powershell',
-  'agent-spawn', 'agent-stop', 'agent-message', 'agent-read',
   'task-output', 'task-describe',
   'ask-user-question', 'exit-plan-mode',
   'skill',
@@ -46,6 +49,10 @@ export const plugins: ToolPlugin[] = [
   taskUpdatePlugin,
   taskListPlugin,
   taskGetPlugin,
+  agentSpawnPlugin,
+  agentReadPlugin,
+  agentStopPlugin,
+  agentMessagePlugin,
 ];
 
 // Build lookup tables
@@ -84,11 +91,12 @@ export function getToolRiskLevel(toolName: string): ToolMeta['riskLevel'] {
   return getToolMeta(toolName)?.riskLevel ?? 'safe';
 }
 
-const EXECUTOR_DEFAULTS: Required<ExecutorOptions> = {
+const EXECUTOR_DEFAULTS: ResolvedExecutorOptions = {
   cwd: process.cwd(),
   allowMutation: true,
   maxOutput: 50_000,
   bashTimeout: 30_000,
+  agentSpawn: undefined,
 };
 
 /**
@@ -100,7 +108,7 @@ export async function executeTool(
   input: Record<string, unknown>,
   options?: ExecutorOptions,
 ): Promise<ToolResult> {
-  const opts: Required<ExecutorOptions> = { ...EXECUTOR_DEFAULTS, ...options };
+  const opts: ResolvedExecutorOptions = { ...EXECUTOR_DEFAULTS, ...options };
   const fn = executorByName.get(toolName);
 
   if (!fn) {

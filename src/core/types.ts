@@ -210,12 +210,22 @@ export enum RiskLevel {
 
 // ── Tool ──────────────────────────────────────────────────────────────
 
+export interface AgentSpawnContext {
+  callModel: (params: import('./query.js').CallModelParams) => AsyncGenerator<StreamEvent | AssistantMessage>;
+  toolRegistry: import('./tool-registry.js').ToolRegistry;
+  sessionManager: import('./session.js').SessionManager;
+  subAgentRegistry: import('./subagent-registry.js').SubAgentRegistry;
+  hookManager?: import('./hooks.js').HookManager;
+  systemPromptAssembler: import('./system-prompt.js').SystemPromptAssembler;
+}
+
 export interface ToolContext {
   sessionId: string;
   cwd: string;
   signal?: AbortSignal;
   env?: Record<string, string>;
   timeoutMs?: number;
+  agentSpawn?: AgentSpawnContext;
 }
 
 export interface ToolDefinition {

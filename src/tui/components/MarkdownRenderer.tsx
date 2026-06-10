@@ -1,4 +1,5 @@
-import { Box, Text } from 'ink';
+import { useState, useEffect, useRef } from 'react';
+import { Box, Text, useStdout } from 'ink';
 
 import { renderLatex } from './latex-to-unicode.js';
 import { highlightCode } from './highlight.js';
@@ -425,7 +426,7 @@ function InlineLine({ tokens }: { tokens: InlineToken[] }) {
 /**
  * Render a single block.
  */
-function BlockElement({ block }: { block: Block }) {
+function BlockElement({ block, termWidth }: { block: Block; termWidth: number }) {
   switch (block.type) {
     case 'heading':
       return (
@@ -527,8 +528,7 @@ function BlockElement({ block }: { block: Block }) {
       const naturalInnerWidths = naturalWidths.map((w) => w + pad * 2);
       const naturalTotal = naturalInnerWidths.reduce((a, b) => a + b, 0) + colCount + 1;
 
-      const termWidth = process.stdout.columns ?? 80;
-      const maxWidth = Math.max(20, termWidth - 4);
+      const maxWidth = Math.max(20, termWidth);
 
       // Scale down if the table is wider than the terminal
       let colWidths = naturalWidths;
@@ -672,16 +672,47 @@ interface MarkdownRendererProps {
  * - Paragraphs
  */
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  const { stdout } = useStdout();
+  const [termWidth, setTermWidth] = useState(
+    () => stdout?.columns ?? process.stdout.columns ?? 80,
+  );
+
+  useEffect(() => {
+    const cols = stdout?.columns;
+    if (cols && cols !== termWidth) {
+      setTermWidth(cols);
+    }
+  }, [stdout?.columns]);
+
+  // Debounced re-render after content stops changing (streaming settles).
+  // This ensures terminal dimensions are stable and Ink has finished layout.
+  const [renderEpoch, setRenderEpoch] = useState(0);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      setRenderEpoch((e) => e + 1);
+    }, 100);
+    return () => {
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+    };
+  }, [content]);
+
   const blocks = parseBlocks(content);
 
   if (blocks.length === 0) {
     return null;
   }
 
+  // Buffer for accumulated parent padding: App(paddingX=1) + ChatView(paddingX=1)
+  // + MessageBubble(paddingLeft=3) + terminal right margin(1) ≈ 6, use 8 for safety.
+  const maxOutputWidth = Math.max(20, termWidth - 8);
+
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" key={`md-${renderEpoch}`}>
       {blocks.map((block, i) => (
-        <BlockElement key={i} block={block} />
+        <BlockElement key={i} block={block} termWidth={maxOutputWidth} />
       ))}
     </Box>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { ToolUseRenderer } from '../types.js';
+import type { ToolUseRenderer } from '../../types.js';
 
 export const AgentSpawnRenderer: ToolUseRenderer = (props) => {
   const prompt = props.input.prompt as string ?? '';

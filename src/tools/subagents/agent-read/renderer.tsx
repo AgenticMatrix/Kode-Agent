@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { ToolUseRenderer } from '../types.js';
+import type { ToolUseRenderer } from '../../types.js';
 
 export const AgentReadRenderer: ToolUseRenderer = (props) => {
   return React.createElement(

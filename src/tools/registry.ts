@@ -17,10 +17,10 @@ import taskCreatePlugin from './task-create/index.js';
 import taskUpdatePlugin from './task-update/index.js';
 import taskListPlugin from './task-list/index.js';
 import taskGetPlugin from './task-get/index.js';
-import agentSpawnPlugin from './agent-spawn/index.js';
-import agentReadPlugin from './agent-read/index.js';
-import agentStopPlugin from './agent-stop/index.js';
-import agentMessagePlugin from './agent-message/index.js';
+import agentSpawnPlugin from './subagents/agent-spawn/index.js';
+import agentReadPlugin from './subagents/agent-read/index.js';
+import agentStopPlugin from './subagents/agent-stop/index.js';
+import agentMessagePlugin from './subagents/agent-message/index.js';
 
 // ── Known tool names (for tools without executors yet) ─────────────────
 const KNOWN_TOOL_NAMES: string[] = [

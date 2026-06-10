@@ -1,4 +1,4 @@
-import type { ToolExecutor, ToolResult } from '../types.js';
+import type { ToolExecutor, ToolResult } from '../../types.js';
 
 export const execute: ToolExecutor = async (input, options): Promise<ToolResult> => {
   const agentSpawn = options.agentSpawn;

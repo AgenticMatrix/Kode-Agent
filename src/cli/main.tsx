@@ -312,6 +312,9 @@ Examples:
 
   const settings = loadSettings();
   const subAgentRegistryTui = new SubAgentRegistry();
+  // Make registry accessible to the agent-spawn renderer for live progress
+  const { setSubAgentRegistry } = await import('../tools/subagents/agent-spawn/registry-ref.js');
+  setSubAgentRegistry(subAgentRegistryTui);
   const systemPromptAssemblerTui = new SystemPromptAssembler();
 
   const engine = new QueryEngine({

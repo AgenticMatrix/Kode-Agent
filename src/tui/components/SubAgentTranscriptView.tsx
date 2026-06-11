@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { getSubAgentRegistry } from '../../tools/subagents/agent-spawn/registry-ref.js';
+import { getSubAgentRegistry } from '../../subagents/agent-spawn/registry-ref.js';
 import type { ContentBlock } from '../../core/types.js';
 
 const AGENT_ICONS: Record<string, string> = {

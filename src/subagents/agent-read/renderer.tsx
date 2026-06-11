@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { ToolUseRenderer } from '../../types.js';
+import type { ToolUseRenderer } from '../../tools/types.js';
 
 export const AgentReadRenderer: ToolUseRenderer = (props) => {
   // Don't render a placeholder while the LLM is still streaming the input.

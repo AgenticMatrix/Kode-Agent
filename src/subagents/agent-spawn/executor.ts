@@ -1,13 +1,13 @@
-import type { ToolExecutor, ToolResult } from '../../types.js';
-import type { Message, ContentBlock } from '../../../core/types.js';
-import { ToolRegistry } from '../../../core/tool-registry.js';
-import { PermissionEngine } from '../../../core/permission.js';
-import { PermissionMode } from '../../../core/types.js';
-import { SessionManager } from '../../../core/session.js';
-import { CheckpointManager } from '../../../core/checkpoint.js';
+import type { ToolExecutor, ToolResult } from '../../tools/types.js';
+import type { Message, ContentBlock } from '../../core/types.js';
+import { ToolRegistry } from '../../core/tool-registry.js';
+import { PermissionEngine } from '../../core/permission.js';
+import { PermissionMode } from '../../core/types.js';
+import { SessionManager } from '../../core/session.js';
+import { CheckpointManager } from '../../core/checkpoint.js';
 import { filterToolsForAgent, type SubagentType } from '../tool-filtering.js';
-import { SystemPromptAssembler } from '../../../core/system-prompt.js';
-import { query } from '../../../core/query.js';
+import { SystemPromptAssembler } from '../../core/system-prompt.js';
+import { query } from '../../core/query.js';
 
 const MAX_SUBAGENT_TURNS = 20;
 const SUBAGENT_CONTEXT_BUDGET = 120_000;

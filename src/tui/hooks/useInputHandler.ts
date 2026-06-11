@@ -2,7 +2,7 @@ import { useInput } from 'ink';
 
 import type { Message, ChatAction } from '../../types.js';
 import { expandPasteMarkers } from './useChatReducer.js';
-import { getSubAgentRegistry } from '../../tools/subagents/agent-spawn/registry-ref.js';
+import { getSubAgentRegistry } from '../../subagents/agent-spawn/registry-ref.js';
 
 export interface InputHandlerDeps {
   inputText: string;

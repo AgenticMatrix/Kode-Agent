@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
-import { ShellTimeDisplay, formatDuration } from '../../shared/ShellTimeDisplay.js';
-import type { ToolUseRenderer } from '../../types.js';
+import { ShellTimeDisplay, formatDuration } from '../../tools/shared/ShellTimeDisplay.js';
+import type { ToolUseRenderer } from '../../tools/types.js';
 import { getSubAgentRegistry } from './registry-ref.js';
 
 const AGENT_ICONS: Record<string, string> = {

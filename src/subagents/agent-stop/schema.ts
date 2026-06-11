@@ -1,4 +1,4 @@
-import type { ToolSchema } from '../../types.js';
+import type { ToolSchema } from '../../tools/types.js';
 
 export const schema: ToolSchema = {
   name: 'agent-stop',

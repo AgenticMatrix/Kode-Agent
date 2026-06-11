@@ -1,4 +1,4 @@
-import type { SubAgentRegistry } from '../../../core/subagent-registry.js';
+import type { SubAgentRegistry } from '../../core/subagent-registry.js';
 
 let _registry: SubAgentRegistry | null = null;
 

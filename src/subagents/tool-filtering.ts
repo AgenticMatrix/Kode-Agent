@@ -7,7 +7,7 @@
  *   Layer 3: IN_PROCESS_TEAMMATE_ALLOWED_TOOLS — extra tools for general-purpose/plan agents
  */
 
-import type { ToolDefinition } from '../../core/types.js';
+import type { ToolDefinition } from '../core/types.js';
 import { ASYNC_AGENT_ALLOWED_TOOLS } from './explore/tool-filtering.js';
 
 /** Always removed from sub-agent tool sets. Enforces depth-limit=1. */

@@ -196,6 +196,10 @@ export interface ChatState {
   contentExpanded: boolean;
   /** When set, renders a sub-agent transcript view instead of the main chat. */
   subAgentView: { agentId: string } | null;
+  /** Last viewed sub-agent ID — Ctrl+T defaults to this. */
+  lastAgentViewId: string | null;
+  /** When true, shows the sub-agent picker overlay. */
+  agentPicker: boolean;
 }
 
 // ── Chat actions ────────────────────────────────────────────────────
@@ -228,6 +232,8 @@ export type ChatAction =
   | { type: 'TOGGLE_ALL_CONTENT' }
   | { type: 'OPEN_SUBAGENT_VIEW'; agentId: string }
   | { type: 'CLOSE_SUBAGENT_VIEW' }
+  | { type: 'SHOW_AGENT_PICKER' }
+  | { type: 'HIDE_AGENT_PICKER' }
   | { type: 'SET_MODE'; mode: AgentMode }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }

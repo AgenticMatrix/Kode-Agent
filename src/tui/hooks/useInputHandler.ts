@@ -25,6 +25,8 @@ export interface InputHandlerDeps {
   pasteBlocks: Record<number, string>;
   /** Current sub-agent view state (null = main chat). */
   subAgentView?: { agentId: string } | null;
+  /** Last viewed sub-agent ID — Ctrl+T defaults to this. */
+  lastAgentViewId?: string | null;
 }
 
 /**
@@ -55,6 +57,7 @@ export function useInputHandler({
   historyScratch,
   pasteBlocks,
   subAgentView,
+  lastAgentViewId,
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
@@ -78,6 +81,11 @@ export function useInputHandler({
         }
         const registry = getSubAgentRegistry();
         if (registry) {
+          // Prefer last viewed agent, fall back to most recent done agent
+          if (lastAgentViewId && registry.get(lastAgentViewId)) {
+            dispatch({ type: 'OPEN_SUBAGENT_VIEW', agentId: lastAgentViewId });
+            return;
+          }
           const doneAgents = registry.listByStatus('done');
           if (doneAgents.length > 0) {
             const latest = doneAgents.reduce((a, b) =>
@@ -92,8 +100,12 @@ export function useInputHandler({
       // When an approval overlay is active, suppress normal input.
       if (blocked) return;
 
-      // Block sending messages while viewing a sub-agent transcript (allow slash commands)
-      if (subAgentView && key.return && !inputText.startsWith('/')) return;
+      // Allow sending messages while viewing a sub-agent transcript.
+      // The view closes and the message goes to the main agent.
+      if (subAgentView && key.return) {
+        dispatch({ type: 'CLOSE_SUBAGENT_VIEW' });
+        // Fall through to normal send logic below
+      }
 
       // Ctrl+E toggles expand / collapse of tool blocks
       if (key.ctrl && input === 'e') {

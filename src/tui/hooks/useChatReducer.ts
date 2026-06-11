@@ -283,10 +283,16 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     }
 
     case 'OPEN_SUBAGENT_VIEW':
-      return { ...state, subAgentView: { agentId: action.agentId } };
+      return { ...state, subAgentView: { agentId: action.agentId }, lastAgentViewId: action.agentId };
 
     case 'CLOSE_SUBAGENT_VIEW':
       return { ...state, subAgentView: null };
+
+    case 'SHOW_AGENT_PICKER':
+      return { ...state, agentPicker: true };
+
+    case 'HIDE_AGENT_PICKER':
+      return { ...state, agentPicker: false };
 
     case 'SET_MODE':
       return { ...state, mode: action.mode };
@@ -429,6 +435,8 @@ export function createInitialState(model: string): ChatState {
     pasteBlocks: {},
     contentExpanded: false,
     subAgentView: null,
+    lastAgentViewId: null,
+    agentPicker: false,
   };
 }
 

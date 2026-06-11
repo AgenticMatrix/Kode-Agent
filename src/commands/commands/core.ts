@@ -123,13 +123,14 @@ export const coreCommands: SlashCommand[] = [
   },
 
   {
+    aliases: ['subagent'],
     help: 'view sub-agent transcript',
     name: 'agent',
-    usage: '/agent <agent-id>',
+    usage: '/agent [agent-id]',
     run: (arg, ctx) => {
       const agentId = arg.trim();
       if (!agentId) {
-        ctx.sys('Usage: /agent <agent-id> — view a sub-agent transcript');
+        ctx.dispatch({ type: 'SHOW_AGENT_PICKER' });
         return;
       }
       ctx.dispatch({ type: 'OPEN_SUBAGENT_VIEW', agentId });

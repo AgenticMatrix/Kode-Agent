@@ -10,6 +10,7 @@ import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
 import { ApprovalPrompt } from './ApprovalPrompt.js';
 import { SubAgentTranscriptView } from './SubAgentTranscriptView.js';
+import { SubAgentPicker } from './SubAgentPicker.js';
 import { useChatReducer } from '../hooks/useChatReducer.js';
 import { useAgentBridge } from '../hooks/useAgentBridge.js';
 import { useInputHandler } from '../hooks/useInputHandler.js';
@@ -79,8 +80,9 @@ export function App({ config, engine }: AppProps) {
     messages: state.messages,
     dispatch,
     onSend: runAgentTurn,
-    blocked: state.approvalReq !== null,
+    blocked: state.approvalReq !== null || state.agentPicker,
     subAgentView: state.subAgentView,
+    lastAgentViewId: state.lastAgentViewId,
     history: state.history,
     historyIndex: state.historyIndex,
     historyScratch: state.historyScratch,
@@ -169,6 +171,18 @@ export function App({ config, engine }: AppProps) {
                 <ApprovalPrompt
                   req={state.approvalReq}
                   onChoice={handleApprovalChoice}
+                />
+              </Box>
+            )}
+
+            {state.agentPicker && (
+              <Box flexDirection="column" flexShrink={0} paddingX={1} paddingY={1}>
+                <SubAgentPicker
+                  onSelect={(agentId) => {
+                    dispatch({ type: 'HIDE_AGENT_PICKER' });
+                    dispatch({ type: 'OPEN_SUBAGENT_VIEW', agentId });
+                  }}
+                  onCancel={() => dispatch({ type: 'HIDE_AGENT_PICKER' })}
                 />
               </Box>
             )}

@@ -108,7 +108,7 @@ export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptVi
         { bold: true, color: 'cyan' },
         `${icon} ${agent.agentType} (${agent.id}) — ${agent.turnCount} turns, ${agent.toolCount} tools`,
       ),
-      React.createElement(Text, { dimColor: true }, 'Esc to go back'),
+      React.createElement(Text, { dimColor: true }, 'Esc or Ctrl+T to go back | Type to follow up'),
     ),
     // Prompt
     React.createElement(

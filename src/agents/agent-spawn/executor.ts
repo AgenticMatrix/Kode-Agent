@@ -1,12 +1,12 @@
 import type { ToolExecutor, ToolResult } from '../../tools/types.js';
-import type { Message, ContentBlock } from '../../core/types.js';
+import type { Message, ContentBlock, AgentSpawnContext } from '../../core/types.js';
 import type { SystemPrompt } from '../../core/system-prompt.js';
 import { ToolRegistry } from '../../core/tool-registry.js';
 import { PermissionEngine } from '../../core/permission.js';
 import { PermissionMode } from '../../core/types.js';
 import { SessionManager } from '../../core/session.js';
 import { CheckpointManager } from '../../core/checkpoint.js';
-import { filterToolsForAgent } from '../tool-filtering.js';
+import { filterToolsForAgent, GLOBAL_DISALLOWED_FOR_SUBAGENTS } from '../tool-filtering.js';
 import { query } from '../../core/query.js';
 
 const DEFAULT_MAX_TURNS = 20;
@@ -35,64 +35,44 @@ function compressTranscript(messages: Message[]): string {
   return body.slice(0, 1997) + '...';
 }
 
-export const execute: ToolExecutor = async (input, options): Promise<ToolResult> => {
-  const agentSpawn = options.agentSpawn;
-  if (!agentSpawn) {
-    return {
-      content: 'agent-spawn requires agentSpawn context.',
-      isError: true,
-    };
-  }
+// ---------------------------------------------------------------------------
+// Core runner — shared by sync and async paths
+// ---------------------------------------------------------------------------
 
-  const agentType = (input.agent_type as string) ?? 'general-purpose';
-  const prompt = input.prompt as string;
-  const modelOverride = input.model as string | undefined;
+interface RunAgentParams {
+  agentId: string;
+  agentType: string;
+  prompt: string;
+  agentSpawn: AgentSpawnContext;
+  systemPromptText: string;
+  effectiveModel: string | undefined;
+  effectiveMaxTurns: number;
+  effectiveContextBudget: number;
+  initialMessages: Message[];
+  subToolRegistry: ToolRegistry;
+  subAbortController: AbortController;
+}
 
-  // Look up agent definition from the registry
-  const agentDef = agentSpawn.agentRegistry?.get(agentType);
-  if (!agentDef) {
-    const available = agentSpawn.agentRegistry?.list().map(a => a.agentType).join(', ') ?? 'none';
-    return {
-      content: `Unknown agent type: ${agentType}. Available: ${available}`,
-      isError: true,
-    };
-  }
-
-  const agentId = `sub-${shortId()}`;
-  const subAbortController = new AbortController();
-
-  agentSpawn.subAgentRegistry.register({
-    id: agentId,
-    name: `${agentType}-${agentId}`,
-    agentType: agentType as 'explore' | 'plan' | 'general-purpose',
-    status: 'running',
-    prompt,
-    createdAt: Date.now(),
-    turnCount: 0,
-    messageCount: 0,
-    toolCount: 0,
-    abortController: subAbortController,
-    // background: agentDef.background — when true, the agent runs asynchronously
-    // and the main loop does NOT block on it (future enhancement).
-  });
-
-  // Build filtered tool registry from the agent definition
-  const parentDefs = agentSpawn.toolRegistry.getDefinitions();
-  const filteredDefs = filterToolsForAgent(parentDefs, agentDef);
-  const subToolRegistry = new ToolRegistry();
-  for (const def of filteredDefs) {
-    const registration = agentSpawn.toolRegistry.get(def.name);
-    if (registration) {
-      subToolRegistry.register(def, registration.execute);
-    }
-  }
+async function runAgentLoop(params: RunAgentParams): Promise<{
+  agentId: string;
+  agentType: string;
+  assistantTurnCount: number;
+  toolCount: number;
+  transcript: Message[];
+  startTime: number;
+  error?: string;
+}> {
+  const {
+    agentId, agentType, prompt, agentSpawn,
+    systemPromptText, effectiveModel, effectiveMaxTurns, effectiveContextBudget,
+    initialMessages, subToolRegistry, subAbortController,
+  } = params;
 
   const subPermissionEngine = new PermissionEngine(process.cwd());
   subPermissionEngine.setMode(PermissionMode.AUTO);
 
-  const effectiveModel = modelOverride ?? agentDef.model;
   const subSessionManager = new SessionManager();
-  const subSession = subSessionManager.create({
+  subSessionManager.create({
     title: `Sub-agent: ${agentType}`,
     cwd: process.cwd(),
     model: effectiveModel,
@@ -100,23 +80,10 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
 
   const subCheckpointManager = new CheckpointManager();
 
-  // Use agent definition's system prompt
   const workerPrompt: SystemPrompt = {
-    prompt: agentDef.getSystemPrompt(),
-    parts: [{ name: `agent-${agentType}`, content: agentDef.getSystemPrompt(), priority: 0 }],
+    prompt: systemPromptText,
+    parts: [{ name: `agent-${agentType}`, content: systemPromptText, priority: 0 }],
   };
-
-  const effectiveMaxTurns = agentDef.maxTurns ?? DEFAULT_MAX_TURNS;
-  const effectiveContextBudget = agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET;
-
-  // Prepend initialPrompt if defined on the agent definition
-  const userPrompt = agentDef.initialPrompt
-    ? `${agentDef.initialPrompt}\n\n${prompt}`
-    : prompt;
-
-  const initialMessages: Message[] = [
-    { role: 'user', content: userPrompt },
-  ];
 
   const startTime = Date.now();
   let assistantTurnCount = 0;
@@ -126,7 +93,7 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
 
   try {
     const generator = query({
-      sessionId: subSession.id,
+      sessionId: subSessionManager.getActive()?.id ?? agentId,
       cwd: process.cwd(),
       messages: initialMessages,
       systemPrompt: workerPrompt,
@@ -167,54 +134,343 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
             });
           }
           break;
-        default:
-          break;
       }
       messageCount++;
     }
 
-    const result = compressTranscript(transcript);
-
-    agentSpawn.subAgentRegistry.update(agentId, {
-      status: subAbortController.signal.aborted ? 'stopped' : 'done',
-      finishedAt: Date.now(),
-      turnCount: assistantTurnCount,
-      messageCount: transcript.length,
-      toolCount,
-      result,
-      transcript,
-    });
-
     return {
-      content: `Sub-agent ${agentId} (${agentType}) completed. ${assistantTurnCount} LLM turns, ${toolCount} tools used.\n\n${result}`,
-      isError: false,
-      duration: Date.now() - startTime,
-      metadata: {
-        agentId,
-        agentType,
-        turnCount: assistantTurnCount,
-        messageCount: transcript.length,
-        toolCount,
-        duration: Date.now() - startTime,
-      },
+      agentId, agentType, assistantTurnCount, toolCount,
+      transcript, startTime,
     };
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
+    return {
+      agentId, agentType, assistantTurnCount, toolCount,
+      transcript, startTime,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
 
-    agentSpawn.subAgentRegistry.update(agentId, {
-      status: 'error',
-      finishedAt: Date.now(),
-      turnCount: assistantTurnCount,
-      messageCount: transcript.length,
-      toolCount,
-      error: errorMsg,
+// ---------------------------------------------------------------------------
+// Execute
+// ---------------------------------------------------------------------------
+
+export const execute: ToolExecutor = async (input, options): Promise<ToolResult> => {
+  const agentSpawn = options.agentSpawn;
+  if (!agentSpawn) {
+    return {
+      content: 'agent-spawn requires agentSpawn context.',
+      isError: true,
+    };
+  }
+
+  const agentTypeInput = input.agent_type as string | undefined;
+  const prompt = input.prompt as string;
+  const modelOverride = input.model as string | undefined;
+  const backgroundOverride = input.background as boolean | undefined;
+
+  // ── Fork mode: no agent_type → inherit parent context ───────────────
+  if (!agentTypeInput) {
+    return executeFork(prompt, modelOverride, backgroundOverride, agentSpawn);
+  }
+
+  // ── Explicit agent_type path ────────────────────────────────────────
+  const agentDef = agentSpawn.agentRegistry?.get(agentTypeInput);
+  if (!agentDef) {
+    const available = agentSpawn.agentRegistry?.list().map(a => a.agentType).join(', ') ?? 'none';
+    return {
+      content: `Unknown agent type: ${agentTypeInput}. Available: ${available}`,
+      isError: true,
+    };
+  }
+
+  const agentType = agentTypeInput;
+  const agentId = `sub-${shortId()}`;
+  const subAbortController = new AbortController();
+  const isBackground = backgroundOverride ?? agentDef.background ?? false;
+
+  // Build filtered tool registry from the agent definition
+  const parentDefs = agentSpawn.toolRegistry.getDefinitions();
+  const filteredDefs = filterToolsForAgent(parentDefs, agentDef);
+  const subToolRegistry = new ToolRegistry();
+  for (const def of filteredDefs) {
+    const registration = agentSpawn.toolRegistry.get(def.name);
+    if (registration) {
+      subToolRegistry.register(def, registration.execute);
+    }
+  }
+
+  const effectiveModel = modelOverride ?? agentDef.model;
+
+  // Prepend initialPrompt if defined
+  const userPrompt = agentDef.initialPrompt
+    ? `${agentDef.initialPrompt}\n\n${prompt}`
+    : prompt;
+
+  const initialMessages: Message[] = [
+    { role: 'user', content: userPrompt },
+  ];
+
+  agentSpawn.subAgentRegistry.register({
+    id: agentId,
+    name: `${agentType}-${agentId}`,
+    agentType: agentType as 'explore' | 'plan' | 'general-purpose',
+    status: 'running',
+    prompt,
+    createdAt: Date.now(),
+    turnCount: 0,
+    messageCount: 0,
+    toolCount: 0,
+    abortController: subAbortController,
+  });
+
+  if (isBackground) {
+    // ── Async path: fire-and-forget ─────────────────────────────────
+    const spawnTime = Date.now();
+
+    runAgentLoop({
+      agentId, agentType, prompt, agentSpawn,
+      systemPromptText: agentDef.getSystemPrompt(),
+      effectiveModel, subToolRegistry, subAbortController,
+      effectiveMaxTurns: agentDef.maxTurns ?? DEFAULT_MAX_TURNS,
+      effectiveContextBudget: agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET,
+      initialMessages,
+    }).then(result => {
+      const status = result.error ? 'error' : (subAbortController.signal.aborted ? 'stopped' : 'done');
+      const compressed = compressTranscript(result.transcript);
+
+      agentSpawn.subAgentRegistry.update(agentId, {
+        status,
+        finishedAt: Date.now(),
+        turnCount: result.assistantTurnCount,
+        messageCount: result.transcript.length,
+        toolCount: result.toolCount,
+        result: compressed,
+        transcript: result.transcript,
+        error: result.error,
+      });
+
+      // Push notification for the next main-loop turn
+      const summary = result.error
+        ? `Background agent ${agentId} (${agentType}) failed after ${result.assistantTurnCount} turns: ${result.error}`
+        : `Background agent ${agentId} (${agentType}) completed. ${result.assistantTurnCount} LLM turns, ${result.toolCount} tools used.\n\n${compressed}`;
+      agentSpawn.subAgentRegistry.pushNotification(summary);
+    }).catch(err => {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      agentSpawn.subAgentRegistry.update(agentId, {
+        status: 'error',
+        finishedAt: Date.now(),
+        error: errorMsg,
+      });
+      agentSpawn.subAgentRegistry.pushNotification(
+        `Background agent ${agentId} (${agentType}) crashed: ${errorMsg}`,
+      );
     });
 
     return {
-      content: `Sub-agent ${agentId} (${agentType}) error after ${assistantTurnCount} turns: ${errorMsg}`,
-      isError: true,
-      duration: Date.now() - startTime,
-      metadata: { agentId, agentType, error: errorMsg },
+      content: `Background agent ${agentId} (${agentType}) spawned. Use agent-read to check progress, agent-stop to cancel.`,
+      isError: false,
+      duration: Date.now() - spawnTime,
+      metadata: { agentId, agentType, background: true },
     };
   }
+
+  // ── Sync path (existing behavior) ──────────────────────────────────
+  const result = await runAgentLoop({
+    agentId, agentType, prompt, agentSpawn,
+    systemPromptText: agentDef.getSystemPrompt(),
+    effectiveModel, subToolRegistry, subAbortController,
+    effectiveMaxTurns: agentDef.maxTurns ?? DEFAULT_MAX_TURNS,
+    effectiveContextBudget: agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET,
+    initialMessages,
+  });
+
+  const status = result.error ? 'error' : (subAbortController.signal.aborted ? 'stopped' : 'done');
+  const compressed = compressTranscript(result.transcript);
+
+  agentSpawn.subAgentRegistry.update(agentId, {
+    status,
+    finishedAt: Date.now(),
+    turnCount: result.assistantTurnCount,
+    messageCount: result.transcript.length,
+    toolCount: result.toolCount,
+    result: compressed,
+    transcript: result.transcript,
+    error: result.error,
+  });
+
+  if (result.error) {
+    return {
+      content: `Sub-agent ${agentId} (${agentType}) error after ${result.assistantTurnCount} turns: ${result.error}`,
+      isError: true,
+      duration: Date.now() - result.startTime,
+      metadata: { agentId, agentType, error: result.error },
+    };
+  }
+
+  return {
+    content: `Sub-agent ${agentId} (${agentType}) completed. ${result.assistantTurnCount} LLM turns, ${result.toolCount} tools used.\n\n${compressed}`,
+    isError: false,
+    duration: Date.now() - result.startTime,
+    metadata: {
+      agentId,
+      agentType,
+      turnCount: result.assistantTurnCount,
+      messageCount: result.transcript.length,
+      toolCount: result.toolCount,
+      duration: Date.now() - result.startTime,
+    },
+  };
 };
+
+// ---------------------------------------------------------------------------
+// Fork execution — inherit parent context
+// ---------------------------------------------------------------------------
+
+async function executeFork(
+  prompt: string,
+  modelOverride: string | undefined,
+  backgroundOverride: boolean | undefined,
+  agentSpawn: AgentSpawnContext,
+): Promise<ToolResult> {
+  const agentType = 'fork';
+  const agentId = `fork-${shortId()}`;
+  const subAbortController = new AbortController();
+  const isBackground = backgroundOverride ?? false;
+
+  // Inherit parent tools (minus globally disallowed)
+  const parentDefs = agentSpawn.toolRegistry.getDefinitions();
+  const filteredDefs = parentDefs.filter(t => !GLOBAL_DISALLOWED_FOR_SUBAGENTS.has(t.name));
+  const subToolRegistry = new ToolRegistry();
+  for (const def of filteredDefs) {
+    const registration = agentSpawn.toolRegistry.get(def.name);
+    if (registration) {
+      subToolRegistry.register(def, registration.execute);
+    }
+  }
+
+  // Inherit parent's system prompt
+  let systemPromptText: string;
+  try {
+    const assembler = agentSpawn.systemPromptAssembler;
+    const parentSystem = await assembler.assemble({
+      cwd: process.cwd(),
+      permissionMode: PermissionMode.AUTO,
+      agentRole: 'default',
+    });
+    systemPromptText = parentSystem.prompt;
+  } catch {
+    systemPromptText = 'You are a forked sub-agent with full context of the parent agent. Complete the assigned task efficiently.';
+  }
+
+  const effectiveModel = modelOverride;
+  const effectiveMaxTurns = DEFAULT_MAX_TURNS;
+  const effectiveContextBudget = DEFAULT_CONTEXT_BUDGET;
+
+  // Inherit parent's recent conversation as initial context
+  const parentSession = agentSpawn.sessionManager.getActive();
+  const parentMessages = parentSession?.messages ?? [];
+  // Take last 20 messages to keep context manageable
+  const recentMessages = parentMessages.slice(-20);
+
+  const userPrompt = `[Forked from parent agent]\n\n${prompt}`;
+  const initialMessages: Message[] = [
+    ...recentMessages,
+    { role: 'user', content: userPrompt },
+  ];
+
+  agentSpawn.subAgentRegistry.register({
+    id: agentId,
+    name: `fork-${agentId}`,
+    agentType: 'general-purpose',
+    status: 'running',
+    prompt,
+    createdAt: Date.now(),
+    turnCount: 0,
+    messageCount: 0,
+    toolCount: 0,
+    abortController: subAbortController,
+  });
+
+  if (isBackground) {
+    const spawnTime = Date.now();
+
+    runAgentLoop({
+      agentId, agentType, prompt, agentSpawn,
+      systemPromptText, effectiveModel, subToolRegistry, subAbortController,
+      effectiveMaxTurns, effectiveContextBudget, initialMessages,
+    }).then(result => {
+      const status = result.error ? 'error' : (subAbortController.signal.aborted ? 'stopped' : 'done');
+      const compressed = compressTranscript(result.transcript);
+
+      agentSpawn.subAgentRegistry.update(agentId, {
+        status, finishedAt: Date.now(),
+        turnCount: result.assistantTurnCount,
+        messageCount: result.transcript.length,
+        toolCount: result.toolCount,
+        result: compressed,
+        transcript: result.transcript,
+        error: result.error,
+      });
+
+      const summary = result.error
+        ? `Fork agent ${agentId} failed after ${result.assistantTurnCount} turns: ${result.error}`
+        : `Fork agent ${agentId} completed. ${result.assistantTurnCount} LLM turns, ${result.toolCount} tools used.\n\n${compressed}`;
+      agentSpawn.subAgentRegistry.pushNotification(summary);
+    }).catch(err => {
+      agentSpawn.subAgentRegistry.update(agentId, {
+        status: 'error', finishedAt: Date.now(),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+    return {
+      content: `Fork agent ${agentId} spawned in background. Use agent-read to check progress.`,
+      isError: false,
+      duration: Date.now() - spawnTime,
+      metadata: { agentId, agentType: 'fork', background: true },
+    };
+  }
+
+  // Sync fork
+  const result = await runAgentLoop({
+    agentId, agentType, prompt, agentSpawn,
+    systemPromptText, effectiveModel, subToolRegistry, subAbortController,
+    effectiveMaxTurns, effectiveContextBudget, initialMessages,
+  });
+
+  const status = result.error ? 'error' : (subAbortController.signal.aborted ? 'stopped' : 'done');
+  const compressed = compressTranscript(result.transcript);
+
+  agentSpawn.subAgentRegistry.update(agentId, {
+    status, finishedAt: Date.now(),
+    turnCount: result.assistantTurnCount,
+    messageCount: result.transcript.length,
+    toolCount: result.toolCount,
+    result: compressed,
+    transcript: result.transcript,
+    error: result.error,
+  });
+
+  if (result.error) {
+    return {
+      content: `Fork agent ${agentId} error after ${result.assistantTurnCount} turns: ${result.error}`,
+      isError: true,
+      duration: Date.now() - result.startTime,
+      metadata: { agentId, agentType: 'fork', error: result.error },
+    };
+  }
+
+  return {
+    content: `Fork agent ${agentId} completed. ${result.assistantTurnCount} LLM turns, ${result.toolCount} tools used.\n\n${compressed}`,
+    isError: false,
+    duration: Date.now() - result.startTime,
+    metadata: {
+      agentId, agentType: 'fork',
+      turnCount: result.assistantTurnCount,
+      messageCount: result.transcript.length,
+      toolCount: result.toolCount,
+      duration: Date.now() - result.startTime,
+    },
+  };
+}

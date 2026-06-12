@@ -189,6 +189,22 @@ export class QueryEngine {
     }
 
     const userMessage: UserMessage = { role: 'user', content: effectiveInput };
+
+    // Inject completed background agent results as system context
+    if (this.config.subAgentRegistry) {
+      const notifications = this.config.subAgentRegistry.drainNotifications();
+      if (notifications.length > 0) {
+        const contextBlock: ContentBlock = {
+          type: 'text',
+          text: '[Background agent results]\n' + notifications.join('\n\n'),
+        };
+        this.config.sessionManager.addMessage({
+          role: 'user',
+          content: [contextBlock],
+        });
+      }
+    }
+
     this.config.sessionManager.addMessage(userMessage);
 
     if (!this.systemPrompt) {

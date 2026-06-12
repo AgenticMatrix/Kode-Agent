@@ -29,6 +29,7 @@ export interface SubAgentRecord {
 
 export class SubAgentRegistry {
   private agents = new Map<string, SubAgentRecord>();
+  private _pendingNotifications: string[] = [];
 
   register(record: SubAgentRecord): void {
     this.agents.set(record.id, record);
@@ -66,5 +67,17 @@ export class SubAgentRegistry {
         agent.abortController.abort();
       }
     }
+  }
+
+  /** Push a notification for a completed background agent. */
+  pushNotification(notification: string): void {
+    this._pendingNotifications.push(notification);
+  }
+
+  /** Drain and return all pending background agent notifications. */
+  drainNotifications(): string[] {
+    const drained = this._pendingNotifications;
+    this._pendingNotifications = [];
+    return drained;
   }
 }

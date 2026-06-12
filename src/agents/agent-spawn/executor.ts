@@ -1,6 +1,6 @@
 import type { ToolExecutor, ToolResult } from '../../tools/types.js';
 import type { Message, ContentBlock, AgentSpawnContext } from '../../core/types.js';
-import type { SystemPrompt } from '../../core/system-prompt.js';
+import type { SystemPrompt, SystemPromptAssembler } from '../../core/system-prompt.js';
 import { ToolRegistry } from '../../core/tool-registry.js';
 import { PermissionEngine } from '../../core/permission.js';
 import { PermissionMode } from '../../core/types.js';
@@ -33,6 +33,32 @@ function compressTranscript(messages: Message[]): string {
   if (!body) return '(sub-agent produced no text output)';
   if (body.length <= 2000) return body;
   return body.slice(0, 1997) + '...';
+}
+
+/**
+ * Enrich an agent definition's system prompt with environment info from the
+ * assembler's worker role output.
+ */
+async function enrichAgentPrompt(
+  agentPrompt: string,
+  assembler: SystemPromptAssembler,
+): Promise<string> {
+  try {
+    const workerPrompt = await assembler.assemble({
+      cwd: process.cwd(),
+      permissionMode: 'auto',
+      agentRole: 'worker',
+    });
+    const envPart = workerPrompt.parts.find(p => p.name === 'env_info');
+    const permPart = workerPrompt.parts.find(p => p.name === 'permission_mode');
+    const extra = [envPart?.content, permPart?.content].filter(Boolean).join('\n\n');
+    if (extra) {
+      return agentPrompt + '\n\n' + extra;
+    }
+  } catch {
+    // If assembly fails, fall back to the raw agent prompt
+  }
+  return agentPrompt;
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +237,11 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
     { role: 'user', content: userPrompt },
   ];
 
+  // Enrich agent prompt with environment info
+  const enrichedPrompt = agentSpawn.systemPromptAssembler
+    ? await enrichAgentPrompt(agentDef.getSystemPrompt(), agentSpawn.systemPromptAssembler)
+    : agentDef.getSystemPrompt();
+
   agentSpawn.subAgentRegistry.register({
     id: agentId,
     name: `${agentType}-${agentId}`,
@@ -230,7 +261,7 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
 
     runAgentLoop({
       agentId, agentType, prompt, agentSpawn,
-      systemPromptText: agentDef.getSystemPrompt(),
+      systemPromptText: enrichedPrompt,
       effectiveModel, subToolRegistry, subAbortController,
       effectiveMaxTurns: agentDef.maxTurns ?? DEFAULT_MAX_TURNS,
       effectiveContextBudget: agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET,
@@ -278,7 +309,7 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
   // ── Sync path (existing behavior) ──────────────────────────────────
   const result = await runAgentLoop({
     agentId, agentType, prompt, agentSpawn,
-    systemPromptText: agentDef.getSystemPrompt(),
+    systemPromptText: enrichedPrompt,
     effectiveModel, subToolRegistry, subAbortController,
     effectiveMaxTurns: agentDef.maxTurns ?? DEFAULT_MAX_TURNS,
     effectiveContextBudget: agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET,

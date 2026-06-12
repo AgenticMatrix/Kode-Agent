@@ -92,6 +92,7 @@ export class QueryEngine {
       customPrompt: this.config.customSystemPrompt,
       appendPrompt: this.config.appendSystemPrompt,
       agentRole: 'default',
+      model: this.config.model,
     });
 
     // Setup hook (non-blockable, fires on first init)

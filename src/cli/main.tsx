@@ -67,7 +67,7 @@ async function runPrintMode(queryText: string): Promise<void> {
   const { QueryEngine } = await import('../core/query-engine.js');
   const { PermissionMode } = await import('../core/types.js');
   const { buildAgentRegistry } = await import('../agents/registry.js');
-  const agentRegistry = buildAgentRegistry();
+  const { registry: agentRegistry } = await buildAgentRegistry(process.cwd());
   const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(loadSettings()), subAgentRegistry: new SubAgentRegistry(), systemPromptAssembler: new SystemPromptAssembler(), agentRegistry });
   await engine.init(); engine.setPermissionMode(PermissionMode.AUTO);
   let fullText = '';
@@ -123,7 +123,7 @@ async function main(): Promise<void> {
   const subAgentRegistry = new SubAgentRegistry();
   const { setSubAgentRegistry } = await import('../agents/agent-spawn/registry-ref.js');
   setSubAgentRegistry(subAgentRegistry);
-  const agentRegistry = buildAgentReg();
+  const { registry: agentRegistry } = await buildAgentReg(process.cwd());
   const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(loadSettings()), subAgentRegistry, systemPromptAssembler: new SystemPromptAssembler(), agentRegistry });
   await engine.init();
 

@@ -210,8 +210,19 @@ export enum RiskLevel {
 
 // ── Agent Definitions ─────────────────────────────────────────────────
 
+/** Where an agent definition originates in the priority chain. */
+export type SettingSource = 'built-in' | 'plugin' | 'userSettings' | 'projectSettings';
+
 /** Describes which tools an agent type is allowed to use. */
 export type AgentToolFilter = string[] | '*';
+
+/** Priority order for source-based override. Higher index = higher priority. */
+export const SETTING_SOURCE_PRIORITY: Record<SettingSource, number> = {
+  'built-in': 0,
+  plugin: 1,
+  userSettings: 2,
+  projectSettings: 3,
+};
 
 /** Base definition for a spawnable agent type. */
 export interface AgentDefinition {
@@ -232,11 +243,28 @@ export interface AgentDefinition {
   contextBudget?: number;
   /** System prompt for this agent type. */
   getSystemPrompt: () => string;
+  /** Source layer — determines override priority. */
+  source?: SettingSource;
+  /** Skill names to preload for this agent. */
+  skills?: string[];
+  /** Prepend to the first user turn when spawned. */
+  initialPrompt?: string;
+  /** Always run as a background task. */
+  background?: boolean;
+  /** Run in an isolated git worktree. */
+  isolation?: 'worktree';
+  /** Display color for this agent in the TUI. */
+  color?: string;
+  /** Original filename (without extension) for file-based agents. */
+  filename?: string;
+  /** Base directory where the agent definition was found. */
+  baseDir?: string;
 }
 
 /** A built-in agent definition shipped with the application. */
 export interface BuiltInAgentDefinition extends AgentDefinition {
   source: 'built-in';
+  baseDir: 'built-in';
 }
 
 /** The result returned by the agent definition loader. */

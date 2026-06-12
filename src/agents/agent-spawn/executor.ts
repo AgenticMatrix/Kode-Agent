@@ -72,6 +72,8 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
     messageCount: 0,
     toolCount: 0,
     abortController: subAbortController,
+    // background: agentDef.background — when true, the agent runs asynchronously
+    // and the main loop does NOT block on it (future enhancement).
   });
 
   // Build filtered tool registry from the agent definition
@@ -107,8 +109,13 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
   const effectiveMaxTurns = agentDef.maxTurns ?? DEFAULT_MAX_TURNS;
   const effectiveContextBudget = agentDef.contextBudget ?? DEFAULT_CONTEXT_BUDGET;
 
+  // Prepend initialPrompt if defined on the agent definition
+  const userPrompt = agentDef.initialPrompt
+    ? `${agentDef.initialPrompt}\n\n${prompt}`
+    : prompt;
+
   const initialMessages: Message[] = [
-    { role: 'user', content: prompt },
+    { role: 'user', content: userPrompt },
   ];
 
   const startTime = Date.now();

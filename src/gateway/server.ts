@@ -154,7 +154,7 @@ export async function startGateway(): Promise<void> {
   setSubAgentRegistry(subAgentRegistry);
   const systemPromptAssembler = new SystemPromptAssembler();
   const { buildAgentRegistry } = await import('../agents/registry.js');
-  const agentRegistry = buildAgentRegistry();
+  const { registry: agentRegistry } = await buildAgentRegistry(process.cwd());
 
   const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry, sessionManager, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(settings), subAgentRegistry, systemPromptAssembler, agentRegistry });
 

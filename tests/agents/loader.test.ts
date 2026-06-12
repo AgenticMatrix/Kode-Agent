@@ -247,15 +247,9 @@ describe('getActiveAgents', () => {
     expect(result[0]!.whenToUse).toBe('project');
   });
 
-  it('should treat missing source as built-in priority', () => {
-    const agent: AgentDefinition = {
-      agentType: 'test',
-      whenToUse: 'no source',
-      getSystemPrompt: () => '',
-      // source is undefined
-    };
+  it('should handle explicit built-in source correctly', () => {
     const result = getActiveAgents([
-      agent,
+      makeAgent('test', 'built-in', 'builtin'),
       makeAgent('test', 'userSettings', 'user'),
     ]);
     expect(result).toHaveLength(1);

@@ -224,8 +224,8 @@ export const SETTING_SOURCE_PRIORITY: Record<SettingSource, number> = {
   projectSettings: 3,
 };
 
-/** Base definition for a spawnable agent type. */
-export interface AgentDefinition {
+/** Fields shared by all agent definition types. */
+export interface BaseAgentDefinition {
   agentType: string;
   /** Description for the LLM — when to use this agent type. */
   whenToUse: string;
@@ -241,10 +241,6 @@ export interface AgentDefinition {
   maxTurns?: number;
   /** Context budget in tokens (default: 120k). */
   contextBudget?: number;
-  /** System prompt for this agent type. */
-  getSystemPrompt: () => string;
-  /** Source layer — determines override priority. */
-  source?: SettingSource;
   /** Skill names to preload for this agent. */
   skills?: string[];
   /** Prepend to the first user turn when spawned. */
@@ -255,16 +251,55 @@ export interface AgentDefinition {
   isolation?: 'worktree';
   /** Display color for this agent in the TUI. */
   color?: string;
-  /** Original filename (without extension) for file-based agents. */
-  filename?: string;
-  /** Base directory where the agent definition was found. */
-  baseDir?: string;
 }
 
 /** A built-in agent definition shipped with the application. */
-export interface BuiltInAgentDefinition extends AgentDefinition {
+export interface BuiltInAgentDefinition extends BaseAgentDefinition {
   source: 'built-in';
   baseDir: 'built-in';
+  getSystemPrompt: () => string;
+}
+
+/** A user- or project-defined agent loaded from a .md / .json file. */
+export interface CustomAgentDefinition extends BaseAgentDefinition {
+  source: 'userSettings' | 'projectSettings';
+  /** Original filename (without extension). */
+  filename?: string;
+  /** Source directory where the definition was found. */
+  baseDir?: string;
+  getSystemPrompt: () => string;
+}
+
+/** An agent provided by a plugin (future). */
+export interface PluginAgentDefinition extends BaseAgentDefinition {
+  source: 'plugin';
+  /** Plugin name that registered this agent. */
+  plugin: string;
+  getSystemPrompt: () => string;
+}
+
+/**
+ * Union of all agent definition types.
+ * Discriminated on `source` for type narrowing via the guards below.
+ */
+export type AgentDefinition =
+  | BuiltInAgentDefinition
+  | CustomAgentDefinition
+  | PluginAgentDefinition;
+
+/** Type guard: returns true for built-in agent definitions. */
+export function isBuiltInAgent(agent: AgentDefinition): agent is BuiltInAgentDefinition {
+  return agent.source === 'built-in';
+}
+
+/** Type guard: returns true for custom (user/project) agent definitions. */
+export function isCustomAgent(agent: AgentDefinition): agent is CustomAgentDefinition {
+  return agent.source === 'userSettings' || agent.source === 'projectSettings';
+}
+
+/** Type guard: returns true for plugin-provided agent definitions. */
+export function isPluginAgent(agent: AgentDefinition): agent is PluginAgentDefinition {
+  return agent.source === 'plugin';
 }
 
 /** The result returned by the agent definition loader. */

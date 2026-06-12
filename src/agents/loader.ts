@@ -14,7 +14,10 @@
 import { readdir, readFile, stat } from 'fs/promises';
 import { basename, extname, join } from 'path';
 import matter from 'gray-matter';
-import type { AgentDefinition, SettingSource } from '../core/types.js';
+import type { AgentDefinition, CustomAgentDefinition, SettingSource } from '../core/types.js';
+
+/** Valid source values for file-based (custom) agent definitions. */
+type CustomSource = CustomAgentDefinition['source'];
 import { SETTING_SOURCE_PRIORITY } from '../core/types.js';
 
 // ---------------------------------------------------------------------------
@@ -22,7 +25,7 @@ import { SETTING_SOURCE_PRIORITY } from '../core/types.js';
 // ---------------------------------------------------------------------------
 
 export interface LoadResult {
-  agents: AgentDefinition[];
+  agents: CustomAgentDefinition[];
   failedFiles: Array<{ path: string; error: string }>;
 }
 
@@ -33,13 +36,14 @@ export interface LoadResult {
  */
 export async function loadAgentsFromDir(
   dir: string,
-  source: SettingSource,
+  source: CustomSource,
 ): Promise<LoadResult> {
-  const agents: AgentDefinition[] = [];
+  const agents: CustomAgentDefinition[] = [];
   const failedFiles: Array<{ path: string; error: string }> = [];
 
   try {
     await stat(dir);
+
   } catch {
     // Directory doesn't exist — no agents from this source
     return { agents, failedFiles };
@@ -123,8 +127,8 @@ export async function loadAgentsFromDir(
 export function parseAgentFromMarkdown(
   filePath: string,
   content: string,
-  source: SettingSource,
-): AgentDefinition | null {
+  source: CustomSource,
+): CustomAgentDefinition | null {
   let parsed: { data: Record<string, unknown>; content: string };
 
   try {
@@ -197,9 +201,9 @@ export function parseAgentFromMarkdown(
 export function parseAgentFromJson(
   name: string,
   definition: Record<string, unknown>,
-  source: SettingSource,
+  source: CustomSource,
   filePath?: string,
-): AgentDefinition | null {
+): CustomAgentDefinition | null {
   const whenToUse = definition['description'];
   if (!whenToUse || typeof whenToUse !== 'string') return null;
 
@@ -289,8 +293,8 @@ export function getActiveAgents(allAgents: AgentDefinition[]): AgentDefinition[]
       continue;
     }
 
-    const existingPriority = SETTING_SOURCE_PRIORITY[existing.source ?? 'built-in'] ?? 0;
-    const newPriority = SETTING_SOURCE_PRIORITY[agent.source ?? 'built-in'] ?? 0;
+    const existingPriority = SETTING_SOURCE_PRIORITY[existing.source];
+    const newPriority = SETTING_SOURCE_PRIORITY[agent.source];
 
     if (newPriority >= existingPriority) {
       agentMap.set(agent.agentType, agent);

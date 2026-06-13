@@ -163,12 +163,6 @@ export function App({ config, engine }: AppProps) {
               <MessageBubble key={message.id} message={message} contentExpanded={state.contentExpanded} />
             ))}
 
-            {state.isStreaming && (
-              <Box marginTop={1}>
-                <Text color="yellow" dimColor>● Generating...</Text>
-              </Box>
-            )}
-
             {state.approvalReq && (
               <Box flexDirection="column" flexShrink={0} paddingX={1} paddingY={1}>
                 <ApprovalPrompt

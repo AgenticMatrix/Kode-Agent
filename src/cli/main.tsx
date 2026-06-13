@@ -62,6 +62,8 @@ async function runPrintMode(queryText: string): Promise<void> {
   const client = createClient(config); const callModel = createCallModelFromClient(client, config.model);
   const { SessionManager } = await import('../core/session.js');
   const sm = new SessionManager(); sm.create({ cwd: process.cwd(), model: config.model });
+  const { setTaskListId } = await import('../tasks/store.js');
+  setTaskListId(sm.getActive().id);
   const { SubAgentRegistry } = await import('../core/subagent-registry.js');
   const { SystemPromptAssembler } = await import('../core/system-prompt.js');
   const { QueryEngine } = await import('../core/query-engine.js');
@@ -116,6 +118,8 @@ async function main(): Promise<void> {
   const client = createClient(config); const callModel = createCallModelFromClient(client, config.model);
   const { SessionManager } = await import('../core/session.js');
   const sm = new SessionManager(); sm.create({ cwd: process.cwd(), model: config.model });
+  const { setTaskListId } = await import('../tasks/store.js');
+  setTaskListId(sm.getActive().id);
   const { SubAgentRegistry } = await import('../core/subagent-registry.js');
   const { SystemPromptAssembler } = await import('../core/system-prompt.js');
   const { QueryEngine } = await import('../core/query-engine.js');

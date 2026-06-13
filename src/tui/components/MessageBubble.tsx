@@ -281,7 +281,7 @@ export function MessageBubble({ message, contentExpanded }: MessageBubbleProps) 
     <Box flexDirection="column" marginBottom={1}>
       <Box marginBottom={0}>
         <Text>
-          <Text color="green" bold>AI:</Text>
+          <Text color="green" bold>Coder:</Text>
         </Text>
       </Box>
       <Box paddingLeft={3} flexDirection="column">

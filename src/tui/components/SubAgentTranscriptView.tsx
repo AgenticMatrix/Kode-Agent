@@ -33,7 +33,7 @@ export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptVi
   // Render a single transcript message
   const renderMessage = (msg: { role: string; content: string | ContentBlock[] }, i: number) => {
     const blocks = Array.isArray(msg.content) ? msg.content : [];
-    const roleLabel = msg.role === 'assistant' ? 'AI' : msg.role === 'user' ? 'User' : 'System';
+    const roleLabel = msg.role === 'assistant' ? 'Coder' : msg.role === 'user' ? 'User' : 'System';
     const roleColor = msg.role === 'assistant' ? 'green' : msg.role === 'user' ? 'cyan' : 'grey';
 
     return React.createElement(

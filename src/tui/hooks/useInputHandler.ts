@@ -11,6 +11,10 @@ export interface InputHandlerDeps {
   messages: Message[];
   dispatch: React.Dispatch<ChatAction>;
   onSend: (text: string) => void;
+  /** Interrupt the running main agent. */
+  onInterrupt: () => void;
+  /** Exit the process. */
+  onExit: () => void;
   /** When true, input is suppressed (e.g. during approval prompt). */
   blocked?: boolean;
   /** Optional slash command handler. Returns true if the command was handled. */
@@ -50,6 +54,8 @@ export function useInputHandler({
   messages,
   dispatch,
   onSend,
+  onInterrupt,
+  onExit,
   onSlashCommand,
   blocked,
   history,
@@ -61,6 +67,24 @@ export function useInputHandler({
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
+      // ── Ctrl+C: smart 3-tier exit ──────────────────────────
+      if ((key.ctrl && (input === 'c' || input === '\x03')) || input === '\x03') {
+        // Tier 1: main agent running → interrupt it
+        if (isStreaming) {
+          onInterrupt();
+          dispatch({ type: 'INTERRUPT' });
+          return;
+        }
+        // Tier 2: input has text → clear it
+        if (inputText.length > 0) {
+          dispatch({ type: 'SET_INPUT', text: '' });
+          dispatch({ type: 'SET_HISTORY_INDEX', index: -1 });
+          return;
+        }
+        // Tier 3: agent not running, input empty → exit
+        onExit();
+        return;
+      }
       // Always allow Escape and Ctrl+T (for navigating sub-agent views)
       if (key.escape) {
         if (subAgentView) {

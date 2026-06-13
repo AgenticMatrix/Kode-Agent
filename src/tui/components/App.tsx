@@ -81,6 +81,8 @@ export function App({ config, engine }: AppProps) {
     messages: state.messages,
     dispatch,
     onSend: runAgentTurn,
+    onInterrupt: () => engine.interrupt(),
+    onExit: () => process.exit(0),
     blocked: state.approvalReq !== null || state.agentPicker,
     subAgentView: state.subAgentView,
     lastAgentViewId: state.lastAgentViewId,
@@ -106,6 +108,8 @@ export function App({ config, engine }: AppProps) {
 
     if (choice === 'deny') {
       pending.deferred.resolve(false);
+      engine.interrupt();
+      dispatch({ type: 'INTERRUPT' });
     } else {
       // 'once', 'session', 'always' all approve the tool
       pending.deferred.resolve(true);

@@ -253,6 +253,7 @@ export type ChatAction =
   | { type: 'APPEND_ASSISTANT_THINKING'; id: number; text: string }
   // Lifecycle
   | { type: 'FINISH_ASSISTANT_RESPONSE'; id: number }
+  | { type: 'INTERRUPT' }
   | { type: 'UPDATE_BLOCK_STATE'; toolId: string; state: ToolUseState }
   | { type: 'SET_TOOL_USE_RESULT'; toolId: string; duration?: number; result: ToolUseBlock['result'] }
   | { type: 'TOGGLE_THINKING'; id: number }

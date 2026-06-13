@@ -232,6 +232,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'FINISH_ASSISTANT_RESPONSE':
       return { ...state, isStreaming: false };
 
+    case 'INTERRUPT':
+      return { ...state, isStreaming: false };
+
     case 'TOGGLE_THINKING':
       return {
         ...state,

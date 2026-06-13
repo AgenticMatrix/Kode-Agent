@@ -133,7 +133,7 @@ async function main(): Promise<void> {
 
   const { render } = await import('ink');
   const { App } = await import('../tui/components/App.js');
-  const { waitUntilExit } = render(<App config={config} engine={engine} />, { exitOnCtrlC: true, patchConsole: true });
+  const { waitUntilExit } = render(<App config={config} engine={engine} />, { exitOnCtrlC: false, patchConsole: true });
   await waitUntilExit();
 }
 

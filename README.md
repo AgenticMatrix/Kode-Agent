@@ -11,7 +11,9 @@
 
 </div>
 
+<div align="center">
 <img src="./assets/screen.gif" width="80%" alt="CoderAgent Demo" />
+</div>
 
 CoderAgent is a powerful CLI coding agent that runs entirely in your terminal. It can read, write, edit files, execute shell commands, search code, and more — all through natural language conversation. Built with Ink/React for a beautiful TUI experience.
 

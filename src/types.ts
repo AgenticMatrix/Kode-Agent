@@ -154,6 +154,14 @@ export interface AppConfig {
   proxy?: string;
   /** Maximum output tokens */
   maxTokens?: number;
+  /** Currency code (CNY, USD, etc.) from model price config. */
+  currency?: string;
+  /** Price per 1M input tokens (cache miss). */
+  inputPrice?: number;
+  /** Price per 1M output tokens. */
+  outputPrice?: number;
+  /** Price per 1M cache read/creation input tokens. */
+  cacheReadPrice?: number;
 }
 
 // ── Approval request ─────────────────────────────────────────────────
@@ -211,6 +219,12 @@ export interface ChatState {
   tokenUsage: TokenUsage;
   /** Accumulated total cost across all turns. */
   accumulatedCost: number;
+  /** Price per 1M input tokens (cache miss). */
+  inputPrice: number;
+  /** Price per 1M output tokens. */
+  outputPrice: number;
+  /** Price per 1M cache read/creation input tokens. */
+  cacheReadPrice: number;
 }
 
 // ── Chat actions ────────────────────────────────────────────────────

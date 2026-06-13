@@ -418,9 +418,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const cacheCreationInputTokens = action.usage.cacheCreationInputTokens ?? 0;
       const cacheReadInputTokens = action.usage.cacheReadInputTokens ?? 0;
       const turnCost =
-        (inputTokens / 1_000_000) * 0.5 +
-        (outputTokens / 1_000_000) * 2.0 +
-        ((cacheCreationInputTokens + cacheReadInputTokens) / 1_000_000) * 0.05;
+        (inputTokens / 1_000_000) * state.inputPrice +
+        (outputTokens / 1_000_000) * state.outputPrice +
+        ((cacheCreationInputTokens + cacheReadInputTokens) / 1_000_000) * state.cacheReadPrice;
       return {
         ...state,
         tokenUsage: { inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens },
@@ -433,7 +433,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-export function createInitialState(model: string): ChatState {
+export function createInitialState(model: string, inputPrice = 0.5, outputPrice = 2.0, cacheReadPrice = 0.05): ChatState {
   return {
     messages: [],
     isStreaming: false,
@@ -455,6 +455,9 @@ export function createInitialState(model: string): ChatState {
     agentPicker: false,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
     accumulatedCost: 0,
+    inputPrice,
+    outputPrice,
+    cacheReadPrice,
   };
 }
 
@@ -465,6 +468,6 @@ export function expandPasteMarkers(text: string, blocks: Record<number, string>)
   });
 }
 
-export function useChatReducer(model: string) {
-  return useReducer(chatReducer, model, createInitialState);
+export function useChatReducer(model: string, inputPrice?: number, outputPrice?: number, cacheReadPrice?: number) {
+  return useReducer(chatReducer, { model, inputPrice, outputPrice, cacheReadPrice }, (init) => createInitialState(init.model, init.inputPrice, init.outputPrice, init.cacheReadPrice));
 }

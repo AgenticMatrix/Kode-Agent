@@ -8,7 +8,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { CoderSettings, ModelEntry } from './config.js';
+import type { CoderSettings, ModelEntry, ModelItem } from './config.js';
+
+const getModelName = (m: string | ModelItem): string =>
+  typeof m === 'string' ? m : m.name;
 import { inferProvider } from './config.js';
 
 // ---------------------------------------------------------------------------
@@ -114,7 +117,7 @@ export async function runInteractiveModelSetup(
     if (providerActiveIdx < 0) providerActiveIdx = 0;
 
     const providerOptions = modelList.map(m => {
-      const firstModel = m.model[0] ?? 'unknown';
+      const firstModel = getModelName(m.model[0] ?? '') || 'unknown';
       const isActive = m.provider === defaultProvider;
       return `${m.provider} (${firstModel}...)${isActive ? '  <- currently active' : ''}`;
     });
@@ -251,16 +254,16 @@ export async function runInteractiveModelSetup(
   }
 
   // ── Step 2: Model selection ─────────────────────────────────────
-  const currentDefaultModel = defaultModel.split('/')[1] ?? selectedProvider.model[0] ?? '';
+  const currentDefaultModel = defaultModel.split('/')[1] ?? (getModelName(selectedProvider.model[0] ?? '') || '');
   let selectedModel = '';
   let modelDone = false;
   while (!modelDone) {
-    let modelActiveIdx = selectedProvider.model.findIndex((m: string) => m === currentDefaultModel);
+    let modelActiveIdx = selectedProvider.model.findIndex(m => getModelName(m) === currentDefaultModel);
     if (modelActiveIdx < 0) modelActiveIdx = 0;
 
-    const modelOptions = selectedProvider.model.map((m: string) => {
-      const isActive = m === currentDefaultModel;
-      return `${m}${isActive ? '  <- currently active' : ''}`;
+    const modelOptions = selectedProvider.model.map(m => {
+      const isActive = getModelName(m) === currentDefaultModel;
+      return `${getModelName(m)}${isActive ? '  <- currently active' : ''}`;
     });
     modelOptions.push('Custom model name');
     modelOptions.push('Remove model');
@@ -279,13 +282,13 @@ export async function runInteractiveModelSetup(
       const rl = readline.createInterface({ input: stdin, output: stdout });
       const name = await new Promise<string>(resolve => rl.question('Enter model name (e.g. my-model-v1): ', resolve));
       rl.close();
-      const modelName = name.trim();
-      selectedProvider.model.push(modelName);
-      selectedModel = modelName;
+      const getModelName = name.trim();
+      selectedProvider.model.push(getModelName);
+      selectedModel = getModelName;
       modelDone = true;
     } else if (selectedModelIdx === selectedProvider.model.length + 1) {
       if (selectedProvider.model.length === 0) continue;
-      const removeModelOptions = selectedProvider.model.map((m: string) => m);
+      const removeModelOptions = selectedProvider.model.map(m => getModelName(m));
       const removeIdx = await radioSelect(
         removeModelOptions,
         0,
@@ -294,19 +297,20 @@ export async function runInteractiveModelSetup(
         stdout,
       );
       const modelToRemove = selectedProvider.model[removeIdx]!;
+      const modelRemoveName = getModelName(modelToRemove);
       const readline = await import('node:readline');
       const rl = readline.createInterface({ input: stdin, output: stdout });
       const confirm = await new Promise<string>(resolve => rl.question(
-        `Remove model "${modelToRemove}" from ${selectedProvider.provider}? (y/N): `,
+        `Remove model "${modelRemoveName}" from ${selectedProvider.provider}? (y/N): `,
         resolve,
       ));
       rl.close();
       if (confirm.trim().toLowerCase() === 'y') {
-        selectedProvider.model = selectedProvider.model.filter((m: string) => m !== modelToRemove);
+        selectedProvider.model = selectedProvider.model.filter(m => getModelName(m) !== modelRemoveName);
         if (selectedProvider.model.length === 0) {
-          console.log(`Model "${modelToRemove}" removed. No models left.\n`);
+          console.log(`Model "${modelRemoveName}" removed. No models left.\n`);
         } else {
-          console.log(`Model "${modelToRemove}" removed.\n`);
+          console.log(`Model "${modelRemoveName}" removed.\n`);
         }
         continue;
       } else {
@@ -314,13 +318,13 @@ export async function runInteractiveModelSetup(
         continue;
       }
     } else if (selectedModelIdx === selectedProvider.model.length + 2) {
-      selectedModel = selectedProvider.model[0] ?? '';
+      selectedModel = getModelName(selectedProvider.model[0] ?? '') || '';
       modelDone = true;
       if (!selectedModel) {
         console.log('No model selected. You can configure one later.\n');
       }
     } else {
-      selectedModel = selectedProvider.model[selectedModelIdx]!;
+      selectedModel = getModelName(selectedProvider.model[selectedModelIdx]!);
       modelDone = true;
     }
   }
@@ -382,7 +386,7 @@ export async function handleModelFlag(modelArg: string | undefined): Promise<voi
       providerName = modelArg.slice(0, slashIdx);
       modelName = modelArg.slice(slashIdx + 1);
     } else {
-      const found = modelList.find(m => m.model.includes(modelArg));
+      const found = modelList.find(m => m.model.some(n => getModelName(n) === modelArg));
       if (found) {
         providerName = found.provider ?? inferProvider(modelArg);
         modelName = modelArg;
@@ -393,7 +397,7 @@ export async function handleModelFlag(modelArg: string | undefined): Promise<voi
     }
 
     const providerEntry = modelList.find(m => m.provider === providerName);
-    if (!providerEntry || !providerEntry.model.includes(modelName)) {
+    if (!providerEntry || !providerEntry.model.some(n => getModelName(n) === modelName)) {
       console.log(`Model "${modelArg}" not found in model_list.`);
       process.exit(0);
     }
@@ -413,7 +417,7 @@ export async function handleModelFlag(modelArg: string | undefined): Promise<voi
     }
 
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-    console.log(`Default model set to: ${providerEntry.provider}/${modelName}`);
+    console.log(`Default model set to: ${providerEntry.provider}/${getModelName}`);
     process.exit(0);
   }
 

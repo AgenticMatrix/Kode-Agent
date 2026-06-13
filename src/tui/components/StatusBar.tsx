@@ -17,11 +17,19 @@ interface StatusBarProps {
   realUsage: TokenUsage;
   /** Accumulated total cost across all turns. */
   accumulatedCost: number;
+  /** Currency symbol (default: $). */
+  currency?: string;
 }
 
 /** Rough token estimate: ~4 characters per token. */
 function estimateTokens(charCount: number): number {
   return Math.ceil(charCount / 4);
+}
+
+function currencySymbol(currency?: string): string {
+  if (currency === 'CNY') return '¥';
+  if (currency === 'USD') return '$';
+  return currency ?? '$';
 }
 
 /** Format accumulated cost in dollars. */
@@ -71,7 +79,7 @@ function ContextBar({ used, max }: { used: number; max: number }) {
  * ctx = cache_read + cache_creation + output + input (real API tokens).
  * Timers update every second in real-time.
  */
-export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, outputTokens, realUsage, accumulatedCost }: StatusBarProps) {
+export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, outputTokens, realUsage, accumulatedCost, currency }: StatusBarProps) {
   const sessionStartRef = useRef(Date.now());
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [responseSeconds, setResponseSeconds] = useState(0);
@@ -137,7 +145,7 @@ export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, 
       <Sep />
 
       <Text dimColor>
-        {formatCost(accumulatedCost)} $
+        {formatCost(accumulatedCost)}{currencySymbol(currency)}
       </Text>
 
       <Sep />

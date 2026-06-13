@@ -8,9 +8,23 @@ import type { AppConfig } from '../types.js';
 // Settings types — matches ~/.coder/settings.json format
 // ---------------------------------------------------------------------------
 
+export interface ModelPrice {
+  input: number;
+  output: number;
+  cache_read_input?: number;
+  currency?: string;
+  unit?: number;
+  concurrency?: number;
+}
+
+export interface ModelItem {
+  name: string;
+  price?: ModelPrice;
+}
+
 export interface ModelEntry {
-  /** List of model IDs available for this provider */
-  model: string[];
+  /** List of model IDs available for this provider — strings or {name, price} objects */
+  model: Array<string | ModelItem>;
   /** Provider endpoint URL */
   base_url?: string;
   /** API key / auth token */
@@ -78,16 +92,29 @@ function resolveModel(settings: CoderSettings): {
   proxy?: string;
   maxTokens?: number;
   provider: string;
+  currency?: string;
+  inputPrice?: number;
+  outputPrice?: number;
+  cacheReadPrice?: number;
 } {
   const parseDefault = (raw: string) => {
     const parts = raw.split('/');
     return { providerName: parts[0]!, modelName: parts.length > 1 ? parts[1] : undefined };
   };
 
+  const modelName = (m: string | ModelItem): string =>
+    typeof m === 'string' ? m : m.name;
+
+  const modelPrice = (m: string | ModelItem): ModelPrice | undefined =>
+    typeof m === 'string' ? undefined : m.price;
+
   const resolveFromEntry = (entry: ModelEntry, preferredModel?: string) => {
-    const selectedModel = preferredModel
-      ? (entry.model.find(m => m === preferredModel) ?? entry.model[0]!)
-      : entry.model[0]!;
+    const list = entry.model;
+    const found = preferredModel
+      ? list.find(m => modelName(m) === preferredModel) ?? list[0]
+      : list[0];
+    const selectedModel = modelName(found!);
+    const price = found ? modelPrice(found) : undefined;
     return {
       model: selectedModel,
       baseUrl: entry.base_url ?? '',
@@ -95,6 +122,10 @@ function resolveModel(settings: CoderSettings): {
       proxy: entry.proxy,
       maxTokens: entry.max_tokens,
       provider: entry.provider ?? inferProvider(selectedModel),
+      currency: price?.currency,
+      inputPrice: price?.input,
+      outputPrice: price?.output,
+      cacheReadPrice: price?.cache_read_input,
     };
   };
 
@@ -158,5 +189,5 @@ export function loadConfig(): AppConfig {
     );
   }
 
-  return { baseUrl, apiKey, model, provider: resolved.provider, proxy, maxTokens };
+  return { baseUrl, apiKey, model, provider: resolved.provider, proxy, maxTokens, currency: resolved.currency, inputPrice: resolved.inputPrice, outputPrice: resolved.outputPrice, cacheReadPrice: resolved.cacheReadPrice };
 }

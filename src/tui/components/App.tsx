@@ -51,7 +51,7 @@ type StaticItem = { _type: 'header' } | { _type: 'message'; msg: Message };
  * preserving terminal text selection on historical content.
  */
 export function App({ config, engine }: AppProps) {
-  const [state, dispatch] = useChatReducer(config.model);
+  const [state, dispatch] = useChatReducer(config.model, config.inputPrice, config.outputPrice, config.cacheReadPrice);
 
   const messagesRef = useRef(state.messages);
   messagesRef.current = state.messages;
@@ -208,6 +208,7 @@ export function App({ config, engine }: AppProps) {
           outputTokens={stats.outputTokens}
           realUsage={stats.realUsage}
           accumulatedCost={stats.accumulatedCost}
+          currency={config.currency}
         />
       </Box>
     </Box>

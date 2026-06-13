@@ -4,14 +4,11 @@ import { listTasks } from '../../tasks/store.js';
 import type { Task } from '../../tasks/schema.js';
 
 interface TaskPanelProps {
-  /** When true, the panel was manually dismissed by the user. */
   dismissed: boolean;
-  /** Called when the dismiss state should be reset (new tasks arrived). */
   onDismissReset?: () => void;
 }
 
 const POLL_INTERVAL_MS = 1000;
-const HIDE_DELAY_MS = 3000;
 
 const STATUS_ICON: Record<string, string> = {
   pending: '○',
@@ -26,15 +23,16 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 /**
- * Fixed task panel that polls listTasks() and renders a compact task list.
- * Auto-shows when tasks exist, auto-hides 3s after all tasks complete.
- * Ctrl+P dismisses it; new tasks reset the dismiss.
+ * Fixed task panel pinned above the input box.
+ *
+ * Batch behaviour: completed tasks stay visible alongside their batch-mates
+ * as long as any task in the batch remains active.  Once every task is done
+ * the whole batch disappears and won't reappear when new tasks are created.
  */
 export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [visible, setVisible] = useState(false);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevCount = useRef(0);
+  const prevActiveCount = useRef(0);
+  const hiddenIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -45,29 +43,25 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
         if (!active) return;
         setTasks(current);
 
-        const count = current.length;
+        const activeCount = current.filter(t => t.status !== 'completed').length;
 
-        // New tasks arrived — reset dismiss
-        if (count > prevCount.current && count > 0 && dismissed) {
-          onDismissReset?.();
-        }
-        prevCount.current = count;
-
-        if (count > 0) {
-          if (hideTimer.current) {
-            clearTimeout(hideTimer.current);
-            hideTimer.current = null;
-          }
-          setVisible(true);
-        } else {
-          // Delay hide when all tasks disappear
-          if (!hideTimer.current) {
-            hideTimer.current = setTimeout(() => {
-              if (active) setVisible(false);
-              hideTimer.current = null;
-            }, HIDE_DELAY_MS);
+        // Batch just finished — hide all completed tasks from this batch
+        if (activeCount === 0 && prevActiveCount.current > 0) {
+          for (const t of current) {
+            if (t.status === 'completed') hiddenIds.current.add(t.id);
           }
         }
+
+        // New tasks arrived — reset dismiss, clear hidden set
+        if (activeCount > prevActiveCount.current && activeCount > 0) {
+          if (dismissed) onDismissReset?.();
+          // New batch starting — forget old completed tasks
+          if (prevActiveCount.current === 0) {
+            hiddenIds.current = new Set();
+          }
+        }
+
+        prevActiveCount.current = activeCount;
       } catch {
         // Silently ignore poll errors
       }
@@ -78,36 +72,41 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
     return () => {
       active = false;
       clearInterval(interval);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, [dismissed, onDismissReset]);
 
-  if (dismissed || (!visible && tasks.length === 0)) return null;
+  if (dismissed) return null;
 
-  // Sort: in_progress first, then pending, then completed at bottom
-  const sorted = [...tasks].sort((a, b) => {
-    const order = { in_progress: 0, pending: 1, completed: 2 };
+  // Filter: show active tasks + completed tasks from the current batch
+  const visible = tasks.filter(t =>
+    t.status !== 'completed' || !hiddenIds.current.has(t.id),
+  );
+  if (visible.length === 0) return null;
+
+  const hasActive = visible.some(t => t.status !== 'completed');
+
+  // Sort: in_progress → pending → completed
+  const sorted = [...visible].sort((a, b) => {
+    const order: Record<string, number> = { in_progress: 0, pending: 1, completed: 2 };
     return (order[a.status] ?? 1) - (order[b.status] ?? 1);
   });
 
-  // Limit to 8 tasks to keep the panel compact
   const display = sorted.slice(0, 8);
   const truncated = sorted.length - display.length;
 
-  const summary = [
-    tasks.filter(t => t.status === 'pending').length,
-    tasks.filter(t => t.status === 'in_progress').length,
-    tasks.filter(t => t.status === 'completed').length,
-  ];
+  const pendingCount = visible.filter(t => t.status === 'pending').length;
+  const activeCount = visible.filter(t => t.status === 'in_progress').length;
+  const doneCount = visible.filter(t => t.status === 'completed').length;
 
   return (
-    <Box flexDirection="column" flexShrink={0} paddingX={1} borderStyle="single" borderColor="grey">
+    <Box flexDirection="column" flexShrink={0} alignSelf="flex-start" paddingX={1} borderStyle="single" borderColor="grey">
       <Box>
         <Text bold>Tasks </Text>
         <Text dimColor>
-          ({summary[0]} pending, {summary[1]} active, {summary[2]} done)
+          ({pendingCount} pending, {activeCount} active
+          {doneCount > 0 ? `, ${doneCount} done` : ''})
         </Text>
-        <Text dimColor> — Ctrl+P to dismiss</Text>
+        {hasActive && <Text dimColor> — Ctrl+P to dismiss</Text>}
       </Box>
 
       {display.map((task) => {
@@ -123,7 +122,6 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
           : '';
         const deps = blockedByTag || blocksTag;
 
-        // Show activeForm instead of subject when in_progress
         const label = task.status === 'in_progress' && task.activeForm
           ? task.activeForm
           : task.subject;
@@ -132,7 +130,7 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
           <Box key={task.id} flexShrink={0}>
             <Text color={color}>{icon} </Text>
             <Text dimColor>#{task.id} </Text>
-            <Text>{label}</Text>
+            <Text dimColor={task.status === 'completed'}>{label}</Text>
             <Text dimColor>{ownerTag}{deps}</Text>
           </Box>
         );

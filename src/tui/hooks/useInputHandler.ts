@@ -17,6 +17,8 @@ export interface InputHandlerDeps {
   onExit: () => void;
   /** When true, input is suppressed (e.g. during approval prompt). */
   blocked?: boolean;
+  /** When true, the team picker overlay is shown. */
+  teamPicker?: boolean;
   /** Optional slash command handler. Returns true if the command was handled. */
   onSlashCommand?: (input: string) => boolean;
   /** Input history lines (newest last). */
@@ -42,6 +44,8 @@ export interface InputHandlerDeps {
  *   Ctrl+E      — toggle expand / collapse tool blocks
    Ctrl+D      — toggle expand / collapse block content (thinking, etc.)
    Ctrl+T      — view sub-agent transcript
+   Ctrl+P      — toggle task panel
+   Ctrl+K      — toggle team picker
    Esc         — close sub-agent view / clear input
  *   ← → Home End — cursor movement
  *   Backspace/Del — deletion
@@ -64,6 +68,7 @@ export function useInputHandler({
   pasteBlocks,
   subAgentView,
   lastAgentViewId,
+  teamPicker,
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
@@ -128,6 +133,20 @@ export function useInputHandler({
         dispatch({ type: 'TOGGLE_TASK_PANEL' });
         return;
       }
+
+      // Ctrl+K opens team member picker overlay
+      if (key.ctrl && input === 'k') {
+        if (teamPicker) {
+          dispatch({ type: 'HIDE_TEAM_PICKER' });
+        } else {
+          dispatch({ type: 'SHOW_TEAM_PICKER' });
+        }
+        return;
+      }
+
+      // When team picker is shown, suppress all other input
+      // (the TeamAgentPicker component handles arrow keys / Enter)
+      if (teamPicker) return;
 
       // When an approval overlay is active, suppress normal input.
       if (blocked) return;

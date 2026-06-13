@@ -26,6 +26,9 @@ import { CheckpointManager } from './checkpoint.js';
 import type { HookManager } from './hooks.js';
 import type { SubAgentRegistry } from './subagent-registry.js';
 import type { AgentRegistry } from './agent-registry.js';
+import { getAgentRole, getCoordinatorSystemContext } from '../teams/coordinator-mode.js';
+import { drainUnreadMessages } from '../teams/team-mailbox.js';
+import type { CoderSettings } from '../cli/config.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,6 +56,10 @@ export interface QueryEngineConfig {
   systemPromptAssembler?: SystemPromptAssembler;
   /** AgentRegistry for agent type definitions */
   agentRegistry?: AgentRegistry;
+  /** CoderSettings for coordinator mode detection */
+  settings?: CoderSettings;
+  /** Active team name (when running in coordinator mode) */
+  teamName?: string;
 }
 
 export interface QueryEngineEvent {
@@ -85,13 +92,24 @@ export class QueryEngine {
   }
 
   async init(): Promise<void> {
-    const assembler = new SystemPromptAssembler();
+    const assembler = this.config.systemPromptAssembler ?? new SystemPromptAssembler();
+    const agentRole = getAgentRole(this.config.settings);
+
+    // If coordinator with team active, inject team context into append prompt
+    let appendPrompt = this.config.appendSystemPrompt;
+    if (agentRole === 'coordinator' && this.config.teamName) {
+      const teamCtx = await getCoordinatorSystemContext(this.config.teamName);
+      if (teamCtx) {
+        appendPrompt = appendPrompt ? `${appendPrompt}\n\n${teamCtx}` : teamCtx;
+      }
+    }
+
     this.systemPrompt = await assembler.assemble({
       cwd: this.config.cwd,
       permissionMode: this.permissionEngine.getMode(),
       customPrompt: this.config.customSystemPrompt,
-      appendPrompt: this.config.appendSystemPrompt,
-      agentRole: 'default',
+      appendPrompt,
+      agentRole,
       model: this.config.model,
     });
 
@@ -198,6 +216,25 @@ export class QueryEngine {
         const contextBlock: ContentBlock = {
           type: 'text',
           text: '[Background agent results]\n' + notifications.join('\n\n'),
+        };
+        this.config.sessionManager.addMessage({
+          role: 'user',
+          content: [contextBlock],
+        });
+      }
+    }
+
+    // Drain team messages for coordinator (inject unread messages as context)
+    if (this.config.teamName && this.config.settings) {
+      const coordinatorName = 'coordinator';
+      const teamMsgs = await drainUnreadMessages(this.config.teamName, coordinatorName);
+      if (teamMsgs.length > 0) {
+        const msgsText = teamMsgs.map(m =>
+          `[${m.from} → ${m.to}]: ${m.text}`
+        ).join('\n');
+        const contextBlock: ContentBlock = {
+          type: 'text',
+          text: '[Team messages]\n' + msgsText,
         };
         this.config.sessionManager.addMessage({
           role: 'user',

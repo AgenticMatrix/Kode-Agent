@@ -70,7 +70,8 @@ async function runPrintMode(queryText: string): Promise<void> {
   const { PermissionMode } = await import('../core/types.js');
   const { buildAgentRegistry } = await import('../agents/registry.js');
   const { registry: agentRegistry } = await buildAgentRegistry(process.cwd());
-  const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(loadSettings()), subAgentRegistry: new SubAgentRegistry(), systemPromptAssembler: new SystemPromptAssembler(), agentRegistry });
+  const settings = loadSettings();
+  const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(settings), subAgentRegistry: new SubAgentRegistry(), systemPromptAssembler: new SystemPromptAssembler(), agentRegistry, settings });
   await engine.init(); engine.setPermissionMode(PermissionMode.AUTO);
   let fullText = '';
   for await (const event of engine.submitMessage(queryText)) {
@@ -128,7 +129,8 @@ async function main(): Promise<void> {
   const { setSubAgentRegistry } = await import('../agents/agent-spawn/registry-ref.js');
   setSubAgentRegistry(subAgentRegistry);
   const { registry: agentRegistry } = await buildAgentReg(process.cwd());
-  const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(loadSettings()), subAgentRegistry, systemPromptAssembler: new SystemPromptAssembler(), agentRegistry });
+  const settings = loadSettings();
+  const engine = new QueryEngine({ cwd: process.cwd(), toolRegistry: await buildToolRegistry(), sessionManager: sm, callModel, model: config.model, maxToolConcurrency: getMaxToolConcurrency(settings), subAgentRegistry, systemPromptAssembler: new SystemPromptAssembler(), agentRegistry, settings });
   await engine.init();
 
   const { render } = await import('ink');

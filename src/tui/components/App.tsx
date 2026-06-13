@@ -12,6 +12,8 @@ import { ApprovalPrompt } from './ApprovalPrompt.js';
 import { SubAgentTranscriptView } from './SubAgentTranscriptView.js';
 import { SubAgentPicker } from './SubAgentPicker.js';
 import { TaskPanel } from './TaskPanel.js';
+import { TeamPanel } from './TeamPanel.js';
+import { TeamAgentPicker } from './TeamAgentPicker.js';
 import { useChatReducer } from '../hooks/useChatReducer.js';
 import { useAgentBridge } from '../hooks/useAgentBridge.js';
 import { useInputHandler } from '../hooks/useInputHandler.js';
@@ -84,6 +86,7 @@ export function App({ config, engine }: AppProps) {
     onInterrupt: () => engine.interrupt(),
     onExit: () => process.exit(0),
     blocked: state.approvalReq !== null || state.agentPicker,
+    teamPicker: state.teamPicker,
     subAgentView: state.subAgentView,
     lastAgentViewId: state.lastAgentViewId,
     history: state.history,
@@ -187,6 +190,18 @@ export function App({ config, engine }: AppProps) {
                 />
               </Box>
             )}
+
+            {state.teamPicker && (
+              <Box flexDirection="column" flexShrink={0} paddingX={1} paddingY={1}>
+                <TeamAgentPicker
+                  onSelect={(agentId) => {
+                    dispatch({ type: 'HIDE_TEAM_PICKER' });
+                    dispatch({ type: 'OPEN_SUBAGENT_VIEW', agentId });
+                  }}
+                  onCancel={() => dispatch({ type: 'HIDE_TEAM_PICKER' })}
+                />
+              </Box>
+            )}
           </>
         )}
       </Box>
@@ -194,6 +209,11 @@ export function App({ config, engine }: AppProps) {
       <TaskPanel
         dismissed={state.taskPanelDismissed}
         onDismissReset={() => dispatch({ type: 'TOGGLE_TASK_PANEL' })}
+      />
+
+      <TeamPanel
+        dismissed={state.teamPanelDismissed}
+        onDismissReset={() => dispatch({ type: 'TOGGLE_TEAM_PANEL' })}
       />
 
       <InputBox

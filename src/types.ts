@@ -219,6 +219,10 @@ export interface ChatState {
   agentPicker: boolean;
   /** When true, the task panel has been manually dismissed. */
   taskPanelDismissed: boolean;
+  /** When true, the team panel has been manually dismissed. */
+  teamPanelDismissed: boolean;
+  /** When true, the team picker overlay is shown. */
+  teamPicker: boolean;
   /** Accumulated real token usage from latest API response (for ctx display). */
   tokenUsage: TokenUsage;
   /** Accumulated total cost across all turns. */
@@ -265,6 +269,9 @@ export type ChatAction =
   | { type: 'SHOW_AGENT_PICKER' }
   | { type: 'HIDE_AGENT_PICKER' }
   | { type: 'TOGGLE_TASK_PANEL' }
+  | { type: 'TOGGLE_TEAM_PANEL' }
+  | { type: 'SHOW_TEAM_PICKER' }
+  | { type: 'HIDE_TEAM_PICKER' }
   | { type: 'SET_MODE'; mode: AgentMode }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }

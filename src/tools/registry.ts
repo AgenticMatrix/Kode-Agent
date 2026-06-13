@@ -21,6 +21,10 @@ import agentSpawnPlugin from '../agents/agent-spawn/index.js';
 import agentReadPlugin from '../agents/agent-read/index.js';
 import agentStopPlugin from '../agents/agent-stop/index.js';
 import agentMessagePlugin from '../agents/agent-message/index.js';
+import teamCreatePlugin from '../teams/tools/team-create/index.js';
+import teamDispatchPlugin from '../teams/tools/team-dispatch/index.js';
+import teamStatusPlugin from '../teams/tools/team-status/index.js';
+import teamMessagePlugin from '../teams/tools/team-message/index.js';
 
 // ── Known tool names (for tools without executors yet) ─────────────────
 const KNOWN_TOOL_NAMES: string[] = [
@@ -53,6 +57,10 @@ export const plugins: ToolPlugin[] = [
   agentReadPlugin,
   agentStopPlugin,
   agentMessagePlugin,
+  teamCreatePlugin,
+  teamDispatchPlugin,
+  teamStatusPlugin,
+  teamMessagePlugin,
 ];
 
 // Build lookup tables

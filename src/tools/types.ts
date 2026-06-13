@@ -40,10 +40,13 @@ export interface ExecutorOptions {
   maxOutput?: number;
   bashTimeout?: number;
   agentSpawn?: import('../core/types.js').AgentSpawnContext | undefined;
+  /** Session ID for resolving the task list directory. */
+  sessionId?: string;
 }
 
 /** Executor options with all core fields resolved (non-optional) but agentSpawn kept optional. */
-export type ResolvedExecutorOptions = Required<Omit<ExecutorOptions, 'agentSpawn'>> & Pick<ExecutorOptions, 'agentSpawn'>;
+export type ResolvedExecutorOptions = Required<Omit<ExecutorOptions, 'agentSpawn' | 'sessionId'>> &
+  Pick<ExecutorOptions, 'agentSpawn' | 'sessionId'>;
 
 export type ToolExecutor = (
   input: Record<string, unknown>,
@@ -107,4 +110,6 @@ export interface ToolPlugin {
   resultRenderer?: ToolResultRenderer;
   /** Extract a human-readable param summary from tool input, e.g. "src/App.tsx". */
   paramSummary?: (input: Record<string, unknown>) => string | undefined;
+  /** When false, this tool is excluded from LLM tool definitions and execution. Default: true. */
+  isEnabled?: () => boolean;
 }

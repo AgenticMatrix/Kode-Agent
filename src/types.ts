@@ -217,6 +217,8 @@ export interface ChatState {
   lastAgentViewId: string | null;
   /** When true, shows the sub-agent picker overlay. */
   agentPicker: boolean;
+  /** When true, the task panel has been manually dismissed. */
+  taskPanelDismissed: boolean;
   /** Accumulated real token usage from latest API response (for ctx display). */
   tokenUsage: TokenUsage;
   /** Accumulated total cost across all turns. */
@@ -261,6 +263,7 @@ export type ChatAction =
   | { type: 'CLOSE_SUBAGENT_VIEW' }
   | { type: 'SHOW_AGENT_PICKER' }
   | { type: 'HIDE_AGENT_PICKER' }
+  | { type: 'TOGGLE_TASK_PANEL' }
   | { type: 'SET_MODE'; mode: AgentMode }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }

@@ -1,4 +1,5 @@
 import type { ToolSchema } from '../types.js';
+import { TASK_STATUSES } from '../../tasks/schema.js';
 
 export const schema: ToolSchema = {
   name: 'TaskUpdate',

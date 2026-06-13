@@ -294,6 +294,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'HIDE_AGENT_PICKER':
       return { ...state, agentPicker: false };
 
+    case 'TOGGLE_TASK_PANEL':
+      return { ...state, taskPanelDismissed: !state.taskPanelDismissed };
+
     case 'SET_MODE':
       return { ...state, mode: action.mode };
 
@@ -453,6 +456,7 @@ export function createInitialState(model: string, inputPrice = 0.5, outputPrice 
     subAgentView: null,
     lastAgentViewId: null,
     agentPicker: false,
+    taskPanelDismissed: false,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
     accumulatedCost: 0,
     inputPrice,

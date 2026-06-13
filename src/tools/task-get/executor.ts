@@ -5,7 +5,7 @@ export const execute: ToolExecutor = async (input, _opts) => {
   const taskId = input.taskId as string;
   if (!taskId) return { content: 'Error: taskId is required', isError: true };
 
-  const task = getTask(taskId);
+  const task = await getTask(taskId);
   if (!task) return { content: `Error: Task #${taskId} not found`, isError: true };
 
   const details = [

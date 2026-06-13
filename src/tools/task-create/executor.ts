@@ -9,7 +9,7 @@ export const execute: ToolExecutor = async (input, _opts) => {
     return { content: 'Error: subject and description are required', isError: true };
   }
 
-  const task = createTask({
+  const task = await createTask({
     subject,
     description,
     activeForm: input.activeForm as string | undefined,

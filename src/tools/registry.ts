@@ -60,12 +60,14 @@ const schemaByName = new Map<string, ToolPlugin['schema']>();
 const executorByName = new Map<string, ToolExecutor>();
 const useRendererByName = new Map<string, ToolUseRenderer>();
 const resultRendererByName = new Map<string, ToolResultRenderer>();
+const isEnabledByName = new Map<string, () => boolean>();
 
 for (const p of plugins) {
   schemaByName.set(p.name, p.schema);
   executorByName.set(p.name, p.executor);
   if (p.useRenderer) useRendererByName.set(p.name, p.useRenderer);
   if (p.resultRenderer) resultRendererByName.set(p.name, p.resultRenderer);
+  if (p.isEnabled) isEnabledByName.set(p.name, p.isEnabled);
 }
 
 // Pre-populate renderers for known (executor-less) tool names
@@ -76,9 +78,17 @@ for (const name of KNOWN_TOOL_NAMES) {
 
 // ── Public API ─────────────────────────────────────────────────────────
 
-/** Extract pure Anthropic tool definitions (strip _meta). */
+/** Extract pure Anthropic tool definitions (strip _meta, skip disabled). */
 export function getAnthropicTools(): Anthropic.Tool[] {
-  return Array.from(schemaByName.values()).map(({ _meta: _, ...tool }) => tool);
+  return Array.from(schemaByName.entries())
+    .filter(([name]) => {
+      const fn = isEnabledByName.get(name);
+      return !fn || fn();
+    })
+    .map(([, schema]) => {
+      const { _meta: _, ...tool } = schema;
+      return tool;
+    });
 }
 
 /** Get tool metadata by name. */
@@ -118,6 +128,14 @@ export async function executeTool(
     };
   }
 
+  const enabled = isEnabledByName.get(toolName);
+  if (enabled && !enabled()) {
+    return {
+      content: `Tool ${toolName} is disabled in the current mode.`,
+      isError: true,
+    };
+  }
+
   try {
     return await fn(input, opts);
   } catch (err) {
@@ -128,9 +146,11 @@ export async function executeTool(
   }
 }
 
-/** Check if a tool name has an executor registered. */
+/** Check if a tool name has an executor registered and is enabled. */
 export function hasExecutor(toolName: string): boolean {
-  return executorByName.has(toolName);
+  if (!executorByName.has(toolName)) return false;
+  const enabled = isEnabledByName.get(toolName);
+  return !enabled || enabled();
 }
 
 /** Look up a tool-use renderer by name. Falls back to GenericToolRenderer. */

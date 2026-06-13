@@ -99,6 +99,12 @@ export function useInputHandler({
         return;
       }
 
+      // Ctrl+P toggles task panel
+      if (key.ctrl && input === 'p') {
+        dispatch({ type: 'TOGGLE_TASK_PANEL' });
+        return;
+      }
+
       // When an approval overlay is active, suppress normal input.
       if (blocked) return;
 

@@ -2,12 +2,14 @@ import type { ToolPlugin } from '../types.js';
 import { schema } from './schema.js';
 import { execute } from './executor.js';
 import { TodoWriteRenderer } from './renderer.js';
+import { isTodoV2Enabled } from '../../tasks/store.js';
 
 const todoWritePlugin: ToolPlugin = {
   name: 'todo-write',
   schema,
   executor: execute,
   useRenderer: TodoWriteRenderer,
+  isEnabled: () => !isTodoV2Enabled(),
   paramSummary: (input) => {
     const todos = input.todos as Array<unknown> | undefined;
     if (!todos || !Array.isArray(todos)) return undefined;

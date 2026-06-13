@@ -1,4 +1,5 @@
 import type { ToolExecutor, ToolResult } from '../../tools/types.js';
+import { unassignTeammateTasks } from '../../tasks/store.js';
 
 export const execute: ToolExecutor = async (input, options): Promise<ToolResult> => {
   const agentSpawn = options.agentSpawn;
@@ -22,13 +23,28 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
   }
 
   const stopped = registry.abort(agentId);
-  if (stopped) {
-    return {
-      content: `Sub-agent ${agentId} stopped. Turns: ${agent.turnCount}, Tools: ${agent.toolCount}.`,
-      isError: false,
-      metadata: { agentId, turnCount: agent.turnCount, toolCount: agent.toolCount },
-    };
+  if (!stopped) {
+    return { content: `Failed to stop sub-agent ${agentId}.`, isError: true };
   }
 
-  return { content: `Failed to stop sub-agent ${agentId}.`, isError: true };
+  // Reclaim any open tasks owned by this agent
+  const ownerName = agent.name || agentId;
+  const { unassignedTasks } = await unassignTeammateTasks(ownerName);
+
+  let message = `Sub-agent ${agentId} stopped. Turns: ${agent.turnCount}, Tools: ${agent.toolCount}.`;
+  if (unassignedTasks.length > 0) {
+    const taskList = unassignedTasks.map(t => `#${t.id} "${t.subject}"`).join(', ');
+    message += ` ${unassignedTasks.length} task(s) unassigned: ${taskList}.`;
+  }
+
+  return {
+    content: message,
+    isError: false,
+    metadata: {
+      agentId,
+      turnCount: agent.turnCount,
+      toolCount: agent.toolCount,
+      unassignedTasks: unassignedTasks.length,
+    },
+  };
 };

@@ -11,6 +11,7 @@ import { StatusBar } from './StatusBar.js';
 import { ApprovalPrompt } from './ApprovalPrompt.js';
 import { SubAgentTranscriptView } from './SubAgentTranscriptView.js';
 import { SubAgentPicker } from './SubAgentPicker.js';
+import { TaskPanel } from './TaskPanel.js';
 import { useChatReducer } from '../hooks/useChatReducer.js';
 import { useAgentBridge } from '../hooks/useAgentBridge.js';
 import { useInputHandler } from '../hooks/useInputHandler.js';
@@ -191,6 +192,11 @@ export function App({ config, engine }: AppProps) {
           </>
         )}
       </Box>
+
+      <TaskPanel
+        dismissed={state.taskPanelDismissed}
+        onDismissReset={() => dispatch({ type: 'TOGGLE_TASK_PANEL' })}
+      />
 
       <InputBox
         inputText={state.inputText}

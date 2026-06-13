@@ -43,18 +43,15 @@ CoderAgent is a powerful CLI coding agent that runs entirely in your terminal. I
 ### Install
 
 ```bash
-# One-click install
+git clone https://github.com/AgenticMatrix/CoderAgent.git
+cd CoderAgent
 ./install.sh --local
 ```
 
-Or from a remote source:
+### Development
 
 ```bash
-git clone https://github.com/AgenticMatrix/CoderAgent.git
-cd CoderAgent
-npm install
-npm run build
-npm link
+npm run dev
 ```
 
 ### Configure

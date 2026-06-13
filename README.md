@@ -154,13 +154,12 @@ Edit `~/.coder/settings.json`:
     },
     {
       "model": [
-        "glm-4-plus",
-        "glm-4-flash",
-        "glm-4-air"
+        "gpt-5",
+        "gpt-5-mini"
       ],
-      "provider": "glm",
-      "base_url": "https://open.bigmodel.cn/api/paas/v4",
-      "auth_token_env": "YOUR_ZHIPU_API_KEY"
+      "provider": "openai",
+      "base_url": "https://api.openai.com/v1",
+      "auth_token_env": "YOUR_OPENAI_API_KEY"
     }
   ],
   "default_model": "deepseek/deepseek-v4-pro",

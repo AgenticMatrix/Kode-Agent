@@ -28,7 +28,9 @@ import type { SubAgentRegistry } from './subagent-registry.js';
 import type { AgentRegistry } from './agent-registry.js';
 import { getAgentRole, getCoordinatorSystemContext } from '../teams/coordinator-mode.js';
 import { drainUnreadMessages } from '../teams/team-mailbox.js';
+import { execute as executeAgentMessage } from '../agents/agent-message/executor.js';
 import type { CoderSettings } from '../cli/config.js';
+import type { ToolResult } from '../tools/types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -312,6 +314,34 @@ export class QueryEngine {
     if (this.abortController) {
       this.abortController.abort();
     }
+  }
+
+  /** Send a follow-up message to a completed/stopped sub-agent, resuming its execution. */
+  async sendSubAgentMessage(agentId: string, message: string): Promise<ToolResult> {
+    const { subAgentRegistry, toolRegistry, sessionManager, callModel, hookManager, systemPromptAssembler, agentRegistry } = this.config;
+    if (!subAgentRegistry || !systemPromptAssembler || !agentRegistry) {
+      return { content: 'Sub-agent infrastructure not available.', isError: true };
+    }
+
+    return executeAgentMessage(
+      { agent_id: agentId, message },
+      {
+        sessionId: sessionManager.getActive().id,
+        cwd: this.config.cwd,
+        allowMutation: true,
+        maxOutput: 200_000,
+        bashTimeout: 120_000,
+        agentSpawn: {
+          callModel,
+          toolRegistry,
+          sessionManager,
+          subAgentRegistry,
+          hookManager,
+          systemPromptAssembler,
+          agentRegistry,
+        },
+      },
+    );
   }
 
   async resume(sessionId: string): Promise<Session> {

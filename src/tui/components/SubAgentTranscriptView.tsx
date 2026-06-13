@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 import { getSubAgentRegistry } from '../../agents/agent-spawn/registry-ref.js';
 import type { ContentBlock } from '../../core/types.js';
 
@@ -12,11 +12,41 @@ const AGENT_ICONS: Record<string, string> = {
 interface SubAgentTranscriptViewProps {
   agentId: string;
   onBack: () => void;
+  /** Called when the user types a message and presses Enter. */
+  onSendMessage?: (agentId: string, message: string) => void;
 }
 
-export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptViewProps) {
+export function SubAgentTranscriptView({ agentId, onBack, onSendMessage }: SubAgentTranscriptViewProps) {
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
+
   const registry = getSubAgentRegistry();
   const agent = registry?.get(agentId);
+
+  useInput((_input, key) => {
+    if (key.escape) {
+      onBack();
+      return;
+    }
+
+    if (key.return && inputText.trim().length > 0 && onSendMessage) {
+      setSending(true);
+      onSendMessage(agentId, inputText.trim());
+      setInputText('');
+      return;
+    }
+
+    // Typing input
+    if (!key.ctrl && !key.meta && !key.return && _input && _input.length > 0) {
+      setInputText(prev => prev + _input);
+      return;
+    }
+
+    if (key.backspace) {
+      setInputText(prev => prev.slice(0, -1));
+      return;
+    }
+  });
 
   if (!agent) {
     return React.createElement(
@@ -90,6 +120,13 @@ export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptVi
     );
   };
 
+  const canSend = agent.status === 'done' || agent.status === 'stopped' || agent.status === 'error';
+  const statusLabel = agent.status === 'running' ? 'running...'
+    : agent.status === 'done' ? 'completed'
+    : agent.status === 'error' ? 'error'
+    : agent.status === 'stopped' ? 'stopped'
+    : agent.status;
+
   return React.createElement(
     Box,
     {
@@ -110,11 +147,16 @@ export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptVi
       ),
       React.createElement(Text, { dimColor: true }, 'Esc or Ctrl+T to go back | Type to follow up'),
     ),
-    // Prompt
+    // Prompt + status
     React.createElement(
       Box,
       { marginBottom: 1 },
       React.createElement(Text, { dimColor: true }, `Prompt: ${agent.prompt.slice(0, 120)}${agent.prompt.length > 120 ? '...' : ''}`),
+    ),
+    React.createElement(
+      Box,
+      { marginBottom: 1 },
+      React.createElement(Text, { color: agent.status === 'running' ? 'yellow' : 'grey' }, `Status: ${statusLabel}`),
     ),
     // Divider
     React.createElement(
@@ -126,5 +168,26 @@ export function SubAgentTranscriptView({ agentId, onBack }: SubAgentTranscriptVi
     ...transcript.map((msg, i) => renderMessage(msg, i)),
     // Empty state
     transcript.length === 0 && React.createElement(Text, { dimColor: true }, '(no transcript available)'),
+    // Spacing
+    React.createElement(Box, { height: 1 }),
+    // Input area
+    canSend && onSendMessage && !sending
+      ? React.createElement(
+          Box,
+          { flexDirection: 'column' },
+          React.createElement(Text, { dimColor: true }, '─'.repeat(40)),
+          React.createElement(
+            Box,
+            null,
+            React.createElement(Text, { color: 'cyan' }, '> '),
+            React.createElement(Text, null, inputText),
+          ),
+          React.createElement(Text, { dimColor: true }, 'Enter to send | Esc to go back'),
+        )
+      : sending
+        ? React.createElement(Text, { dimColor: true, color: 'yellow' }, 'Sending message...')
+        : agent.status === 'running'
+          ? React.createElement(Text, { dimColor: true }, 'Agent is running — wait for completion before sending follow-up.')
+          : null,
   );
 }

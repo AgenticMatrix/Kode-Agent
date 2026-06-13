@@ -155,6 +155,11 @@ export function App({ config, engine }: AppProps) {
           <SubAgentTranscriptView
             agentId={state.subAgentView.agentId}
             onBack={() => dispatch({ type: 'CLOSE_SUBAGENT_VIEW' })}
+            onSendMessage={(agentId, message) => {
+              engine.sendSubAgentMessage(agentId, message).then(() => {
+                dispatch({ type: 'CLOSE_SUBAGENT_VIEW' });
+              });
+            }}
           />
         ) : (
           <>

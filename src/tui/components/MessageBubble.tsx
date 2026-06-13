@@ -109,17 +109,22 @@ export function MessageBubble({ message, contentExpanded }: MessageBubbleProps) 
     const USER_FOLD = 10;
     const contentLines = displayContent.split(/\r?\n|\r/);
     const tooLong = contentLines.length > USER_FOLD;
-    const displayText = tooLong
-      ? contentLines.slice(0, 6).join('\n') +
-        `\n... [${contentLines.length - 6} more lines]`
-      : displayContent;
+    const displayLines = tooLong
+      ? [...contentLines.slice(0, 6), `... [${contentLines.length - 6} more lines]`]
+      : contentLines;
 
     return (
-      <Box flexDirection="column" marginBottom={1} backgroundColor="black">
-        <Text>
-          <Text color="cyan" bold>You:</Text>{' '}
-          <Text color="white">{displayText}</Text>
-        </Text>
+      <Box flexDirection="column" marginBottom={1}>
+        {displayLines.map((line, i) => (
+          <Box key={i} width="100%" backgroundColor="black">
+            <Text>
+              {i === 0 ? (
+                <><Text color="cyan" bold>You:</Text>{' '}</>
+              ) : null}
+              <Text color="white">{line}</Text>
+            </Text>
+          </Box>
+        ))}
       </Box>
     );
   }

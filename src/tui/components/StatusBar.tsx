@@ -25,7 +25,8 @@ interface StatusBarProps {
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return Math.round(n / 1_000_000) + 'M';
-  return Math.round(n / 1000) + 'K';
+  if (n >= 1000) return Math.round(n / 1000) + 'K';
+  return (n / 1000).toFixed(1) + 'K';
 }
 
 /** Rough token estimate: ~4 characters per token. */

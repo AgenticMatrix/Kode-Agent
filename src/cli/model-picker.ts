@@ -279,12 +279,40 @@ export async function runInteractiveModelSetup(
 
     if (selectedModelIdx === selectedProvider.model.length) {
       const readline = await import('node:readline');
-      const rl = readline.createInterface({ input: stdin, output: stdout });
+      let rl = readline.createInterface({ input: stdin, output: stdout });
       const name = await new Promise<string>(resolve => rl.question('Enter model name (e.g. my-model-v1): ', resolve));
       rl.close();
-      const getModelName = name.trim();
-      selectedProvider.model.push(getModelName);
-      selectedModel = getModelName;
+
+      console.log('\n  Configure pricing (per 1M tokens):');
+      const currencyIdx = await radioSelect(
+        ['人民币 (CNY)', '美元 (USD)', '欧元 (EUR)', '英镑 (GBP)', '日元 (JPY)'],
+        0,
+        '  Currency:',
+        stdin,
+        stdout,
+      );
+      const currencies = ['CNY', 'USD', 'EUR', 'GBP', 'JPY'];
+      const currency = currencies[currencyIdx]!;
+
+      rl = readline.createInterface({ input: stdin, output: stdout });
+      const inputPrice = parseFloat(await new Promise<string>(resolve => rl.question('  Input price (cache miss): ', resolve))) || 0;
+      const cachePrice = parseFloat(await new Promise<string>(resolve => rl.question('  Cache read input price: ', resolve))) || 0;
+      const outputPrice = parseFloat(await new Promise<string>(resolve => rl.question('  Output price: ', resolve))) || 0;
+      const maxContext = parseInt(await new Promise<string>(resolve => rl.question('  Max context tokens [1000000]: ', resolve)), 10) || 1000000;
+      rl.close();
+      const modelName = name.trim();
+      selectedProvider.model.push({
+        name: modelName,
+        price: {
+          input: inputPrice,
+          cache_read_input: cachePrice,
+          output: outputPrice,
+          currency,
+          unit: 1000000,
+          max_context: maxContext,
+        },
+      } as ModelItem);
+      selectedModel = modelName;
       modelDone = true;
     } else if (selectedModelIdx === selectedProvider.model.length + 1) {
       if (selectedProvider.model.length === 0) continue;

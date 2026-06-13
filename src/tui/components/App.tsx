@@ -117,7 +117,7 @@ export function App({ config, engine }: AppProps) {
     }
   };
 
-  const stats = useTokenStats(state.messages);
+  const stats = useTokenStats(state.messages, state.tokenUsage, state.accumulatedCost);
 
   const messages = state.messages;
   const { historical, live, staticItems } = useMemo(() => {
@@ -206,6 +206,8 @@ export function App({ config, engine }: AppProps) {
           totalChars={stats.totalChars}
           inputTokens={stats.inputTokens}
           outputTokens={stats.outputTokens}
+          realUsage={stats.realUsage}
+          accumulatedCost={stats.accumulatedCost}
         />
       </Box>
     </Box>

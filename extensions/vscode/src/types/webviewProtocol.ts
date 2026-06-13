@@ -11,6 +11,7 @@ export interface UsageInfo {
   calls: number;
   input: number;
   output: number;
+  cache: number;
   total: number;
   cost_usd?: number;
 }

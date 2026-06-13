@@ -1,19 +1,23 @@
 import { useMemo } from 'react';
 
-import type { Message } from '../../types.js';
+import type { Message, TokenUsage } from '../../types.js';
 import { getMessageText, getMessageThinking } from './useChatReducer.js';
 
 export interface TokenStats {
   totalChars: number;
   inputTokens: number;
   outputTokens: number;
+  /** Real token usage from latest API response (for ctx display). */
+  realUsage: TokenUsage;
+  /** Accumulated total cost across all turns. */
+  accumulatedCost: number;
 }
 
 /**
- * Compute approximate token statistics from message history.
- * Tokens are roughly estimated at ~4 chars per token.
+ * Compute approximate token statistics from message history,
+ * combined with real token usage from API responses.
  */
-export function useTokenStats(messages: Message[]): TokenStats {
+export function useTokenStats(messages: Message[], realUsage: TokenUsage, accumulatedCost: number): TokenStats {
   return useMemo(() => {
     const totalChars = messages.reduce((sum, m) => {
       const text = getMessageText(m);
@@ -37,6 +41,6 @@ export function useTokenStats(messages: Message[]): TokenStats {
         }, 0) / 4,
     );
 
-    return { totalChars, inputTokens, outputTokens };
-  }, [messages]);
+    return { totalChars, inputTokens, outputTokens, realUsage, accumulatedCost };
+  }, [messages, realUsage, accumulatedCost]);
 }

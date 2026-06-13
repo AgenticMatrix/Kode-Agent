@@ -182,13 +182,20 @@ export function createCallModelFromClient(
               usage = {
                 input_tokens: event.message.usage?.input_tokens ?? 0,
                 output_tokens: 0,
+                cache_creation_input_tokens: event.message.usage?.cache_creation_input_tokens ?? 0,
+                cache_read_input_tokens: event.message.usage?.cache_read_input_tokens ?? 0,
               };
             }
             yield {
               type: 'message_start',
               message: {
                 model,
-                usage: { input_tokens: usage.input_tokens ?? 0, output_tokens: 0 },
+                usage: {
+                  input_tokens: usage.input_tokens ?? 0,
+                  output_tokens: 0,
+                  cache_creation_input_tokens: usage.cache_creation_input_tokens,
+                  cache_read_input_tokens: usage.cache_read_input_tokens,
+                },
               },
             };
             break;
@@ -300,9 +307,12 @@ export function createCallModelFromClient(
           case 'message_stop': {
             const raw = event as unknown as Record<string, unknown>;
             const msgUsage = raw.message as Record<string, unknown> | undefined;
+            const rawUsage = (msgUsage?.usage ?? {}) as Record<string, number>;
             const finalUsage: CompletionUsage = {
-              input_tokens: (msgUsage?.usage as Record<string, number>)?.input_tokens ?? usage.input_tokens,
-              output_tokens: (msgUsage?.usage as Record<string, number>)?.output_tokens ?? usage.output_tokens,
+              input_tokens: rawUsage.input_tokens ?? usage.input_tokens,
+              output_tokens: rawUsage.output_tokens ?? usage.output_tokens,
+              cache_creation_input_tokens: rawUsage.cache_creation_input_tokens ?? usage.cache_creation_input_tokens,
+              cache_read_input_tokens: rawUsage.cache_read_input_tokens ?? usage.cache_read_input_tokens,
             };
 
             // Build the content blocks for the assistant message

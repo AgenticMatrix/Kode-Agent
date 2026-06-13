@@ -618,6 +618,8 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     sessionManager.updateUsage({
       inputTokens: usage.input_tokens,
       outputTokens: usage.output_tokens,
+      cacheCreationInputTokens: usage.cache_creation_input_tokens,
+      cacheReadInputTokens: usage.cache_read_input_tokens,
     });
     if (usage.totalCost) sessionManager.addCost(usage.totalCost);
 

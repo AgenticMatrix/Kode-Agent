@@ -181,12 +181,13 @@ export function useAgentBridge({ engine, dispatch }: AgentBridgeDeps) {
               if (msg.type === 'stream_event' && msg.event) {
                 const ev = msg.event;
                 switch (ev.type) {
-                  case 'message_start':
+                  case 'message_start': {
                     // Start a new assistant response
                     currentAssistantId = nextMessageId();
                     pendingBlocks = [];
                     dispatch({ type: 'START_ASSISTANT_RESPONSE', id: currentAssistantId });
                     break;
+                  }
 
                   case 'content_block_start': {
                     if (!currentAssistantId) break;
@@ -229,6 +230,20 @@ export function useAgentBridge({ engine, dispatch }: AgentBridgeDeps) {
                     if (currentAssistantId) {
                       flushDeltas();
                       dispatch({ type: 'FINISH_ASSISTANT_RESPONSE', id: currentAssistantId });
+                      // Track final token usage
+                      const stopMsg = ev.message as Record<string, unknown> | undefined;
+                      const stopUsage = stopMsg?.usage as Record<string, number> | undefined;
+                      if (stopUsage) {
+                        dispatch({
+                          type: 'UPDATE_TOKEN_USAGE',
+                          usage: {
+                            inputTokens: stopUsage.input_tokens ?? 0,
+                            outputTokens: stopUsage.output_tokens ?? 0,
+                            cacheCreationInputTokens: stopUsage.cache_creation_input_tokens ?? 0,
+                            cacheReadInputTokens: stopUsage.cache_read_input_tokens ?? 0,
+                          },
+                        });
+                      }
                       currentAssistantId = null;
                     }
                     break;

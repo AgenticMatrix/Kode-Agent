@@ -169,6 +169,13 @@ export interface ApprovalRequest {
 
 export type AgentMode = 'plan' | 'ask' | 'auto';
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+}
+
 export interface ChatState {
   messages: Message[];
   isStreaming: boolean;
@@ -200,6 +207,10 @@ export interface ChatState {
   lastAgentViewId: string | null;
   /** When true, shows the sub-agent picker overlay. */
   agentPicker: boolean;
+  /** Accumulated real token usage from latest API response (for ctx display). */
+  tokenUsage: TokenUsage;
+  /** Accumulated total cost across all turns. */
+  accumulatedCost: number;
 }
 
 // ── Chat actions ────────────────────────────────────────────────────
@@ -246,7 +257,9 @@ export type ChatAction =
   | { type: 'ADD_HISTORY'; line: string }
   | { type: 'SET_HISTORY_INDEX'; index: number; scratch?: string }
   // Paste blocks
-  | { type: 'ADD_PASTE_BLOCK'; text: string };
+  | { type: 'ADD_PASTE_BLOCK'; text: string }
+  // Token usage
+  | { type: 'UPDATE_TOKEN_USAGE'; usage: Partial<TokenUsage> };
 
 // ── Streaming callbacks (API client → App) ──────────────────────────
 

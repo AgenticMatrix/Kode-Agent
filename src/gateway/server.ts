@@ -100,7 +100,8 @@ function convertMessageEvent(msg: QueryMessage, sessionId: string): unknown[] {
         text,
         usage: {
           calls: 1, input: am.usage?.input_tokens ?? 0, output: am.usage?.output_tokens ?? 0,
-          total: (am.usage?.input_tokens ?? 0) + (am.usage?.output_tokens ?? 0),
+          cache: (am.usage?.cache_creation_input_tokens ?? 0) + (am.usage?.cache_read_input_tokens ?? 0),
+          total: (am.usage?.input_tokens ?? 0) + (am.usage?.output_tokens ?? 0) + (am.usage?.cache_creation_input_tokens ?? 0) + (am.usage?.cache_read_input_tokens ?? 0),
           cost_usd: am.usage?.totalCost,
         },
       },

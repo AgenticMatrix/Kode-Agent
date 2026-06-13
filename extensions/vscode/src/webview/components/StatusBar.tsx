@@ -39,7 +39,8 @@ export function StatusBar({
       {usage && (
         <span class="status-usage">
           {usage.total.toLocaleString()} tokens
-          {usage.cost_usd ? ` · $${usage.cost_usd.toFixed(2)}` : ''}
+          {usage.cache > 0 ? ` (cache: ${usage.cache.toLocaleString()})` : ''}
+          {usage.cost_usd ? ` · $${usage.cost_usd.toFixed(4)}` : ''}
         </span>
       )}
     </div>

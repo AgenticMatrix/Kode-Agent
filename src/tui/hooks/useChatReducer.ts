@@ -412,6 +412,22 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
 
+    case 'UPDATE_TOKEN_USAGE': {
+      const inputTokens = action.usage.inputTokens ?? 0;
+      const outputTokens = action.usage.outputTokens ?? 0;
+      const cacheCreationInputTokens = action.usage.cacheCreationInputTokens ?? 0;
+      const cacheReadInputTokens = action.usage.cacheReadInputTokens ?? 0;
+      const turnCost =
+        (inputTokens / 1_000_000) * 0.5 +
+        (outputTokens / 1_000_000) * 2.0 +
+        ((cacheCreationInputTokens + cacheReadInputTokens) / 1_000_000) * 0.05;
+      return {
+        ...state,
+        tokenUsage: { inputTokens, outputTokens, cacheCreationInputTokens, cacheReadInputTokens },
+        accumulatedCost: state.accumulatedCost + turnCost,
+      };
+    }
+
     default:
       return state;
   }
@@ -437,6 +453,8 @@ export function createInitialState(model: string): ChatState {
     subAgentView: null,
     lastAgentViewId: null,
     agentPicker: false,
+    tokenUsage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
+    accumulatedCost: 0,
   };
 }
 

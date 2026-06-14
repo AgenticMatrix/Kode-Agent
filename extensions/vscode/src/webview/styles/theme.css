@@ -115,11 +115,17 @@ body {
 
 .input-box {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px;
   border-top: 1px solid var(--coder-border);
   background: var(--coder-bg);
   transition: border-color 0.15s, background 0.15s;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
 }
 
 .input-dragover {
@@ -627,4 +633,47 @@ body {
 .session-item-meta {
   font-size: 11px;
   opacity: 0.5;
+}
+
+/* ── Command hint dropdown ─────────────────────────────── */
+
+.command-hint {
+  border: 1px solid var(--coder-border);
+  border-radius: var(--coder-radius);
+  background: var(--coder-input-bg);
+  margin-bottom: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.command-hint-item {
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.command-hint-item:hover,
+.command-hint-item--selected {
+  background: var(--coder-button-bg);
+  color: var(--coder-button-fg);
+}
+
+.command-hint-item--selected .command-hint-help {
+  opacity: 0.85;
+}
+
+.command-hint-name {
+  font-weight: 600;
+}
+
+.command-hint-help {
+  opacity: 0.55;
+}
+
+.command-hint-footer {
+  padding: 3px 10px;
+  font-size: 10px;
+  opacity: 0.35;
+  border-top: 1px solid var(--coder-border);
 }

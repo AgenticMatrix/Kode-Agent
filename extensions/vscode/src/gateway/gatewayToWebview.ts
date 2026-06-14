@@ -28,6 +28,7 @@ export function gatewayToWebview(
             calls: p.usage.calls ?? 1,
             input: p.usage.input ?? 0,
             output: p.usage.output ?? 0,
+            cache: p.usage.cache ?? 0,
             total: p.usage.total ?? 0,
             cost_usd: p.usage.cost_usd,
           }

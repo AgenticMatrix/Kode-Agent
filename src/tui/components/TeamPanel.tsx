@@ -47,6 +47,7 @@ export function TeamPanel({ dismissed, onDismissReset }: TeamPanelProps) {
   const [configs, setConfigs] = useState<TeamConfig[]>([]);
   const prevActiveCount = useRef(0);
   const hiddenTeams = useRef<Set<string>>(new Set());
+  const prevFingerprint = useRef('');
 
   useEffect(() => {
     let active = true;
@@ -73,7 +74,11 @@ export function TeamPanel({ dismissed, onDismissReset }: TeamPanelProps) {
         }
         if (!active) return;
 
-        setConfigs(loaded);
+        const fp = loaded.map(c => `${c.name}:${c.members.map(m => `${m.name}:${m.status}:${m.agentId}`).join(',')}`).join('|');
+        if (fp !== prevFingerprint.current) {
+          prevFingerprint.current = fp;
+          setConfigs(loaded);
+        }
 
         const activeCount = loaded.reduce(
           (sum, c) => sum + c.members.filter(m => m.status === 'running' || m.status === 'pending').length,

@@ -33,6 +33,7 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const prevActiveCount = useRef(0);
   const hiddenIds = useRef<Set<string>>(new Set());
+  const prevFingerprint = useRef('');
 
   useEffect(() => {
     let active = true;
@@ -41,7 +42,12 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
       try {
         const current = await listTasks();
         if (!active) return;
-        setTasks(current);
+
+        const fp = current.map(t => `${t.id}:${t.status}:${t.owner ?? ''}:${t.subject}:${t.activeForm ?? ''}:${t.blocks.join(',')}:${t.blockedBy.join(',')}`).join('|');
+        if (fp !== prevFingerprint.current) {
+          prevFingerprint.current = fp;
+          setTasks(current);
+        }
 
         const activeCount = current.filter(t => t.status !== 'completed').length;
 

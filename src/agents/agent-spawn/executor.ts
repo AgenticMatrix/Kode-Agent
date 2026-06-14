@@ -1,13 +1,14 @@
 import type { ToolExecutor, ToolResult } from '../../tools/types.js';
-import type { Message, ContentBlock, AgentSpawnContext } from '../../core/types.js';
+import type { Message, ContentBlock, AgentSpawnContext, ToolContext } from '../../core/types.js';
 import type { SystemPrompt, SystemPromptAssembler } from '../../core/system-prompt.js';
 import { ToolRegistry } from '../../core/tool-registry.js';
 import { PermissionEngine } from '../../core/permission.js';
-import { PermissionMode } from '../../core/types.js';
+import { PermissionMode, RiskLevel } from '../../core/types.js';
 import { SessionManager } from '../../core/session.js';
 import { CheckpointManager } from '../../core/checkpoint.js';
 import { filterToolsForAgent, GLOBAL_DISALLOWED_FOR_SUBAGENTS } from '../tool-filtering.js';
 import { query } from '../../core/query.js';
+import teamMessagePlugin from '../../teams/tools/team-message/index.js';
 
 const DEFAULT_MAX_TURNS = 20;
 const DEFAULT_CONTEXT_BUDGET = 120_000;
@@ -224,6 +225,39 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
     if (registration) {
       subToolRegistry.register(def, registration.execute);
     }
+  }
+
+  // Team member: register team-message tool for inter-team communication
+  const teamName = input.team_name as string | undefined;
+  const memberName = input.member_name as string | undefined;
+  if (teamName && memberName) {
+    const teamMsgSchema = teamMessagePlugin.schema as unknown as { input_schema: Record<string, unknown>; description: string };
+    subToolRegistry.register(
+      {
+        name: teamMessagePlugin.name,
+        description: teamMsgSchema.description,
+        input_schema: teamMsgSchema.input_schema,
+        riskLevel: RiskLevel.SAFE,
+      },
+      async (toolInput: Record<string, unknown>, ctx: ToolContext) => {
+        const result = await teamMessagePlugin.executor(
+          { ...toolInput, from: memberName },
+          {
+            cwd: ctx.cwd ?? process.cwd(),
+            allowMutation: true,
+            maxOutput: 50_000,
+            bashTimeout: 30_000,
+            sessionId: ctx.sessionId,
+          },
+        );
+        return {
+          content: result.content,
+          isError: result.isError,
+          duration: result.duration,
+          metadata: result.metadata,
+        };
+      },
+    );
   }
 
   const effectiveModel = modelOverride ?? agentDef.model;

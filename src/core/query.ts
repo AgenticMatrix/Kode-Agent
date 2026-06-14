@@ -35,6 +35,7 @@ import type { SubAgentRegistry } from './subagent-registry.js';
 import type { AgentRegistry } from './agent-registry.js';
 import { estimateTokens } from './token-budget.js';
 import { ToolExecutionQueue } from './tool-queue.js';
+import { COORDINATOR_ALLOWED_TOOLS } from '../agents/tool-filtering.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,6 +66,8 @@ export interface QueryConfig {
   systemPromptAssembler?: SystemPromptAssembler;
   /** AgentRegistry for looking up agent type definitions */
   agentRegistry?: AgentRegistry;
+  /** Role determines tool access: 'coordinator' gets restricted to orchestration tools only */
+  agentRole?: 'default' | 'coordinator' | 'worker';
 }
 
 export interface CallModelParams {
@@ -231,6 +234,7 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     callModel,
     hookManager,
     agentRegistry,
+    agentRole,
   } = config;
 
   let messages = [...config.messages];
@@ -273,11 +277,13 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     }
 
     // === Get tool definitions for LLM ===
-    const toolDefinitions = toolRegistry.getDefinitions().map((def) => ({
-      name: def.name,
-      description: def.description,
-      input_schema: def.input_schema,
-    }));
+    const toolDefinitions = toolRegistry.getDefinitions()
+      .filter((def) => agentRole !== 'coordinator' || COORDINATOR_ALLOWED_TOOLS.has(def.name))
+      .map((def) => ({
+        name: def.name,
+        description: def.description,
+        input_schema: def.input_schema,
+      }));
 
     // === Stream call to LLM ===
     const assistantMessages: AssistantMessage[] = [];
@@ -394,6 +400,14 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
             };
             orderedBlocks.push(toolBlock);
 
+            // Coordinator whitelist enforcement — safety net
+            if (agentRole === 'coordinator' && !COORDINATOR_ALLOWED_TOOLS.has(toolBlock.name)) {
+              queue.storeError(toolBlock,
+                `Tool '${toolBlock.name}' is not available in coordinator mode. Use agent/team orchestration tools instead.`);
+              buildingBlock = null;
+              continue;
+            }
+
             // Permission check + enqueue (may yield for ASK mode)
             if (!abortController.signal.aborted) {
               const toolDef = toolRegistry.get(toolBlock.name)?.definition;
@@ -508,6 +522,13 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
               if (block.type === 'tool_use') {
                 const toolBlock = block as ToolUseBlock;
                 orderedBlocks.push(toolBlock);
+
+                // Coordinator whitelist enforcement — safety net
+                if (agentRole === 'coordinator' && !COORDINATOR_ALLOWED_TOOLS.has(toolBlock.name)) {
+                  queue.storeError(toolBlock,
+                    `Tool '${toolBlock.name}' is not available in coordinator mode. Use agent/team orchestration tools instead.`);
+                  continue;
+                }
 
                 // Permission check + enqueue (same logic as streaming path above)
                 if (!abortController.signal.aborted) {

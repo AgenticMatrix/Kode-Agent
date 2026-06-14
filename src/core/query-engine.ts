@@ -271,6 +271,7 @@ export class QueryEngine {
       subAgentRegistry: this.config.subAgentRegistry,
       systemPromptAssembler: this.config.systemPromptAssembler,
       agentRegistry: this.config.agentRegistry,
+      agentRole: getAgentRole(this.config.settings),
     };
 
     try {

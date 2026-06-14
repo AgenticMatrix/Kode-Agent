@@ -6,7 +6,7 @@ export const execute: ToolExecutor = async (input, _options) => {
   const teamName = input.team_name as string;
   const to = input.to as string;
   const text = input.text as string;
-  const from = 'coordinator';
+  const from = (input.from as string) || 'coordinator';
 
   const config = await loadTeamConfig(teamName);
   if (!config) {

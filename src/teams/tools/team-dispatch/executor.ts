@@ -1,6 +1,38 @@
 import type { ToolExecutor } from '../../../tools/types.js';
 import { loadTeamConfig, updateTeamMember } from '../../team-store.js';
 import { executeTool } from '../../../tools/registry.js';
+import type { TeamConfig, TeamMember } from '../../types.js';
+
+function buildTeamMemberPrompt(
+  teamName: string,
+  member: TeamMember,
+  config: TeamConfig,
+): string {
+  const teammateNames = config.members
+    .filter(m => m.name !== member.name)
+    .map(m => `- ${m.name} (${m.agentType}): ${m.task ?? 'no task assigned'}`)
+    .join('\n');
+
+  return [
+    `[Team: ${teamName} — You are team member "${member.name}"]`,
+    '',
+    '## Your Task',
+    member.task,
+    '',
+    '## Team Context',
+    `Team: ${config.name}`,
+    `Description: ${config.description}`,
+    '',
+    '## Teammates',
+    teammateNames || '(you are the only member)',
+    '',
+    '## Communication',
+    'Use the team-message tool to send messages to your teammates.',
+    `Example: team-message team_name="${teamName}" to="<teammate-name>" text="<your message>"`,
+    'Use to="*" to broadcast to all teammates.',
+    'The coordinator will also send you messages — check for them in your context.',
+  ].join('\n');
+}
 
 export const execute: ToolExecutor = async (input, options) => {
   const teamName = input.team_name as string;
@@ -44,9 +76,11 @@ export const execute: ToolExecutor = async (input, options) => {
         'agent-spawn',
         {
           agent_type: member.agentType,
-          prompt: `[Team: ${teamName}] ${member.task}`,
+          prompt: buildTeamMemberPrompt(teamName, member, config),
           model: member.model,
           background,
+          team_name: teamName,
+          member_name: member.name,
         },
         {
           cwd: options.cwd,

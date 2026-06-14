@@ -8,9 +8,9 @@ import * as lockfile from 'proper-lockfile';
  */
 const LOCK_OPTIONS: lockfile.LockOptions = {
   retries: {
-    retries: 10,
-    minTimeout: 5,
-    maxTimeout: 100,
+    retries: 30,
+    minTimeout: 10,
+    maxTimeout: 200,
   },
 };
 

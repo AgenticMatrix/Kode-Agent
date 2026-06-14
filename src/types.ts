@@ -223,6 +223,8 @@ export interface ChatState {
   teamPanelDismissed: boolean;
   /** When true, the team picker overlay is shown. */
   teamPicker: boolean;
+  /** When true, display is frozen (user scrolled up during streaming). */
+  isFrozen: boolean;
   /** Accumulated real token usage from latest API response (for ctx display). */
   tokenUsage: TokenUsage;
   /** Accumulated total cost across all turns. */
@@ -272,6 +274,8 @@ export type ChatAction =
   | { type: 'TOGGLE_TEAM_PANEL' }
   | { type: 'SHOW_TEAM_PICKER' }
   | { type: 'HIDE_TEAM_PICKER' }
+  | { type: 'FREEZE_DISPLAY' }
+  | { type: 'UNFREEZE_DISPLAY' }
   | { type: 'SET_MODE'; mode: AgentMode }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }

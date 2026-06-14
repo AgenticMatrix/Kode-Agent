@@ -151,6 +151,19 @@ export function useInputHandler({
       // When an approval overlay is active, suppress normal input.
       if (blocked) return;
 
+      // ── Display freeze (scroll-away) controls ─────────────────
+      // PageUp  → freeze display (enter review mode)
+      // PageDown / End → unfreeze (resume following)
+      // These work even when not streaming, to be safe.
+      if (key.pageUp) {
+        dispatch({ type: 'FREEZE_DISPLAY' });
+        return;
+      }
+      if (key.pageDown || key.end) {
+        dispatch({ type: 'UNFREEZE_DISPLAY' });
+        return;
+      }
+
       // Allow sending messages while viewing a sub-agent transcript.
       // The view closes and the message goes to the main agent.
       if (subAgentView && key.return) {
@@ -172,6 +185,8 @@ export function useInputHandler({
 
       if (key.return) {
         if (inputText.trim().length > 0) {
+          // Auto-resume following when user sends a message
+          dispatch({ type: 'UNFREEZE_DISPLAY' });
           // Expand paste markers to full text before sending / saving history
           const expandedText = expandPasteMarkers(inputText.trim(), pasteBlocks);
           dispatch({ type: 'ADD_HISTORY', line: expandedText });

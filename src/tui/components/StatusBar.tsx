@@ -6,6 +6,7 @@ import type { TokenUsage } from '../../types.js';
 interface StatusBarProps {
   model: string;
   isStreaming: boolean;
+  isFrozen?: boolean;
   error: string | null;
   /** Total character count of all messages (for context estimation). */
   totalChars: number;
@@ -87,7 +88,7 @@ function ContextBar({ used, max }: { used: number; max: number }) {
  * ctx = cache_read + cache_creation + output + input (real API tokens).
  * Timers update every second in real-time.
  */
-export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, outputTokens, realUsage, accumulatedCost, currency, maxContext }: StatusBarProps) {
+export function StatusBar({ model, isStreaming, isFrozen, error, totalChars, inputTokens, outputTokens, realUsage, accumulatedCost, currency, maxContext }: StatusBarProps) {
   const sessionStartRef = useRef(Date.now());
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [responseSeconds, setResponseSeconds] = useState(0);
@@ -136,6 +137,8 @@ export function StatusBar({ model, isStreaming, error, totalChars, inputTokens, 
     <Box paddingX={1} flexDirection="row">
       {error ? (
         <Text color="red">⚠ {error}</Text>
+      ) : isStreaming && isFrozen ? (
+        <Text color="yellow">⏸ Paused</Text>
       ) : isStreaming ? (
         <Text color="yellow" dimColor>● Streaming</Text>
       ) : (

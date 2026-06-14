@@ -309,6 +309,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'HIDE_TEAM_PICKER':
       return { ...state, teamPicker: false };
 
+    case 'FREEZE_DISPLAY':
+      return { ...state, isFrozen: true };
+
+    case 'UNFREEZE_DISPLAY':
+      return { ...state, isFrozen: false };
+
     case 'SET_MODE':
       return { ...state, mode: action.mode };
 
@@ -471,6 +477,7 @@ export function createInitialState(model: string, inputPrice = 0.5, outputPrice 
     taskPanelDismissed: false,
     teamPanelDismissed: false,
     teamPicker: false,
+    isFrozen: false,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },
     accumulatedCost: 0,
     inputPrice,

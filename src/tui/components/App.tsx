@@ -129,22 +129,32 @@ export function App({ config, engine }: AppProps) {
 
   const messages = state.messages;
 
-  // Static zone items must be reference-stable during streaming.
-  // messages.length only changes when turns are added, not on text deltas,
-  // and contentExpanded only changes on explicit user toggle.
-  // This prevents Ink's <Static> from re-laying out on every delta,
-  // which would reset the terminal scroll position to the top.
+  // When display is frozen (user scrolled up), keep showing the snapshot.
+  // The reducer continues updating state.messages in the background.
+  const frozenRef = useRef(state.messages);
+  if (!state.isFrozen) frozenRef.current = state.messages;
+  const displayMessages = state.isFrozen ? frozenRef.current : state.messages;
+
+  // liveStart only changes at turn boundaries (new user message), not during
+  // streaming deltas, tool calls, or tool results.  This keeps staticItems
+  // reference-stable for the entire turn, preventing Ink's <Static> from
+  // re-laying out and resetting the terminal scroll position.
+  const liveStart = getLiveStart(displayMessages);
+
   const staticItems = useMemo<StaticItem[]>(() => {
-    const liveStart = getLiveStart(messages);
-    const historical = messages.slice(0, liveStart);
+    const historical = displayMessages.slice(0, liveStart);
     return [
       { _type: 'header' as const },
       ...historical.map((msg): StaticItem => ({ _type: 'message' as const, msg })),
     ];
-  }, [messages.length, state.contentExpanded]);
+  }, [liveStart, state.contentExpanded]);
 
-  const liveStart = getLiveStart(messages);
-  const live = messages.slice(liveStart);
+  const live = displayMessages.slice(liveStart);
+
+  // Count new messages arrived while frozen
+  const frozenNewCount = state.isFrozen && state.isStreaming
+    ? state.messages.length - frozenRef.current.length
+    : 0;
 
   return (
     <Box flexDirection="column" height="100%" padding={1}>
@@ -155,6 +165,15 @@ export function App({ config, engine }: AppProps) {
           return <MessageBubble key={item.msg.id} message={item.msg} contentExpanded={state.contentExpanded} />;
         }}
       </Static>
+
+      {/* ── Freeze indicator ──────────────────────────────────── */}
+      {state.isFrozen && (
+        <Box flexShrink={0} paddingX={1}>
+          <Text color="yellow" dimColor>
+            ⏸ Paused — {frozenNewCount > 0 ? `${frozenNewCount} new message(s) — ` : ''}PageDown / End to follow
+          </Text>
+        </Box>
+      )}
 
       {/* ── Live zone: current turn + input ────────────────────── */}
       <Box flexDirection="column" flexGrow={1} flexShrink={1} paddingX={1}>
@@ -170,7 +189,7 @@ export function App({ config, engine }: AppProps) {
           />
         ) : (
           <>
-            {messages.length === 0 && !state.isStreaming && (
+            {displayMessages.length === 0 && !state.isStreaming && (
               <Box marginY={1}>
                 <Text dimColor>
                   Welcome to Coder Chat TUI! Type a message and press Enter to start.
@@ -238,6 +257,7 @@ export function App({ config, engine }: AppProps) {
         <StatusBar
           model={state.model}
           isStreaming={state.isStreaming}
+          isFrozen={state.isFrozen}
           error={state.error}
           totalChars={stats.totalChars}
           inputTokens={stats.inputTokens}

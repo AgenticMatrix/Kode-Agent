@@ -753,6 +753,15 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
 
     turnCount++;
 
+    // If this is the coordinator and background sub-agents are still
+    // running, end turn to prevent polling with agent-read.
+    if (agentRole === 'coordinator' && config.subAgentRegistry) {
+      const running = config.subAgentRegistry.list().filter(a => a.status === 'running');
+      if (running.length > 0) {
+        return;
+      }
+    }
+
     // === Context compaction check (basic snip) ===
     const currentTokens = estimateTokens(messages);
     if (currentTokens / contextBudget > compactThreshold) {

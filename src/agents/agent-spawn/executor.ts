@@ -333,7 +333,7 @@ export const execute: ToolExecutor = async (input, options): Promise<ToolResult>
     });
 
     return {
-      content: `Background agent ${agentId} (${agentType}) spawned. Use agent-read to check progress, agent-stop to cancel.`,
+      content: `Background agent ${agentId} (${agentType}) running. Results will be delivered automatically when complete. Do not poll — just wait.`,
       isError: false,
       duration: Date.now() - spawnTime,
       metadata: { agentId, agentType, background: true },

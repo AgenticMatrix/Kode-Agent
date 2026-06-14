@@ -139,8 +139,10 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
 
       {display.map((task) => {
         const isActive = task.id === realActiveId;
-        const icon = isActive ? SPINNER_FRAMES[spinnerIndex] : (STATUS_ICON[task.status] ?? '?');
-        const color = isActive ? 'yellow' : STATUS_COLOR[task.status];
+        // Non-active in_progress → ○
+        const displayStatus = isActive ? 'active' : task.status === 'in_progress' ? 'pending' : task.status;
+        const icon = isActive ? SPINNER_FRAMES[spinnerIndex] : (STATUS_ICON[displayStatus] ?? '?');
+        const color = isActive ? 'yellow' : STATUS_COLOR[displayStatus];
 
         const ownerTag = task.owner ? ` [${task.owner}]` : '';
         const blockedByTag = task.blockedBy.length > 0

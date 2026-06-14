@@ -223,6 +223,8 @@ export interface ChatState {
   teamPanelDismissed: boolean;
   /** When true, the team picker overlay is shown. */
   teamPicker: boolean;
+  /** Selected index in the command picker dropdown (-1 = hidden). */
+  commandPickerIndex: number;
   /** When true, display is frozen (user scrolled up during streaming). */
   isFrozen: boolean;
   /** Accumulated real token usage from latest API response (for ctx display). */
@@ -272,6 +274,7 @@ export type ChatAction =
   | { type: 'HIDE_AGENT_PICKER' }
   | { type: 'TOGGLE_TASK_PANEL' }
   | { type: 'TOGGLE_TEAM_PANEL' }
+  | { type: 'SET_COMMAND_PICKER_INDEX'; index: number }
   | { type: 'SHOW_TEAM_PICKER' }
   | { type: 'HIDE_TEAM_PICKER' }
   | { type: 'FREEZE_DISPLAY' }

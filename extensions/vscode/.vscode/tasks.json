@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "label": "npm: build",
+      "detail": "webpack --mode production --config webpack.config.mjs",
+      "problemMatcher": ["$ts-webpack", "$ts-checker-webpack"]
+    }
+  ]
+}

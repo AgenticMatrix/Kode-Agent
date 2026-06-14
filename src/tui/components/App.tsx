@@ -15,6 +15,7 @@ import { TaskPanel } from './TaskPanel.js';
 import { TeamPanel } from './TeamPanel.js';
 import { TeamAgentPicker } from './TeamAgentPicker.js';
 import { OffscreenFreeze } from './OffscreenFreeze.js';
+import { CommandHint } from './CommandHint.js';
 import { useChatReducer } from '../hooks/useChatReducer.js';
 import { useAgentBridge } from '../hooks/useAgentBridge.js';
 import { useInputHandler } from '../hooks/useInputHandler.js';
@@ -102,6 +103,7 @@ export function App({ config, engine }: AppProps) {
     teamPicker: state.teamPicker,
     subAgentView: state.subAgentView,
     lastAgentViewId: state.lastAgentViewId,
+    commandPickerIndex: state.commandPickerIndex,
     history: state.history,
     historyIndex: state.historyIndex,
     historyScratch: state.historyScratch,
@@ -262,6 +264,7 @@ export function App({ config, engine }: AppProps) {
         onDismissReset={handleTeamDismissReset}
       />
 
+      <CommandHint inputText={state.inputText} selectedIndex={state.commandPickerIndex} />
       <InputBox
         inputText={state.inputText}
         cursorPosition={state.cursorPosition}

@@ -303,6 +303,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'TOGGLE_TEAM_PANEL':
       return { ...state, teamPanelDismissed: !state.teamPanelDismissed };
 
+    case 'SET_COMMAND_PICKER_INDEX':
+      return { ...state, commandPickerIndex: action.index };
+
     case 'SHOW_TEAM_PICKER':
       return { ...state, teamPicker: true };
 
@@ -476,6 +479,7 @@ export function createInitialState(model: string, inputPrice = 0.5, outputPrice 
     agentPicker: false,
     taskPanelDismissed: false,
     teamPanelDismissed: false,
+    commandPickerIndex: -1,
     teamPicker: false,
     isFrozen: false,
     tokenUsage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0 },

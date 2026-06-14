@@ -1,10 +1,12 @@
 import type { SlashCommand } from './types.js';
 import { coreCommands } from './commands/core.js';
+import { gitCommands } from './commands/git.js';
 import { tasksCommand } from './commands/tasks.js';
 
 export const SLASH_COMMANDS: SlashCommand[] = [
   ...coreCommands,
   tasksCommand,
+  ...gitCommands,
 ];
 
 const byName = new Map<string, SlashCommand>(

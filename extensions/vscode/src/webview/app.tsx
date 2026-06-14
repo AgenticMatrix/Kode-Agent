@@ -31,6 +31,24 @@ export interface ApprovalState {
 
 let nextId = 1;
 
+const COMMANDS = [
+  { name: 'agent', help: 'view sub-agent transcript' },
+  { name: 'clear', help: 'start a new conversation' },
+  { name: 'commit', help: 'auto-generate commit message and commit staged changes' },
+  { name: 'compact', help: 'compact the conversation context' },
+  { name: 'help', help: 'list available commands' },
+  { name: 'model', help: 'show or change the current model' },
+  { name: 'pr', help: 'create a pull request for the current branch (uses gh CLI)' },
+  { name: 'quit', help: 'exit the application' },
+  { name: 'retry', help: 'retry the last user message' },
+  { name: 'review', help: 'review current branch changes' },
+  { name: 'status', help: 'show session status' },
+  { name: 'statusbar', help: 'toggle status bar' },
+  { name: 'tasks', help: 'list all tasks or show task details' },
+  { name: 'undo', help: 'undo the last exchange' },
+  { name: 'verbose', help: 'cycle verbose tool output mode' },
+];
+
 export function App(): h.JSX.Element {
   const vscode = useVsCodeApi();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -260,6 +278,7 @@ export function App(): h.JSX.Element {
         onSubmit={handleSubmit}
         onInterrupt={() => vscode.postMessage({ type: 'interrupt' } as WebviewInboundMessage)}
         isBusy={isBusy}
+        commands={COMMANDS}
       />
     </div>
   );

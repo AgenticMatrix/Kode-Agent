@@ -3,6 +3,15 @@ import { useInput } from 'ink';
 import type { Message, ChatAction } from '../../types.js';
 import { expandPasteMarkers } from './useChatReducer.js';
 import { getSubAgentRegistry } from '../../agents/agent-spawn/registry-ref.js';
+import { listCommandNames } from '../../commands/index.js';
+
+function getCycleGroup(inputName: string, allCmds: string[]): string[] {
+  for (let len = inputName.length; len >= 1; len--) {
+    const m = allCmds.filter((c) => c.startsWith(inputName.slice(0, len)));
+    if (m.length > 1) return m;
+  }
+  return [];
+}
 
 export interface InputHandlerDeps {
   inputText: string;
@@ -33,6 +42,8 @@ export interface InputHandlerDeps {
   subAgentView?: { agentId: string } | null;
   /** Last viewed sub-agent ID — Ctrl+T defaults to this. */
   lastAgentViewId?: string | null;
+  /** Current command picker selected index (-1 = hidden). */
+  commandPickerIndex: number;
 }
 
 /**
@@ -69,6 +80,7 @@ export function useInputHandler({
   subAgentView,
   lastAgentViewId,
   teamPicker,
+  commandPickerIndex,
 }: InputHandlerDeps) {
   useInput(
     (input, key) => {
@@ -183,6 +195,53 @@ export function useInputHandler({
         return;
       }
 
+      // Tab: fill command from picker
+      if (key.tab && inputText.startsWith('/')) {
+        const inputName = inputText.slice(1).split(' ')[0]!.toLowerCase();
+        const allCmds = listCommandNames();
+        const group = getCycleGroup(inputName, allCmds);
+        const matches = group.length > 0 ? group : allCmds.filter((c) => c.startsWith(inputName));
+        if (matches.length > 0) {
+          const idx = commandPickerIndex >= 0 && commandPickerIndex < matches.length
+            ? commandPickerIndex
+            : 0;
+          dispatch({ type: 'SET_INPUT', text: '/' + matches[idx]! + ' ' });
+          dispatch({ type: 'SET_COMMAND_PICKER_INDEX', index: -1 });
+        }
+        return;
+      }
+
+      // Enter: if exact known command, fall through to execute;
+      // otherwise fill AND execute in one step
+      if (key.return && inputText.startsWith('/')) {
+        const inputName = inputText.slice(1).split(' ')[0]!.toLowerCase();
+        const exactMatch = listCommandNames().includes(inputName);
+        if (exactMatch) {
+          // Known command — hide picker and let normal Enter handler execute it
+          dispatch({ type: 'SET_COMMAND_PICKER_INDEX', index: -1 });
+          // Do NOT return — let the regular key.return handler below run
+        } else {
+          // Partial match — fill from picker and execute immediately
+          const allCmds = listCommandNames();
+          const group = getCycleGroup(inputName, allCmds);
+          const matches = group.length > 0 ? group : allCmds.filter((c) => c.startsWith(inputName));
+          if (matches.length > 0) {
+            const idx = commandPickerIndex >= 0 && commandPickerIndex < matches.length
+              ? commandPickerIndex
+              : 0;
+            const filled = '/' + matches[idx]! + ' ';
+            dispatch({ type: 'SET_INPUT', text: filled });
+            dispatch({ type: 'SET_COMMAND_PICKER_INDEX', index: -1 });
+            if (onSlashCommand?.(filled.trimEnd())) {
+              dispatch({ type: 'SET_INPUT', text: '' });
+            }
+          } else {
+            dispatch({ type: 'SET_COMMAND_PICKER_INDEX', index: -1 });
+          }
+          return;
+        }
+      }
+
       if (key.return) {
         if (inputText.trim().length > 0) {
           // Auto-resume following when user sends a message
@@ -197,6 +256,23 @@ export function useInputHandler({
           } else {
             onSend(expandedText);
           }
+        }
+        return;
+      }
+
+      // ── Command picker navigation (up / down arrows) ──────────
+      if (inputText.startsWith('/') && (key.upArrow || key.downArrow)) {
+        const inputName = inputText.slice(1).split(' ')[0]!.toLowerCase();
+        const allCmds = listCommandNames();
+        const group = getCycleGroup(inputName, allCmds);
+        const matches = group.length > 0 ? group : allCmds.filter((c) => c.startsWith(inputName));
+        if (matches.length > 1) {
+          const curIdx = commandPickerIndex >= 0 && commandPickerIndex < matches.length
+            ? commandPickerIndex
+            : 0;
+          const delta = key.upArrow ? -1 : 1;
+          const newIdx = ((curIdx + delta) % matches.length + matches.length) % matches.length;
+          dispatch({ type: 'SET_COMMAND_PICKER_INDEX', index: newIdx });
         }
         return;
       }

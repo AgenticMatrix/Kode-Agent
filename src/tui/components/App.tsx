@@ -128,16 +128,23 @@ export function App({ config, engine }: AppProps) {
   const stats = useTokenStats(state.messages, state.tokenUsage, state.accumulatedCost);
 
   const messages = state.messages;
-  const { historical, live, staticItems } = useMemo(() => {
+
+  // Static zone items must be reference-stable during streaming.
+  // messages.length only changes when turns are added, not on text deltas,
+  // and contentExpanded only changes on explicit user toggle.
+  // This prevents Ink's <Static> from re-laying out on every delta,
+  // which would reset the terminal scroll position to the top.
+  const staticItems = useMemo<StaticItem[]>(() => {
     const liveStart = getLiveStart(messages);
     const historical = messages.slice(0, liveStart);
-    const live = messages.slice(liveStart);
-    const staticItems: StaticItem[] = [
+    return [
       { _type: 'header' as const },
       ...historical.map((msg): StaticItem => ({ _type: 'message' as const, msg })),
     ];
-    return { historical, live, staticItems };
-  }, [messages]);
+  }, [messages.length, state.contentExpanded]);
+
+  const liveStart = getLiveStart(messages);
+  const live = messages.slice(liveStart);
 
   return (
     <Box flexDirection="column" height="100%" padding={1}>

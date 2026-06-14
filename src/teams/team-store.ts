@@ -137,4 +137,10 @@ export async function deleteTeam(teamName: string): Promise<void> {
   }
 }
 
+/** Remove all team configs — called on session start to clear stale state. */
+export async function resetAllTeams(): Promise<void> {
+  const names = await listTeams();
+  await Promise.all(names.map(n => deleteTeam(n)));
+}
+
 export { sanitize as sanitizeTeamName };

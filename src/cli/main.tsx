@@ -121,6 +121,11 @@ async function main(): Promise<void> {
   const sm = new SessionManager(); sm.create({ cwd: process.cwd(), model: config.model });
   const { setTaskListId } = await import('../tasks/store.js');
   setTaskListId(sm.getActive().id);
+
+  // Clear stale team configs from previous sessions
+  const { resetAllTeams } = await import('../teams/team-store.js');
+  await resetAllTeams();
+
   const { SubAgentRegistry } = await import('../core/subagent-registry.js');
   const { SystemPromptAssembler } = await import('../core/system-prompt.js');
   const { QueryEngine } = await import('../core/query-engine.js');

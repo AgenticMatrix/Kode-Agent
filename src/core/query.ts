@@ -702,26 +702,6 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
       yield { type: 'system', subtype: 'progress', data: pe };
     }
 
-    // === Inject completed background sub-agent results ===
-    // This lets the coordinator see agent completions automatically
-    // without needing to poll with agent-read.
-    if (config.subAgentRegistry) {
-      const agentNotifications = config.subAgentRegistry.drainNotifications();
-      if (agentNotifications.length > 0) {
-        const resultMsg = {
-          role: 'user' as const,
-          content: [
-            {
-              type: 'text' as const,
-              text: '[Background agent results]\n' + agentNotifications.join('\n\n'),
-            },
-          ],
-        };
-        messages.push(resultMsg);
-        yield { type: 'user' as const, message: resultMsg };
-      }
-    }
-
     // Assemble results in original parse order
     const toolResults: ToolResultBlock[] = orderedBlocks.map((block) =>
       queue.getResult(block.id) ?? createToolErrorResult(block.id, 'Tool execution skipped'),
@@ -749,6 +729,27 @@ export async function* query(config: QueryConfig): AsyncGenerator<QueryMessage> 
     const userMsg = createUserMessage(toolResults);
     messages.push(userMsg);
     yield { type: 'user', message: userMsg };
+
+    // === Inject completed background sub-agent results ===
+    // Placed AFTER tool_use/tool_result pair to avoid breaking the API
+    // requirement that tool_use blocks must have tool_result blocks in
+    // the immediately following message.
+    if (config.subAgentRegistry) {
+      const agentNotifications = config.subAgentRegistry.drainNotifications();
+      if (agentNotifications.length > 0) {
+        const resultMsg = {
+          role: 'user' as const,
+          content: [
+            {
+              type: 'text' as const,
+              text: '[Background agent results]\n' + agentNotifications.join('\n\n'),
+            },
+          ],
+        };
+        messages.push(resultMsg);
+        yield { type: 'user' as const, message: resultMsg };
+      }
+    }
 
     turnCount++;
 

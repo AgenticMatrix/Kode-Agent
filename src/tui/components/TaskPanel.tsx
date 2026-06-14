@@ -9,6 +9,8 @@ interface TaskPanelProps {
 }
 
 const POLL_INTERVAL_MS = 1000;
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const SPINNER_INTERVAL_MS = 80;
 
 const STATUS_ICON: Record<string, string> = {
   pending: '○',
@@ -81,6 +83,17 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
     };
   }, [dismissed, onDismissReset]);
 
+  // Animated spinner for in_progress tasks
+  const [spinnerIndex, setSpinnerIndex] = useState(0);
+  useEffect(() => {
+    const hasInProgress = tasks.some(t => t.status === 'in_progress');
+    if (dismissed || !hasInProgress) return;
+    const id = setInterval(() => {
+      setSpinnerIndex(i => (i + 1) % SPINNER_FRAMES.length);
+    }, SPINNER_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [tasks, dismissed]);
+
   if (dismissed) return null;
 
   // Filter: show active tasks + completed tasks from the current batch
@@ -104,6 +117,15 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
   const activeCount = visible.filter(t => t.status === 'in_progress').length;
   const doneCount = visible.filter(t => t.status === 'completed').length;
 
+  // Only ONE in_progress task shows ⟳ — the one with an owner, or the most recently updated
+  let realActiveId: string | null = null;
+  const inProgress = visible.filter(t => t.status === 'in_progress');
+  if (inProgress.length > 0) {
+    const owned = inProgress.filter(t => t.owner);
+    const candidate = owned.length > 0 ? owned : inProgress;
+    realActiveId = candidate.reduce((a, b) => a.updatedAt > b.updatedAt ? a : b).id;
+  }
+
   return (
     <Box flexDirection="column" flexShrink={0} alignSelf="flex-start" paddingX={1} borderStyle="single" borderColor="grey">
       <Box>
@@ -116,10 +138,9 @@ export function TaskPanel({ dismissed, onDismissReset }: TaskPanelProps) {
       </Box>
 
       {display.map((task) => {
-        // in_progress without an owner = not actually claimed yet, show as pending
-        const effectiveStatus = task.status === 'in_progress' && !task.owner ? 'pending' : task.status;
-        const icon = STATUS_ICON[effectiveStatus] ?? '?';
-        const color = STATUS_COLOR[effectiveStatus];
+        const isActive = task.id === realActiveId;
+        const icon = isActive ? SPINNER_FRAMES[spinnerIndex] : (STATUS_ICON[task.status] ?? '?');
+        const color = isActive ? 'yellow' : STATUS_COLOR[task.status];
 
         const ownerTag = task.owner ? ` [${task.owner}]` : '';
         const blockedByTag = task.blockedBy.length > 0

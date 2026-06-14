@@ -2,14 +2,14 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { createTask, getTask, listTasks, updateTask, resetStore } from '../../src/tasks/store.js';
 
 describe('Task store', () => {
-  beforeEach(() => {
-    resetStore();
+  beforeEach(async () => {
+    await resetStore();
   });
 
   describe('createTask', () => {
-    it('should create a task with auto-increment ID', () => {
-      const t1 = createTask({ subject: 'Task 1', description: 'First task' });
-      const t2 = createTask({ subject: 'Task 2', description: 'Second task' });
+    it('should create a task with auto-increment ID', async () => {
+      const t1 = await createTask({ subject: 'Task 1', description: 'First task' });
+      const t2 = await createTask({ subject: 'Task 2', description: 'Second task' });
 
       expect(t1.id).toBe('1');
       expect(t2.id).toBe('2');
@@ -17,15 +17,15 @@ describe('Task store', () => {
       expect(t2.status).toBe('pending');
     });
 
-    it('should set createdAt and updatedAt', () => {
+    it('should set createdAt and updatedAt', async () => {
       const before = Date.now();
-      const task = createTask({ subject: 'Test', description: 'Desc' });
+      const task = await createTask({ subject: 'Test', description: 'Desc' });
       expect(task.createdAt).toBeGreaterThanOrEqual(before);
       expect(task.updatedAt).toBeGreaterThanOrEqual(before);
     });
 
-    it('should store metadata', () => {
-      const task = createTask({
+    it('should store metadata', async () => {
+      const task = await createTask({
         subject: 'Test',
         description: 'Desc',
         metadata: { priority: 'high' },
@@ -35,36 +35,38 @@ describe('Task store', () => {
   });
 
   describe('getTask', () => {
-    it('should retrieve a task by ID', () => {
-      const task = createTask({ subject: 'Test', description: 'Desc' });
-      const retrieved = getTask(task.id);
+    it('should retrieve a task by ID', async () => {
+      const task = await createTask({ subject: 'Test', description: 'Desc' });
+      const retrieved = await getTask(task.id);
       expect(retrieved).toBeDefined();
       expect(retrieved!.subject).toBe('Test');
     });
 
-    it('should return undefined for non-existent ID', () => {
-      expect(getTask('nonexistent')).toBeUndefined();
+    it('should return null for non-existent ID', async () => {
+      expect(await getTask('nonexistent')).toBeNull();
     });
   });
 
   describe('listTasks', () => {
-    it('should list all non-deleted tasks', () => {
-      createTask({ subject: 'T1', description: 'D1' });
-      createTask({ subject: 'T2', description: 'D2' });
-      expect(listTasks()).toHaveLength(2);
+    it('should list all non-deleted tasks', async () => {
+      await createTask({ subject: 'T1', description: 'D1' });
+      await createTask({ subject: 'T2', description: 'D2' });
+      const tasks = await listTasks();
+      expect(tasks).toHaveLength(2);
     });
 
-    it('should exclude deleted tasks', () => {
-      const task = createTask({ subject: 'T1', description: 'D1' });
-      updateTask(task.id, { status: 'deleted' });
-      expect(listTasks()).toHaveLength(0);
+    it('should exclude deleted tasks', async () => {
+      const task = await createTask({ subject: 'T1', description: 'D1' });
+      await updateTask(task.id, { status: 'deleted' });
+      const tasks = await listTasks();
+      expect(tasks).toHaveLength(0);
     });
   });
 
   describe('updateTask', () => {
-    it('should update subject', () => {
-      const task = createTask({ subject: 'Old', description: 'Desc' });
-      const result = updateTask(task.id, { subject: 'New' });
+    it('should update subject', async () => {
+      const task = await createTask({ subject: 'Old', description: 'Desc' });
+      const result = await updateTask(task.id, { subject: 'New' });
       expect('error' in result).toBe(false);
       if ('task' in result) {
         expect(result.task.subject).toBe('New');
@@ -72,73 +74,80 @@ describe('Task store', () => {
       }
     });
 
-    it('should update status', () => {
-      const task = createTask({ subject: 'Test', description: 'Desc' });
-      const result = updateTask(task.id, { status: 'in_progress' });
+    it('should update status', async () => {
+      const task = await createTask({ subject: 'Test', description: 'Desc' });
+      const result = await updateTask(task.id, { status: 'in_progress' });
       if ('task' in result) {
         expect(result.task.status).toBe('in_progress');
       }
     });
 
-    it('should mark task as deleted', () => {
-      const task = createTask({ subject: 'Test', description: 'Desc' });
-      const result = updateTask(task.id, { status: 'deleted' });
+    it('should mark task as deleted', async () => {
+      const task = await createTask({ subject: 'Test', description: 'Desc' });
+      const result = await updateTask(task.id, { status: 'deleted' });
       if ('task' in result) {
         expect(result.task.status).toBe('deleted');
       }
     });
 
-    it('should return error for unknown task', () => {
-      const result = updateTask('nonexistent', { subject: 'New' });
+    it('should return error for unknown task', async () => {
+      const result = await updateTask('nonexistent', { subject: 'New' });
       expect('error' in result).toBe(true);
     });
 
-    it('should establish dependency chains', () => {
-      const t1 = createTask({ subject: 'Task 1', description: 'First' });
-      const t2 = createTask({ subject: 'Task 2', description: 'Second' });
+    it('should establish dependency chains', async () => {
+      const t1 = await createTask({ subject: 'Task 1', description: 'First' });
+      const t2 = await createTask({ subject: 'Task 2', description: 'Second' });
 
-      updateTask(t1.id, { addBlocks: [t2.id] });
+      await updateTask(t1.id, { addBlocks: [t2.id] });
 
-      const updatedT1 = getTask(t1.id)!;
-      const updatedT2 = getTask(t2.id)!;
+      const updatedT1 = await getTask(t1.id);
+      const updatedT2 = await getTask(t2.id);
 
-      expect(updatedT1.blocks).toContain(t2.id);
-      expect(updatedT2.blockedBy).toContain(t1.id);
+      expect(updatedT1).toBeDefined();
+      expect(updatedT2).toBeDefined();
+      expect(updatedT1!.blocks).toContain(t2.id);
+      expect(updatedT2!.blockedBy).toContain(t1.id);
     });
 
-    it('should not add duplicate dependencies', () => {
-      const t1 = createTask({ subject: 'T1', description: 'D1' });
-      const t2 = createTask({ subject: 'T2', description: 'D2' });
+    it('should not add duplicate dependencies', async () => {
+      const t1 = await createTask({ subject: 'T1', description: 'D1' });
+      const t2 = await createTask({ subject: 'T2', description: 'D2' });
 
-      updateTask(t1.id, { addBlocks: [t2.id] });
-      updateTask(t1.id, { addBlocks: [t2.id] });
+      await updateTask(t1.id, { addBlocks: [t2.id] });
+      await updateTask(t1.id, { addBlocks: [t2.id] });
 
-      const updated = getTask(t1.id)!;
-      expect(updated.blocks.filter(b => b === t2.id)).toHaveLength(1);
+      const updated = await getTask(t1.id);
+      expect(updated).toBeDefined();
+      expect(updated!.blocks.filter((b: string) => b === t2.id)).toHaveLength(1);
     });
 
-    it('should not allow self-dependency', () => {
-      const t1 = createTask({ subject: 'T1', description: 'D1' });
-      updateTask(t1.id, { addBlocks: [t1.id] });
-      expect(getTask(t1.id)!.blocks).not.toContain(t1.id);
+    it('should not allow self-dependency', async () => {
+      const t1 = await createTask({ subject: 'T1', description: 'D1' });
+      await updateTask(t1.id, { addBlocks: [t1.id] });
+      const updated = await getTask(t1.id);
+      expect(updated).toBeDefined();
+      expect(updated!.blocks).not.toContain(t1.id);
     });
 
-    it('should clear references when a task is deleted', () => {
-      const t1 = createTask({ subject: 'T1', description: 'D1' });
-      const t2 = createTask({ subject: 'T2', description: 'D2' });
+    it('should clear references when a task is deleted', async () => {
+      const t1 = await createTask({ subject: 'T1', description: 'D1' });
+      const t2 = await createTask({ subject: 'T2', description: 'D2' });
 
-      updateTask(t1.id, { addBlocks: [t2.id] });
-      updateTask(t2.id, { status: 'deleted' });
+      await updateTask(t1.id, { addBlocks: [t2.id] });
+      await updateTask(t2.id, { status: 'deleted' });
 
-      expect(getTask(t1.id)!.blocks).not.toContain(t2.id);
+      const updated = await getTask(t1.id);
+      expect(updated).toBeDefined();
+      expect(updated!.blocks).not.toContain(t2.id);
     });
   });
 
   describe('resetStore', () => {
-    it('should clear all tasks and reset counter', () => {
-      createTask({ subject: 'T1', description: 'D1' });
-      resetStore();
-      const t2 = createTask({ subject: 'T2', description: 'D2' });
+    it('should clear all tasks and reset counter', async () => {
+      await createTask({ subject: 'T1', description: 'D1' });
+      await resetStore();
+      const t2 = await createTask({ subject: 'T2', description: 'D2' });
       expect(t2.id).toBe('1'); // counter reset
     });
   });

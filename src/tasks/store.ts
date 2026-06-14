@@ -272,7 +272,7 @@ export async function updateTask(
     if (input.addBlocks && input.addBlocks.length > 0) {
       const newBlocks = input.addBlocks.filter(bid => !task.blocks.includes(bid) && bid !== id);
       for (const blockedId of newBlocks) {
-        await blockTask(listId, id, blockedId);
+        await blockTask(id, blockedId, listId);
       }
       if (newBlocks.length > 0) updatedFields.push('blocks');
     }
@@ -280,7 +280,7 @@ export async function updateTask(
     if (input.addBlockedBy && input.addBlockedBy.length > 0) {
       const newBlockedBy = input.addBlockedBy.filter(bid => !task.blockedBy.includes(bid) && bid !== id);
       for (const blockerId of newBlockedBy) {
-        await blockTask(listId, blockerId, id);
+        await blockTask(blockerId, id, listId);
       }
       if (newBlockedBy.length > 0) updatedFields.push('blockedBy');
     }
